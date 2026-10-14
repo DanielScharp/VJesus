@@ -1,0 +1,17 @@
+﻿# compilação
+bin/
+obj/
+artifacts/
+*.user
+.vs/
+.vscode/
+
+# interface
+ui/node_modules/
+ui/dist/
+
+# vídeos de teste e arquivos locais
+media/
+*.lnk
+*.log
+Thumbs.db

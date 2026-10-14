@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15161a">
+<title>VJApp Remoto</title>
+<style>
+  :root { --bg:#15161a; --panel:#1d1f24; --btn:#2a2d34; --line:#34373f; --text:#e8e8ea; --muted:#9a9ca3; --accent:#ffb020; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px system-ui, 'Segoe UI', sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 17px; margin: 0; flex: 1; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #c33; }
+  .dot.on { background: #3c6; }
+  main { padding: 12px 16px 40px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
+  .clips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  button { background: var(--btn); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: inherit; padding: 0 6px; min-height: 52px; overflow: hidden; text-overflow: ellipsis; }
+  button:active { transform: scale(.97); }
+  button.active { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 600; }
+  button.empty { opacity: .25; }
+  button.small { min-height: 34px; padding: 0 12px; font-size: 13px; }
+  .columns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  input[type=range] { width: 100%; height: 36px; accent-color: var(--accent); }
+  label { display: block; color: var(--muted); font-size: 13px; }
+  .danger { background: #4a1d1d; border-color: #8a3434; }
+</style>
+</head>
+<body>
+<header><span id="dot" class="dot"></span><h1>VJApp Remoto</h1><button class="small danger" onclick="send('/composition/clear')">Parar tudo</button></header>
+<main>
+  <section>
+    <h2>Colunas</h2>
+    <div id="columns" class="columns"></div>
+  </section>
+  <section>
+    <h2>Letras</h2>
+    <div class="columns">
+      <button onclick="send('/lyrics/prev')">◀ Anterior</button>
+      <button onclick="send('/lyrics/blank', blank = blank ? 0 : 1)" id="blankBtn">Tela em branco</button>
+      <button onclick="send('/lyrics/next')">Próximo ▶</button>
+      <button class="danger" onclick="send('/lyrics/clear')">Encerrar letra</button>
+    </div>
+  </section>
+  <section>
+    <h2>Ataques</h2>
+    <div id="attacks" class="columns"></div>
+  </section>
+  <div id="layers"></div>
+  <section>
+    <h2>Master</h2>
+    <label>Brilho</label>
+    <input id="brightness" type="range" min="0" max="1" step="0.01" oninput="send('/composition/video/brightness', +this.value)">
+  </section>
+</main>
+<script>
+  let ws, state = null, dragging = false, blank = 0;
+  const $ = (id) => document.getElementById(id);
+
+  function connect() {
+    ws = new WebSocket(`ws://${location.host}/ws`);
+    ws.onopen = () => $('dot').classList.add('on');
+    ws.onclose = () => { $('dot').classList.remove('on'); setTimeout(connect, 1000); };
+    ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.type === 'state') { state = m; render(); } };
+  }
+
+  function send(address, value = 1) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ address, value }));
+  }
+
+  function render() {
+    if (dragging) return; // não atrapalha enquanto arrasta um slider
+    $('brightness').value = state.brightness;
+
+    const cols = $('columns');
+    if (cols.children.length !== state.columns) {
+      cols.innerHTML = '';
+      for (let c = 1; c <= state.columns; c++) {
+        const b = document.createElement('button');
+        b.textContent = c;
+        b.onclick = () => send(`/composition/columns/${c}/connect`);
+        cols.appendChild(b);
+      }
+    }
+
+    const root = $('layers');
+    root.innerHTML = '';
+    [...state.layers].map((l, i) => ({ l, n: i + 1 })).reverse().forEach(({ l, n }) => {
+      const s = document.createElement('section');
+      s.innerHTML = `<h2><span>${l.name}</span><button class="small">Parar</button></h2><div class="clips"></div>
+        <label>Opacidade</label><input type="range" min="0" max="1" step="0.01" value="${l.opacity}">`;
+      s.querySelector('h2 button').onclick = () => send(`/composition/layers/${n}/clear`);
+      const grid = s.querySelector('.clips');
+      l.clips.forEach((name, c) => {
+        const b = document.createElement('button');
+        b.textContent = name ?? '';
+        b.className = (l.active === c ? 'active' : '') + (name ? '' : ' empty');
+        if (name) b.onclick = () => send(`/composition/layers/${n}/clips/${c + 1}/connect`);
+        grid.appendChild(b);
+      });
+      const r = s.querySelector('input');
+      r.oninput = () => send(`/composition/layers/${n}/video/opacity`, +r.value);
+      root.appendChild(s);
+    });
+  }
+
+  document.addEventListener('pointerdown', (e) => { if (e.target.type === 'range') dragging = true; });
+  document.addEventListener('pointerup', () => { dragging = false; if (state) render(); });
+  connect();
+</script>
+</body>
+</html>

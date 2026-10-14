@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
+    <UiDir>$(MSBuildProjectDirectory)\..\..\ui\</UiDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Melanchall.DryWetMidi" Version="8.0.3" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
+    <PackageReference Include="NAudio.Wasapi" Version="3.1.0" />
+    <PackageReference Include="Sdcb.FFmpeg" Version="7.0.0" />
+    <PackageReference Include="Sdcb.FFmpeg.runtime.windows-x64" Version="7.1.0" />
+    <PackageReference Include="Snappier" Version="1.3.1" />
+    <PackageReference Include="Vortice.D3DCompiler" Version="3.8.3" />
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
+    <PackageReference Include="Vortice.DXGI" Version="3.8.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Remote\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Shaders\**\*.hlsl" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Compila a UI React (ui/) e copia o resultado para a pasta "ui" ao lado do exe.
+       Use -p:SkipUi=true para pular quando estiver usando o servidor do Vite (VJ_UI_DEV=1). -->
+  <Target Name="BuildUi" BeforeTargets="Build" Condition="'$(SkipUi)' != 'true'">
+    <Exec Command="npm install" WorkingDirectory="$(UiDir)" Condition="!Exists('$(UiDir)node_modules')" />
+    <Exec Command="npm run build" WorkingDirectory="$(UiDir)" />
+  </Target>
+
+  <Target Name="CopyUi" AfterTargets="Build">
+    <ItemGroup>
+      <UiFiles Include="$(UiDir)dist\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(UiFiles)" DestinationFiles="@(UiFiles->'$(OutDir)ui\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- No dotnet publish, a UI compilada também vai para a pasta publicada. -->
+  <Target Name="CopyUiToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <UiPublishFiles Include="$(UiDir)dist\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(UiPublishFiles)" DestinationFiles="@(UiPublishFiles->'$(PublishDir)ui\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>
