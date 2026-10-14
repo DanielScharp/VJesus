@@ -6,7 +6,7 @@ Plano completo em `plano-recriacao.md`; análise do Resolume em `relatorio-resol
 
 ## Instalação
 
-**Para instalar em outro computador, veja [INSTALAR.md](INSTALAR.md)** (pacote pronto na página Releases, dependências e links).
+**Para instalar em outro computador, veja [INSTALAR.md](INSTALAR.md)** (pacote pronto em [Releases](https://github.com/DanielScharp/vjapp/releases/latest), dependências e links).
 
 ## Rodar (desenvolvimento)
 
