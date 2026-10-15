@@ -127,6 +127,14 @@ sealed class BibleStore
         if (File.Exists(VersionPath(id))) File.Delete(VersionPath(id));
     }
 
+    /// <summary>Guarda uma versão importada de arquivo junto com as baixadas.</summary>
+    public void Save(BibleText text)
+    {
+        Directory.CreateDirectory(Dir);
+        File.WriteAllText(VersionPath(text.Info.Id), JsonSerializer.Serialize(text));
+        _loaded[text.Info.Id] = text;
+    }
+
     /// <summary>Lista de todas as versões livres (baixa da internet; sem conexão usa a última lista guardada).</summary>
     public async Task<List<BibleVersionInfo>> CatalogAsync()
     {

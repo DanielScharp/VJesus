@@ -483,3 +483,5 @@ button.danger { color: #ff8a8a; }
 .catalog-list.scroll { overflow: auto; min-height: 200px; }
 .catalog-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 5px 6px; border-bottom: 1px solid var(--line); }
 .warn-box { margin: 8px 0; padding: 8px; border: 1px solid #c62828; border-radius: 6px; background: rgba(198, 40, 40, .12); font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+.import-box { border: 1px solid var(--accent); border-radius: 8px; padding: 8px 10px; margin: 6px 0 10px; }
+.import-box h3 { margin: 0 0 4px; color: var(--accent); }

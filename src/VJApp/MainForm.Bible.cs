@@ -51,6 +51,9 @@ sealed partial class MainForm
                     if (_liveBible != null) ShowBible(_liveBible, addHistory: false);
                 }
                 break;
+            case "bibleImport":
+                ImportBible(((string?)msg["name"])?.Trim(), ((string?)msg["shortName"])?.Trim());
+                break;
             case "bibleBooks":
                 SendBibleBooks((string?)msg["version"]);
                 break;
@@ -125,6 +128,37 @@ sealed partial class MainForm
             _bibleDownloading.Remove(id);
             SendBibleState();
         }
+    }
+
+    /// <summary>Bíblia de um arquivo que a pessoa já tem (ARA, NAA, NVI... com licença de uso).</summary>
+    void ImportBible(string? name, string? shortName)
+    {
+        using var dlg = new OpenFileDialog
+        {
+            Title = "Importar Bíblia (MySword, MyBible, Zefania, OSIS ou JSON)",
+            Filter = "Bíblias|*.mybible;*.bbl;*.sqlite3;*.sqlite;*.db;*.xml;*.osis;*.json|Todos os arquivos|*.*",
+        };
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        string file = dlg.FileName;
+        shortName = string.IsNullOrWhiteSpace(shortName) ? Path.GetFileNameWithoutExtension(file).Split('.')[0] : shortName;
+        name = string.IsNullOrWhiteSpace(name) ? shortName : name;
+        Send(new { type = "notice", message = $"Importando {Path.GetFileName(file)}…" });
+        Task.Run(() => BibleImport.Load(file, name, shortName!)).ContinueWith(t => BeginInvoke(() =>
+        {
+            if (t.Exception != null)
+            {
+                Send(new { type = "error", message = $"Não consegui importar: {t.Exception.GetBaseException().Message}" });
+                return;
+            }
+            var text = t.Result;
+            _bible.Save(text);
+            var s = _bible.Settings;
+            s.MainVersion ??= text.Info.Id;
+            if (!s.Compare.Contains(text.Info.Id)) s.Compare.Add(text.Info.Id);
+            _bible.SaveSettings();
+            Send(new { type = "notice", message = $"Bíblia importada: {text.Info.Name} ({text.Info.Books} livros, {text.Info.Verses} versículos)" });
+            SendBibleState();
+        }));
     }
 
     void SendBibleState()

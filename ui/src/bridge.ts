@@ -188,6 +188,7 @@ export type UiMessage =
   | { type: 'bibleHello' | 'bibleCatalog' }
   | { type: 'bibleDownload' | 'bibleDelete'; id: string }
   | { type: 'bibleSettings'; settings: BibleSettings }
+  | { type: 'bibleImport'; name: string; shortName: string }
   | { type: 'bibleBooks'; version: string }
   | { type: 'bibleChapter'; book: string; chapter: number; versions: string[] }
   | { type: 'bibleSearch'; version: string; query: string }

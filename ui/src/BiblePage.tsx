@@ -420,9 +420,9 @@ function Catalog({ catalog, error, installed, downloading, onClose }: {
         </div>
         <p className="meta">
           Todas as versões livres (domínio público ou licença aberta) da Free Use Bible API, em {languages.length} idiomas.
-          Baixe uma vez e use sem internet. Versões com direitos autorais, como ARA, ARC, NVI, NVT e NAA, não podem ser
-          distribuídas e por isso não aparecem aqui.
+          Baixe uma vez e use sem internet.
         </p>
+        <ImportBox />
         {installed.length > 0 && (
           <>
             <h3>Instaladas</h3>
@@ -464,6 +464,27 @@ function Catalog({ catalog, error, installed, downloading, onClose }: {
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  )
+}
+
+/** Versões com direitos autorais (ARA, ARC, NAA, NVI, NVT, NTLH...) entram por arquivo que a pessoa já tem. */
+function ImportBox() {
+  const [name, setName] = useState('')
+  const [short, setShort] = useState('')
+  return (
+    <div className="import-box">
+      <h3>Importar de arquivo (ARC, ARA, NAA, NVI, NVT, NTLH…)</h3>
+      <p className="meta">
+        Essas versões têm direitos autorais e não podem vir junto com o programa. Se você tem o arquivo da versão
+        (de um programa ou aplicativo em que ela foi adquirida ou licenciada), importe aqui. Formatos aceitos:
+        MySword (.bbl.mybible), MyBible (.SQLite3), Zefania XML, OSIS XML e JSON.
+      </p>
+      <div className="row">
+        <input value={short} onChange={(e) => setShort(e.target.value)} placeholder="Sigla (ex.: NAA)" style={{ width: 120 }} />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome (ex.: Nova Almeida Atualizada)" style={{ flex: 1 }} />
+        <button className="primary" onClick={() => send({ type: 'bibleImport', name, shortName: short })}>Escolher arquivo…</button>
       </div>
     </div>
   )
