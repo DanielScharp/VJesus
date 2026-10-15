@@ -16,7 +16,7 @@ sealed partial class MainForm : Form
 {
     const string UiHost = "app.vj";
     const string VideoFilter =
-        "Vídeos|*.mov;*.mp4;*.avi;*.mkv;*.webm;*.m4v;*.wmv|Todos os arquivos|*.*";
+        "Vídeos e imagens|*.mov;*.mp4;*.avi;*.mkv;*.webm;*.m4v;*.wmv;*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp|Todos os arquivos|*.*";
 
     static readonly JsonSerializerOptions Json = new()
     {
@@ -102,6 +102,9 @@ sealed partial class MainForm : Form
             core.Navigate($"https://{UiHost}/index.html");
         }
         _playbackTimer.Start();
+        StartAutosave();
+        EnsureDesktopShortcut();
+        RegisterProjectFileType();
         StartControl();
     }
 
@@ -118,6 +121,11 @@ sealed partial class MainForm : Form
         switch ((string?)msg["type"])
         {
             case "hello":
+                if (StartupProject is { } startup)
+                {
+                    StartupProject = null; // VJApp.exe "show.vjproj" (duplo clique no arquivo)
+                    BeginInvoke(() => OpenProjectFile(startup));
+                }
                 Send(new
                 {
                     type = "displays",

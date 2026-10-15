@@ -79,6 +79,11 @@ sealed unsafe class VideoPlayer : IDisposable
     double _clockBase;
     double _seekTarget = -1;
     int _loops;
+    bool _stillShown;
+
+    static readonly string[] StillExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".webp", ".tif", ".tiff"];
+    /// <summary>Imagem parada (png, jpg...): mostra um quadro e segura, sem loop.</summary>
+    public bool IsStill => !IsLive && StillExtensions.Contains(Path.GetExtension(FilePath).ToLowerInvariant());
 
     public bool Playing => _clock.IsRunning;
 
@@ -332,11 +337,13 @@ sealed unsafe class VideoPlayer : IDisposable
                     if (_codec != null) avcodec_flush_buffers(_codec);
                     if (_audioCodec != null) avcodec_flush_buffers(_audioCodec);
                     lock (_lock) { _loops = 0; _audioCount = 0; }
+                    _stillShown = false;
                     dropBefore = target - 0.5 / FrameRate;
                 }
 
                 int ret = av_read_frame(_fmt, pkt);
                 if (ret < 0 && IsLive) { Thread.Sleep(5); continue; } // câmera sem quadro novo ainda
+                if (ret == AVERROR_EOF && IsStill && _stillShown) { Thread.Sleep(20); continue; } // imagem parada: segura o quadro
                 if (ret == AVERROR_EOF)
                 {
                     // fim do arquivo: drena o decoder e volta para o início (loop)
@@ -347,6 +354,7 @@ sealed unsafe class VideoPlayer : IDisposable
                         avcodec_flush_buffers(_codec);
                     }
                     if (_audioCodec != null) avcodec_flush_buffers(_audioCodec);
+                    if (IsStill) { _stillShown = true; continue; }
                     av_seek_frame(_fmt, _stream, 0, AVSEEK_FLAG_BACKWARD);
                     lock (_lock) _loops++;
                     continue;

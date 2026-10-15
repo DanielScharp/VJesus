@@ -28,7 +28,12 @@ Já vem no Windows 11 e na maioria dos Windows 10 atualizados. Se a janela do VJ
 ### 3. Abra
 - Execute **`VJApp.exe`**. Na primeira vez o Windows pode mostrar *"O Windows protegeu o computador"* → **Mais informações** → **Executar assim mesmo** (o programa não é assinado digitalmente).
 - O **Firewall do Windows** vai perguntar sobre acesso à rede: marque **Redes privadas** e permita. Isso é necessário para o **controle pelo celular** (porta 8080), **OSC** (porta 7000) e **NDI**.
-- Dica: crie um atalho do `VJApp.exe` na área de trabalho.
+- Na primeira vez, o VJApp cria o atalho **VJApp** na área de trabalho e passa a abrir os arquivos `.vjproj` com duplo clique.
+
+### Projetos e salvamento automático
+- **Salvar** grava tudo num arquivo `.vjproj`: grade de clips, efeitos, transições, BPM, mapeamento, **letras** (músicas, cenas, estilos, transições e palavras animadas), **tela de retorno** e **ataques**.
+- Os **vídeos e imagens** usados são copiados para a pasta **`<nome do projeto> - mídia`**, ao lado do `.vjproj`. Para levar o show para outro computador, copie o arquivo e essa pasta juntos.
+- Com um projeto aberto, o VJApp **salva sozinho a cada minuto** quando algo mudou. Sem projeto aberto, guarda uma cópia em `%AppData%\VJApp\autosave`.
 
 Pronto. O .NET, o FFmpeg (vídeo, HAP, DXV) e o restante já estão dentro da pasta do programa.
 
@@ -61,7 +66,7 @@ Tudo o que você configura fica em **`%AppData%\VJApp`** (cole esse caminho na b
 | `ataques.json` | ataques e teclas de atalho |
 | `midi.json` | mapeamentos MIDI |
 
-Copie a pasta inteira para o mesmo lugar no outro computador. Os **vídeos** não ficam aí: copie-os também e, se mudarem de pasta, use **Abrir…** num projeto `.vjproj` ou arraste os vídeos de novo para a grade.
+Copie a pasta inteira para o mesmo lugar no outro computador. Os **vídeos** não ficam aí; o jeito mais simples de levar tudo é **Salvar** um projeto e copiar o `.vjproj` com a pasta `- mídia`.
 
 ### Atualizar para uma versão nova
 Baixe o zip novo da página **Releases** e extraia **por cima** da pasta antiga (com o VJApp fechado). Suas configurações em `%AppData%\VJApp` são mantidas.
