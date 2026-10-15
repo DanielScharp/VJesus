@@ -266,7 +266,7 @@ sealed partial class MainForm : Form
 
             case "setLiveClip":
                 _comp.Layers[L()].Clips[C()] = Clip.Live((string?)msg["kind"] == "spout" ? ClipKind.Spout : ClipKind.Camera, (string)msg["name"]!);
-                if (_comp.Layers[L()].Active == C()) ClearLayer(L());
+                if (_comp.ActiveHere(_comp.Layers[L()]) == C()) ClearLayer(L());
                 CompositionChanged();
                 break;
 
@@ -287,14 +287,14 @@ sealed partial class MainForm : Form
                 var a = _comp.Layers[fl].Clips[fc];
                 _comp.Layers[fl].Clips[fc] = _comp.Layers[tl].Clips[tc];
                 _comp.Layers[tl].Clips[tc] = a;
-                if (_comp.Layers[fl].Active == fc) ClearLayer(fl);
-                if (_comp.Layers[tl].Active == tc) ClearLayer(tl);
+                if (_comp.ActiveHere(_comp.Layers[fl]) == fc) ClearLayer(fl);
+                if (_comp.ActiveHere(_comp.Layers[tl]) == tc) ClearLayer(tl);
                 CompositionChanged();
                 break;
             }
 
             case "removeClip":
-                if (_comp.Layers[L()].Active == C()) ClearLayer(L());
+                if (_comp.ActiveHere(_comp.Layers[L()]) == C()) ClearLayer(L());
                 _comp.Layers[L()].Clips[C()] = null;
                 CompositionChanged();
                 break;
@@ -323,10 +323,15 @@ sealed partial class MainForm : Form
                 SendComposition();
                 break;
 
+            case var gridType when gridType is "columnAdd" or "columnRemove" or "deckAdd" or "deckSelect" or "deckRename" or "deckRemove" or "deckMove":
+                OnGridMessage(gridType, msg);
+                break;
+
             case "layerParams":
             {
                 var layer = _comp.Layers[L()];
                 if (msg["opacity"] is JsonNode o) layer.Opacity = (float)o;
+                if (msg["name"] is JsonNode nm && ((string?)nm)?.Trim() is { Length: > 0 } newName) { layer.Name = newName; SendComposition(withThumbs: false); }
                 if (msg["blend"] is JsonNode bl && Enum.TryParse<BlendMode>((string?)bl, true, out var mode)) layer.Blend = mode;
                 if (msg["transition"] is JsonNode tr && Enum.TryParse<TransitionType>((string?)tr, true, out var tt)) layer.Transition = tt;
                 if (msg["transitionSeconds"] is JsonNode ts) layer.TransitionSeconds = Math.Clamp((float)ts, 0, 10);
@@ -395,6 +400,8 @@ sealed partial class MainForm : Form
                 // abrir a câmera pode levar um segundo: abre fora da thread da UI
                 string device = clip.Path!;
                 _comp.Layers[layer].Active = column;
+                _comp.Layers[layer].ActiveDeck = _comp.Current.Id;
+                _comp.Layers[layer].PlayingClip = clip;
                 Task.Run(async () =>
                 {
                     // tenta de novo a cada 2 s enquanto o clip estiver ativo
@@ -402,14 +409,14 @@ sealed partial class MainForm : Form
                     bool warned = false;
                     while (true)
                     {
-                        bool stillActive = (bool)Invoke(() => _comp.Layers[layer].Active == column && _comp.Layers[layer].Clips[column] == clip);
+                        bool stillActive = (bool)Invoke(() => _comp.Layers[layer].PlayingClip == clip);
                         if (!stillActive) return;
                         try
                         {
                             var cam = new VideoPlayer(device, liveDevice: true);
                             BeginInvoke(() =>
                             {
-                                if (_comp.Layers[layer].Active != column) { cam.Dispose(); return; } // trocou de clip no meio
+                                if (_comp.Layers[layer].PlayingClip != clip) { cam.Dispose(); return; } // trocou de clip no meio
                                 _players[layer] = cam;
                                 _renderer!.SetLayerSource(layer, SourceKind.Video, cam);
                             });
@@ -448,6 +455,8 @@ sealed partial class MainForm : Form
                 break;
         }
         _comp.Layers[layer].Active = column;
+        _comp.Layers[layer].ActiveDeck = _comp.Current.Id;
+        _comp.Layers[layer].PlayingClip = clip;
     }
 
     void ClearLayer(int layer)
@@ -455,6 +464,8 @@ sealed partial class MainForm : Form
         _players[layer] = null;
         _renderer?.SetLayerSource(layer, null);
         _comp.Layers[layer].Active = -1;
+        _comp.Layers[layer].ActiveDeck = null;
+        _comp.Layers[layer].PlayingClip = null;
     }
 
     void ApplyLayerParams(int layer)
@@ -561,7 +572,9 @@ sealed partial class MainForm : Form
                 name = l.Name,
                 opacity = l.Opacity,
                 blend = l.Blend,
-                active = l.Active,
+                active = _comp.ActiveHere(l),
+                playing = l.PlayingClip,
+                playingDeck = l.ActiveDeck,
                 clips = l.Clips,
                 effects = l.Effects,
                 transition = l.Transition,
@@ -571,6 +584,8 @@ sealed partial class MainForm : Form
                 hasAudio = _players[_comp.Layers.IndexOf(l)]?.HasAudio ?? false,
             }),
             masterEffects = _comp.MasterEffects,
+            decks = _comp.Decks.Select(d => new { id = d.Id, name = d.Name }),
+            currentDeck = _comp.CurrentDeck,
         });
         BroadcastRemoteState();
         SendStage(); // a imagem do retorno depende do que está tocando

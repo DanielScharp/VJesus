@@ -142,7 +142,7 @@ export function BiblePage({ scenes, comp }: Props) {
   if (!settings) return <div className="meta">Conectando ao motor…</div>
 
   // a Bíblia sai pelo mesmo clip "Letras" da grade
-  const lyricsPlaying = !!comp?.layers.some((l) => l.active >= 0 && l.opacity > 0 && l.clips[l.active]?.kind === 'lyrics')
+  const lyricsPlaying = !!comp?.layers.some((l) => !!l.playing && l.opacity > 0 && l.playing.kind === 'lyrics')
   const lyricsCell = (() => {
     for (let l = (comp?.layers.length ?? 0) - 1; l >= 0; l--) {
       const c = comp!.layers[l].clips.findIndex((x) => x?.kind === 'lyrics')

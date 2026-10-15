@@ -97,7 +97,7 @@ sealed partial class MainForm
             SendAttacks();
             BroadcastRemoteState();
 
-            var missing = _comp.Layers.SelectMany(l => l.Clips)
+            var missing = AllClips(_comp)
                 .Where(c => c?.Kind == ClipKind.Video && !File.Exists(c.Path)).Select(c => c!.Name).Distinct().ToList();
             if (missing.Count > 0)
                 Send(new { type = "error", message = $"{missing.Count} vídeo(s)/imagem(ns) do projeto não foram encontrados: {string.Join(", ", missing.Take(5))}{(missing.Count > 5 ? "…" : "")}" });
@@ -137,7 +137,7 @@ sealed partial class MainForm
         try
         {
             var media = MediaDirFor(path);
-            var files = _comp.Layers.SelectMany(l => l.Clips)
+            var files = AllClips(_comp)
                 .Where(c => c?.Kind == ClipKind.Video && !string.IsNullOrEmpty(c.Path) && File.Exists(c.Path))
                 .Select(c => Path.GetFullPath(c!.Path!)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             var toCopy = files.Where(f => !IsInside(f, media) && !SameFileExists(f, Path.Combine(media, Path.GetFileName(f)))).ToList();
@@ -169,7 +169,7 @@ sealed partial class MainForm
     {
         var mediaName = Path.GetFileName(MediaDirFor(path));
         var comp = JsonSerializer.Deserialize<Composition>(JsonSerializer.Serialize(_comp, ProjectJson), ProjectJson)!;
-        foreach (var c in comp.Layers.SelectMany(l => l.Clips))
+        foreach (var c in AllClips(comp))
             if (c?.Kind == ClipKind.Video && !string.IsNullOrEmpty(c.Path))
                 c.Path = Path.Combine(mediaName, Path.GetFileName(c.Path)); // relativo ao .vjproj
         return SerializeProject(comp);
@@ -185,13 +185,20 @@ sealed partial class MainForm
     {
         var dir = Path.GetDirectoryName(Path.GetFullPath(projectFile))!;
         var media = MediaDirFor(projectFile);
-        foreach (var c in comp.Layers.SelectMany(l => l.Clips))
+        foreach (var c in AllClips(comp))
         {
             if (c?.Kind != ClipKind.Video || string.IsNullOrEmpty(c.Path)) continue;
             if (!Path.IsPathRooted(c.Path)) c.Path = Path.GetFullPath(Path.Combine(dir, c.Path));
             var local = Path.Combine(media, Path.GetFileName(c.Path));
             if (!File.Exists(c.Path) && File.Exists(local)) c.Path = local;
         }
+    }
+
+    /// <summary>Clips de todas as abas (a aba aberta também está nas layers).</summary>
+    static IEnumerable<Clip?> AllClips(Composition c)
+    {
+        c.StoreDeck();
+        return c.Layers.SelectMany(l => l.Clips).Concat(c.Decks.SelectMany(d => d.Clips).SelectMany(r => r)).Distinct();
     }
 
     static bool IsInside(string file, string dir) =>

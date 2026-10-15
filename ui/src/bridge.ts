@@ -20,7 +20,9 @@ export type Layer = {
   name: string
   opacity: number
   blend: BlendMode
-  active: number // coluna tocando, -1 = vazia
+  active: number // coluna tocando nesta aba, -1 = vazia (ou tocando de outra aba)
+  playing: Clip | null // clip tocando (de qualquer aba)
+  playingDeck: string | null // aba de onde ele veio
   clips: (Clip | null)[]
   effects: EffectInstance[]
   transition: Transition
@@ -30,7 +32,8 @@ export type Layer = {
   sendToStage: boolean
 }
 
-export type Composition = { columns: number; layers: Layer[]; masterEffects: EffectInstance[] }
+export type Deck = { id: string; name: string }
+export type Composition = { columns: number; layers: Layer[]; masterEffects: EffectInstance[]; decks: Deck[]; currentDeck: number }
 
 export type Pt = { x: number; y: number }
 export type Slice = {
@@ -181,7 +184,13 @@ export type UiMessage =
   | { type: 'triggerColumn'; column: number }
   | { type: 'clearLayer'; layer: number }
   | { type: 'clearAll' }
-  | { type: 'layerParams'; layer: number; opacity?: number; blend?: BlendMode; transition?: Transition; transitionSeconds?: number; volume?: number; sendToStage?: boolean }
+  | { type: 'columnAdd'; after?: number }
+  | { type: 'columnRemove'; column: number }
+  | { type: 'deckAdd'; name?: string }
+  | { type: 'deckSelect' | 'deckRemove'; index: number }
+  | { type: 'deckRename'; index: number; name: string }
+  | { type: 'deckMove'; index: number; direction: -1 | 1 }
+  | { type: 'layerParams'; layer: number; name?: string; opacity?: number; blend?: BlendMode; transition?: Transition; transitionSeconds?: number; volume?: number; sendToStage?: boolean }
   | { type: 'tap' | 'beatResync' }
   | { type: 'setBpm'; bpm: number }
   | { type: 'setMasterVolume'; volume: number }

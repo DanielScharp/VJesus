@@ -62,7 +62,7 @@ function App() {
       switch (msg.type) {
         case 'displays': setDisplays(msg.list); break
         case 'stats': setFps(msg.fps); break
-        case 'composition': setComp({ columns: msg.columns, layers: msg.layers, masterEffects: msg.masterEffects }); break
+        case 'composition': setComp({ columns: msg.columns, layers: msg.layers, masterEffects: msg.masterEffects, decks: msg.decks, currentDeck: msg.currentDeck }); break
         case 'effects': setLibrary(msg.list); break
         case 'thumb': setThumbs((t) => ({ ...t, [msg.path]: msg.data })); break
         case 'playback': setPlayback(msg.layers); setTempo({ bpm: msg.bpm, beat: msg.beat }); break

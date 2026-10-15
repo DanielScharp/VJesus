@@ -36,6 +36,22 @@ function ClipThumb({ clip, thumb }: { clip: Clip; thumb?: string }) {
 export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSelect, live, library, onToggleEffect }: Props) {
   const [menu, setMenu] = useState<Menu | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
+  const [colMenu, setColMenu] = useState<{ column: number; x: number; y: number } | null>(null)
+  const [deckMenu, setDeckMenu] = useState<{ index: number; x: number; y: number } | null>(null)
+  const [renaming, setRenaming] = useState<{ kind: 'deck' | 'layer'; index: number } | null>(null)
+
+  const finishRename = (value: string) => {
+    const name = value.trim()
+    if (renaming && name) {
+      if (renaming.kind === 'deck') send({ type: 'deckRename', index: renaming.index, name })
+      else send({ type: 'layerParams', layer: renaming.index, name })
+    }
+    setRenaming(null)
+  }
+  const renameKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') finishRename(e.currentTarget.value)
+    if (e.key === 'Escape') setRenaming(null)
+  }
 
   // layer de cima aparece primeiro, como no Resolume
   const order = comp.layers.map((_, i) => i).reverse()
@@ -54,17 +70,40 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
   }
 
   return (
-    <div className="grid" onClick={() => setMenu(null)}>
+    <div className="grid-wrap" onClick={() => { setMenu(null); setColMenu(null); setDeckMenu(null) }}>
+      {/* ---------- abas de clips ---------- */}
+      <div className="deck-tabs">
+        {comp.decks.map((d, i) => (
+          renaming?.kind === 'deck' && renaming.index === i ? (
+            <input key={d.id} className="rename" autoFocus defaultValue={d.name}
+              onBlur={(e) => finishRename(e.target.value)} onKeyDown={renameKeys} />
+          ) : (
+            <button key={d.id} className={`deck-tab ${i === comp.currentDeck ? 'active' : ''}`}
+              title="Clique para abrir · duplo clique para renomear · botão direito para mais opções"
+              onClick={() => i !== comp.currentDeck && send({ type: 'deckSelect', index: i })}
+              onDoubleClick={() => setRenaming({ kind: 'deck', index: i })}
+              onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setDeckMenu({ index: i, x: e.clientX, y: e.clientY }) }}>
+              {d.name}
+              {i !== comp.currentDeck && comp.layers.some((l) => l.playingDeck === d.id) && <span className="deck-live" title="Há clips desta aba tocando">●</span>}
+            </button>
+          )
+        ))}
+        <button className="small" title="Nova aba de clips" onClick={() => send({ type: 'deckAdd' })}>+ Aba</button>
+      </div>
+
+    <div className="grid">
       <div className="grid-row grid-head">
         <div className="layer-head">
           <button className="small" onClick={() => send({ type: 'clearAll' })}>Limpar tudo</button>
         </div>
         {columns.map((c) => (
-          <button key={c} className="column-head" title="Disparar a coluna inteira" data-address={`/composition/columns/${c + 1}/connect`}
-            onClick={() => send({ type: 'triggerColumn', column: c })}>
+          <button key={c} className="column-head" title="Disparar a coluna inteira · botão direito: inserir/remover coluna" data-address={`/composition/columns/${c + 1}/connect`}
+            onClick={() => send({ type: 'triggerColumn', column: c })}
+            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setColMenu({ column: c, x: e.clientX, y: e.clientY }) }}>
             {c + 1}
           </button>
         ))}
+        <button className="column-head column-add" title="Adicionar coluna" onClick={() => send({ type: 'columnAdd' })}>+</button>
       </div>
 
       {order.map((li) => {
@@ -72,10 +111,13 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
         const pb = playback[li]
         return (
           <div key={li} className="grid-row">
-            <div className={`layer-head ${layer.active >= 0 ? 'live' : ''} ${selected === li ? 'selected' : ''}`}
+            <div className={`layer-head ${layer.playing ? 'live' : ''} ${selected === li ? 'selected' : ''}`}
               title="Clique para editar os efeitos desta layer" onClick={() => onSelect(li)}>
               <div className="layer-title">
-                <span>{layer.name}{layer.hasAudio && layer.active >= 0 && <span title="Este clip tem áudio"> 🔊</span>}{layer.sendToStage && <em className="ret-badge" title="Aparece na tela de retorno quando tocar">RET</em>}</span>
+                {renaming?.kind === 'layer' && renaming.index === li
+                  ? <input className="rename" autoFocus defaultValue={layer.name} onClick={(e) => e.stopPropagation()}
+                      onBlur={(e) => finishRename(e.target.value)} onKeyDown={renameKeys} />
+                  : <span title="Duplo clique para renomear" onDoubleClick={(e) => { e.stopPropagation(); setRenaming({ kind: 'layer', index: li }) }}>{layer.name}{layer.hasAudio && layer.playing && <span title="Este clip tem áudio"> 🔊</span>}{layer.sendToStage && <em className="ret-badge" title="Aparece na tela de retorno quando tocar">RET</em>}</span>}
                 <button className="small" title="Parar a layer" data-address={`/composition/layers/${li + 1}/clear`} onClick={() => send({ type: 'clearLayer', layer: li })}>✕</button>
               </div>
               <input type="range" min={0} max={1} step={0.01} value={layer.opacity} title="Opacidade"
@@ -153,6 +195,33 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
               </>
             )
           })()}
+        </div>
+      )}
+    </div>
+
+      {colMenu && (
+        <div className="menu" style={{ left: colMenu.x, top: colMenu.y }} onClick={(e) => e.stopPropagation()}>
+          <div className="menu-label">Coluna {colMenu.column + 1}</div>
+          <button onClick={() => { send({ type: 'columnAdd', after: colMenu.column - 1 }); setColMenu(null) }}>Inserir coluna antes</button>
+          <button onClick={() => { send({ type: 'columnAdd', after: colMenu.column }); setColMenu(null) }}>Inserir coluna depois</button>
+          <button className="danger" disabled={comp.columns <= 1} onClick={() => {
+            const filled = comp.layers.some((l) => l.clips[colMenu.column])
+            if (!filled || window.confirm(`Remover a coluna ${colMenu.column + 1} e os clips dela?`)) send({ type: 'columnRemove', column: colMenu.column })
+            setColMenu(null)
+          }}>Remover coluna</button>
+        </div>
+      )}
+
+      {deckMenu && (
+        <div className="menu" style={{ left: deckMenu.x, top: deckMenu.y }} onClick={(e) => e.stopPropagation()}>
+          <div className="menu-label">{comp.decks[deckMenu.index]?.name}</div>
+          <button onClick={() => { setRenaming({ kind: 'deck', index: deckMenu.index }); setDeckMenu(null) }}>Renomear</button>
+          <button disabled={deckMenu.index === 0} onClick={() => { send({ type: 'deckMove', index: deckMenu.index, direction: -1 }); setDeckMenu(null) }}>Mover para a esquerda</button>
+          <button disabled={deckMenu.index === comp.decks.length - 1} onClick={() => { send({ type: 'deckMove', index: deckMenu.index, direction: 1 }); setDeckMenu(null) }}>Mover para a direita</button>
+          <button className="danger" disabled={comp.decks.length <= 1} onClick={() => {
+            if (window.confirm(`Apagar a aba "${comp.decks[deckMenu.index].name}" e os clips dela?`)) send({ type: 'deckRemove', index: deckMenu.index })
+            setDeckMenu(null)
+          }}>Apagar aba</button>
         </div>
       )}
     </div>

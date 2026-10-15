@@ -53,6 +53,19 @@ sealed class Layer
 
     /// <summary>Coluna do clip tocando agora (-1 = layer vazia). Não é salvo.</summary>
     [JsonIgnore] public int Active { get; set; } = -1;
+    /// <summary>Aba (deck) de onde veio o clip tocando, e o próprio clip (continua tocando ao trocar de aba).</summary>
+    [JsonIgnore] public string? ActiveDeck { get; set; }
+    [JsonIgnore] public Clip? PlayingClip { get; set; }
+}
+
+/// <summary>Uma aba de clips (como os decks do Resolume): a grade inteira de colunas de cada layer.</summary>
+sealed class Deck
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N")[..8];
+    public string Name { get; set; } = "Aba";
+    public int Columns { get; set; } = Composition.DefaultColumns;
+    /// <summary>Clips[layer][coluna].</summary>
+    public List<Clip?[]> Clips { get; set; } = [];
 }
 
 /// <summary>
@@ -69,6 +82,36 @@ sealed class Composition
     public List<EffectInstance> MasterEffects { get; set; } = [];
     public float Bpm { get; set; } = 120f;
     public float MasterVolume { get; set; } = 1f;
+    /// <summary>Abas de clips. A aba aberta fica em Columns e Layers[].Clips (cópia de trabalho).</summary>
+    public List<Deck> Decks { get; set; } = [];
+    public int CurrentDeck { get; set; }
+
+    public Deck Current => Decks[CurrentDeck];
+
+    /// <summary>Guarda a grade aberta na aba atual (antes de salvar ou trocar de aba).</summary>
+    public void StoreDeck()
+    {
+        if (Decks.Count == 0) return;
+        Current.Columns = Columns;
+        Current.Clips = [.. Layers.Select(l => l.Clips)];
+    }
+
+    /// <summary>Abre a aba <paramref name="index"/> (os clips tocando continuam tocando).</summary>
+    public void LoadDeck(int index)
+    {
+        CurrentDeck = Math.Clamp(index, 0, Decks.Count - 1);
+        var d = Current;
+        Columns = Math.Max(1, d.Columns);
+        for (int i = 0; i < Layers.Count; i++)
+        {
+            var row = i < d.Clips.Count ? d.Clips[i] : [];
+            Layers[i].Clips = row.Length == Columns ? row : [.. row.Take(Columns), .. new Clip?[Math.Max(0, Columns - row.Length)]];
+        }
+        StoreDeck();
+    }
+
+    /// <summary>Coluna tocando nesta layer, se o clip é da aba aberta (senão -1).</summary>
+    public int ActiveHere(Layer l) => Decks.Count > 0 && l.ActiveDeck == Current.Id ? l.Active : -1;
 
     static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -80,7 +123,7 @@ sealed class Composition
         var c = new Composition();
         for (int i = 0; i < DefaultLayers; i++)
             c.Layers.Add(new Layer { Name = $"Layer {i + 1}", Clips = new Clip?[DefaultColumns] });
-        return c;
+        return c.Normalize();
     }
 
     public static Composition LoadOrDefault(string path)
@@ -108,11 +151,14 @@ sealed class Composition
             if (l.Clips.Length != Columns) l.Clips = [.. l.Clips.Take(Columns), .. new Clip?[Math.Max(0, Columns - l.Clips.Length)]];
             l.Active = -1;
         }
+        if (Decks.Count == 0) Decks.Add(new Deck { Name = "Principal", Columns = Columns, Clips = [.. Layers.Select(l => l.Clips)] });
+        LoadDeck(CurrentDeck);
         return this;
     }
 
     public void Save(string path)
     {
+        StoreDeck();
         Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
         File.WriteAllText(path, JsonSerializer.Serialize(this, JsonOptions));
     }

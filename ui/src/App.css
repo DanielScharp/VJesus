@@ -516,3 +516,15 @@ button.magnet.active { background: #1e88e5; border-color: #1e88e5; color: #fff; 
 .led-parts tr.active td { background: rgba(255, 176, 32, .1); }
 .led-parts .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
 .led-parts td:first-child { display: flex; align-items: center; }
+
+/* ---------- abas de clips ---------- */
+.grid-wrap { display: flex; flex-direction: column; gap: 6px; }
+.deck-tabs { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.deck-tab { padding: 5px 14px; border-radius: 6px 6px 0 0; }
+.deck-tab.active { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
+.deck-live { color: #e53935; margin-left: 5px; font-size: 10px; }
+input.rename { font-size: 13px; padding: 3px 6px; width: 140px; }
+.column-add { opacity: .7; }
+.grid { overflow-x: auto; }
+.menu button:disabled { opacity: .4; }
+.grid .layer-head { position: sticky; left: 0; z-index: 2; }

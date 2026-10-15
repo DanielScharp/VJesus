@@ -28,14 +28,14 @@ export function MonitorsBar({ preview, stagePreview, stage, lyrics, comp, displa
   // o que está tocando agora em cada layer (de cima para baixo)
   const playing = comp
     ? comp.layers.map((l, i) => ({ l, i })).reverse()
-      .filter(({ l }) => l.active >= 0 && l.opacity > 0)
-      .map(({ l }) => `${l.name}: ${l.clips[l.active]?.name ?? '?'}${l.opacity < 1 ? ` (${Math.round(l.opacity * 100)}%)` : ''}`)
+      .filter(({ l }) => !!l.playing && l.opacity > 0)
+      .map(({ l }) => `${l.name}: ${l.playing?.name ?? '?'}${l.opacity < 1 ? ` (${Math.round(l.opacity * 100)}%)` : ''}`)
     : []
   const lyricsStatus = lyrics.blank ? 'Letra: tela em branco' : lyrics.text ? `Letra: “${stripTags(lyrics.text).split('\n')[0]}”` : 'Letra: nada projetado'
 
   // há letra projetada mas nenhuma layer está tocando o clip Letras (ou está com opacidade 0)
   const lyricsOffAir = !!lyrics.text && !lyrics.blank && !!comp &&
-    !comp.layers.some((l) => l.active >= 0 && l.opacity > 0 && l.clips[l.active]?.kind === 'lyrics')
+    !comp.layers.some((l) => !!l.playing && l.opacity > 0 && l.playing.kind === 'lyrics')
 
   const stageDisplay = stage ? displays[stage.config.display] : undefined
   const stageAspect = stageDisplay ? stageDisplay.width / stageDisplay.height : 16 / 9
