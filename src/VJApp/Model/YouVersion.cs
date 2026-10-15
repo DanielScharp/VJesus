@@ -56,7 +56,7 @@ sealed class YouVersionClient
                 System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden => "a YouVersion recusou a chave (confira a chave e as permissões do app no portal)",
                 System.Net.HttpStatusCode.NotFound => "não encontrado na YouVersion",
                 (System.Net.HttpStatusCode)429 => "muitas consultas seguidas à YouVersion; tente de novo em instantes",
-                _ => $"YouVersion respondeu {(int)res.StatusCode}",
+                _ => $"YouVersion respondeu {(int)res.StatusCode}{(body.Length > 0 && body.Length < 300 ? ": " + body : "")}",
             };
             throw new HttpRequestException(msg);
         }
@@ -78,7 +78,7 @@ sealed class YouVersionClient
         string? token = null;
         for (int page = 0; page < 20; page++)
         {
-            var q = $"/v1/bibles?language_ranges[]={Uri.EscapeDataString(language)}&page_size=100" + (token != null ? $"&page_token={Uri.EscapeDataString(token)}" : "");
+            var q = $"/v1/bibles?language_ranges[]={Uri.EscapeDataString(language)}&page_size=99" + (token != null ? $"&page_token={Uri.EscapeDataString(token)}" : "");
             using var doc = await GetAsync(q);
             var root = doc.RootElement;
             if (root.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
