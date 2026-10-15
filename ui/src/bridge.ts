@@ -43,10 +43,17 @@ export type Slice = {
   rows: number
   points: Pt[]
   softEdge: { left: number; right: number; top: number; bottom: number; gamma: number }
+  /** null = composição inteira; id de grupo; ou "layer:N" (uma layer só) */
+  source?: string | null
+  /** criado pelo mapa de painéis de LED */
+  ledPart?: string | null
 }
 export type Mask = { id: string; name: string; enabled: boolean; points: Pt[] }
-export type OutputScreen = { id: string; name: string; display: number; fullscreen: boolean; slices: Slice[]; masks: Mask[] }
-export type MappingSetup = { screens: OutputScreen[] }
+export type OutputScreen = { id: string; name: string; display: number; fullscreen: boolean; slices: Slice[]; masks: Mask[]; led?: LedWall | null }
+export type LayerGroup = { id: string; name: string; layers: number[] }
+export type LedPart = { id: string; name: string; x: number; y: number; w: number; h: number; mapX: number; mapY: number; rotation: number; source: string | null }
+export type LedWall = { layout: 'separado' | 'unido'; source: string | null; parts: LedPart[] }
+export type MappingSetup = { screens: OutputScreen[]; groups?: LayerGroup[] }
 
 export type ControlInfo = {
   oscPort: number | null

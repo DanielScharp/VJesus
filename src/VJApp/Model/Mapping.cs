@@ -45,6 +45,10 @@ sealed class Slice
     public int Rows { get; set; } = 2;
     public List<Pt> Points { get; set; } = DefaultPoints(2, 2);
     public SoftEdge SoftEdge { get; set; } = new();
+    /// <summary>De onde vem a imagem: null = composição inteira; senão o Id de um grupo de layers.</summary>
+    public string? Source { get; set; }
+    /// <summary>Criado pelo mapa de painéis de LED (é refeito quando o mapa muda).</summary>
+    public string? LedPart { get; set; }
 
     public static List<Pt> DefaultPoints(int cols, int rows, float margin = 0)
     {
@@ -76,11 +80,48 @@ sealed class OutputScreen
     public bool Fullscreen { get; set; }
     public List<Slice> Slices { get; set; } = [];
     public List<Mask> Masks { get; set; } = [];
+    /// <summary>Mapa de painéis de LED desta saída (null = não usa).</summary>
+    public LedWall? Led { get; set; }
+}
+
+/// <summary>Grupo de layers composto à parte (ex.: "Laterais" = layers 1 e 2), para mandar a um slice ou painel.</summary>
+sealed class LayerGroup
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N")[..8];
+    public string Name { get; set; } = "Grupo";
+    public List<int> Layers { get; set; } = [];
+}
+
+/// <summary>
+/// Painel de LED dividido em partes que saem pela mesma processadora. Cada parte tem a área que ocupa
+/// na saída (pixels do mapa da processadora) e a posição no mapa físico (como está montado na igreja).
+/// </summary>
+sealed class LedWall
+{
+    /// <summary>"separado": cada parte com sua fonte; "unido": uma imagem só espalhada pelas partes conforme o mapa físico.</summary>
+    public string Layout { get; set; } = "separado";
+    public string? Source { get; set; }
+    public List<LedPart> Parts { get; set; } = [];
+}
+
+sealed class LedPart
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N")[..8];
+    public string Name { get; set; } = "Parte";
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float W { get; set; } = 640;
+    public float H { get; set; } = 360;
+    public float MapX { get; set; }
+    public float MapY { get; set; }
+    public int Rotation { get; set; }
+    public string? Source { get; set; }
 }
 
 sealed class MappingSetup
 {
     public List<OutputScreen> Screens { get; set; } = [];
+    public List<LayerGroup> Groups { get; set; } = [];
 
     static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 

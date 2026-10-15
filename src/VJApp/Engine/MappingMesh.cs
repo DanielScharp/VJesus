@@ -13,10 +13,18 @@ static class MappingMesh
     public const int FloatsPerVertex = 12;
     const int Tess = 24; // subdivisões por eixo de cada slice
 
-    public static float[] BuildSlices(OutputScreen screen)
+    /// <summary>Triângulos dos slices separados pela fonte (-1 = composição inteira; n = grupo n de layers).</summary>
+    public static List<(int Source, float[] Vertices)> BuildSliceBatches(OutputScreen screen, Func<string?, int> source) =>
+        screen.Slices
+            .GroupBy(s => source(s.Source))
+            .Select(g => (g.Key, BuildSlices(g)))
+            .Where(b => b.Item2.Length > 0)
+            .ToList();
+
+    public static float[] BuildSlices(IEnumerable<Slice> slices)
     {
         var v = new List<float>();
-        foreach (var slice in screen.Slices)
+        foreach (var slice in slices)
         {
             if (!slice.Enabled || !slice.IsValid() || slice.Opacity <= 0) continue;
 

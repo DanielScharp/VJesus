@@ -50,6 +50,22 @@ sealed partial class MainForm
         }
 
         var specs = new List<OutputSpec>();
+        // fontes dos slices: grupos de layers do mapeamento e "layer:N" (uma layer só, vira um grupo implícito)
+        var groupIds = _mapping.Groups.Select(g => g.Id).ToList();
+        var groupLayers = _mapping.Groups.Select(g => g.Layers.ToArray()).ToList();
+        int Source(string? id)
+        {
+            if (id == null) return -1;
+            int i = groupIds.IndexOf(id);
+            if (i >= 0) return i;
+            if (id.StartsWith("layer:") && int.TryParse(id[6..], out int n))
+            {
+                groupIds.Add(id);
+                groupLayers.Add([n]);
+                return groupLayers.Count - 1;
+            }
+            return -1;
+        }
         int index = 0;
         foreach (var screen in _mapping.Screens)
         {
@@ -74,9 +90,10 @@ sealed partial class MainForm
             }
 
             specs.Add(new OutputSpec(win.Handle, win.ClientSize.Width, win.ClientSize.Height,
-                MappingMesh.BuildSlices(screen), MappingMesh.BuildMasks(screen)));
+                MappingMesh.BuildSliceBatches(screen, Source), MappingMesh.BuildMasks(screen)));
             index++;
         }
+        _renderer.SetGroups([.. groupLayers]);
         _renderer.SetOutputs(specs);
     }
 

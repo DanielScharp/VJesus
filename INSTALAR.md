@@ -40,6 +40,11 @@ Pronto. O .NET, o FFmpeg (vídeo, HAP, DXV) e o restante já estão dentro da pa
 ### Bíblia
 Na aba **Bíblia**, clique em **Versões…** e baixe as que quiser (precisa de internet só nessa hora). As versões ficam em `%AppData%\VJApp\biblia` e funcionam sem internet. A lista vem da Free Use Bible API (bible.helloao.org) e tem só versões livres. ARC, ARA, NAA, NVI, NVT, NTLH e outras com direitos autorais entram por **Versões… → Importar de arquivo**, a partir de um arquivo que você já tenha licenciado (MySword .bbl.mybible, MyBible .SQLite3, Zefania XML, OSIS XML ou JSON).
 
+### Mapeamento e painéis de LED
+- **Ímã** (botão 🧲 na aba Mapeamento): ao arrastar, as pontas grudam nas bordas e cantos da tela e nos outros slices e máscaras. Segure **Alt** para inverter na hora.
+- **Painel de LED**: escolha um modelo (ex.: 2 laterais verticais + centro), informe os pixels de cada parte como estão na processadora e arraste as partes no mapa do palco. Em **Separados** cada parte recebe uma layer, um grupo de layers ou a composição; em **Unido** uma imagem só atravessa todas as partes conforme o mapa.
+- **Grupos de layers**: junte layers (ex.: "Centro" = layers 2 e 3) para mandar a um slice ou parte do LED.
+
 ### 4. Opcionais (instale só o que for usar)
 
 | Para quê | O que instalar | Link |

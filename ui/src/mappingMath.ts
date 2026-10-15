@@ -94,3 +94,65 @@ export function warpOutline(slice: Slice, samples = 24): V[] {
   for (let i = samples; i > 0; i--) out.push(ev(0, i / samples))
   return out
 }
+
+// ---------------- ímã (snap) ----------------
+
+export type Seg = [Pt, Pt]
+export type SnapTargets = { points: Pt[]; segs: Seg[] }
+
+/**
+ * Gruda um ponto no alvo mais próximo: primeiro em pontos (cantos, vértices de outros slices/máscaras),
+ * depois em linhas (bordas da tela e contornos). Distâncias medidas em pixels do editor (sx, sy = escala).
+ */
+export function snapPoint(p: Pt, t: SnapTargets, radius: number, sx: number, sy: number): { p: Pt; hit: Pt | null } {
+  const dist = (a: Pt, b: Pt) => Math.hypot((a.x - b.x) * sx, (a.y - b.y) * sy)
+  let best: Pt | null = null, bestD = radius
+  for (const q of t.points) { const d = dist(p, q); if (d < bestD) { bestD = d; best = q } }
+  if (best) return { p: { ...best }, hit: best }
+  for (const [a, b] of t.segs) {
+    const ax = a.x * sx, ay = a.y * sy, bx = b.x * sx, by = b.y * sy, px = p.x * sx, py = p.y * sy
+    const vx = bx - ax, vy = by - ay, len = vx * vx + vy * vy
+    if (len < 1e-9) continue
+    const k = Math.min(1, Math.max(0, ((px - ax) * vx + (py - ay) * vy) / len))
+    const q = { x: (ax + k * vx) / sx, y: (ay + k * vy) / sy }
+    const d = dist(p, q)
+    if (d < bestD) { bestD = d; best = q }
+  }
+  return best ? { p: best, hit: best } : { p, hit: null }
+}
+
+/** Ao mover uma forma inteira: o deslocamento que gruda o canto mais próximo de um alvo. */
+export function snapShape(corners: Pt[], t: SnapTargets, radius: number, sx: number, sy: number): { d: Pt; hit: Pt | null } {
+  let best: { d: Pt; hit: Pt } | null = null, bestD = radius
+  for (const c of corners) {
+    const r = snapPoint(c, t, bestD, sx, sy)
+    if (!r.hit) continue
+    const dd = Math.hypot((r.p.x - c.x) * sx, (r.p.y - c.y) * sy)
+    if (dd < bestD) { bestD = dd; best = { d: { x: r.p.x - c.x, y: r.p.y - c.y }, hit: r.p } }
+  }
+  return best ?? { d: { x: 0, y: 0 }, hit: null }
+}
+
+/** Gruda um valor na linha mais próxima (para retângulos: bordas de entrada e mapa de painéis). */
+export function snapValue(v: number, lines: number[], radius: number): number | null {
+  let best: number | null = null, bestD = radius
+  for (const l of lines) { const d = Math.abs(v - l); if (d < bestD) { bestD = d; best = l } }
+  return best
+}
+
+export const SCREEN_TARGETS: SnapTargets = {
+  points: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 0.5, y: 0 }, { x: 0.5, y: 1 }, { x: 0, y: 0.5 }, { x: 1, y: 0.5 }, { x: 0.5, y: 0.5 }],
+  segs: [[{ x: 0, y: 0 }, { x: 1, y: 0 }], [{ x: 1, y: 0 }, { x: 1, y: 1 }], [{ x: 1, y: 1 }, { x: 0, y: 1 }], [{ x: 0, y: 1 }, { x: 0, y: 0 }]],
+}
+
+/** Pontos e linhas de contorno de uma forma (slice ou máscara) para servir de alvo ao ímã. */
+export function shapeTargets(points: Pt[], closed: Pt[]): SnapTargets {
+  const segs: Seg[] = closed.map((p, i) => [p, closed[(i + 1) % closed.length]])
+  return { points, segs }
+}
+
+/** Cantos do contorno de um slice (para mover inteiro e para servir de alvo). */
+export function sliceCorners(s: Slice): Pt[] {
+  const c = s.cols, r = s.rows
+  return [s.points[0], s.points[c - 1], s.points[(r - 1) * c], s.points[r * c - 1]]
+}

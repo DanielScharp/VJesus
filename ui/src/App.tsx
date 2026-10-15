@@ -167,7 +167,7 @@ function App() {
       {tab === 'bible' && <BiblePage scenes={scenes} comp={comp} />}
 
       {tab === 'mapping' && (mapping
-        ? <MappingEditor mapping={mapping} onChange={setMapping} displays={displays} preview={preview}
+        ? <MappingEditor mapping={mapping} onChange={setMapping} displays={displays} preview={preview} comp={comp}
             testCard={testCard} onTestCard={setTestCard} presets={presets} />
         : <div className="meta">Conectando ao motor…</div>)}
 

@@ -6,7 +6,7 @@ using Vortice.Mathematics;
 namespace VJApp.Engine;
 
 /// <summary>O que a UI pede para uma tela de saída: a janela e os triângulos de slices e máscaras.</summary>
-sealed record OutputSpec(IntPtr Hwnd, int Width, int Height, float[] SliceVertices, float[] MaskVertices);
+sealed record OutputSpec(IntPtr Hwnd, int Width, int Height, List<(int Source, float[] Vertices)> SliceBatches, float[] MaskVertices);
 
 /// <summary>Uma tela de saída do lado do motor (só usada pelo render thread).</summary>
 sealed class OutputTarget(IntPtr hwnd) : IDisposable
@@ -15,12 +15,20 @@ sealed class OutputTarget(IntPtr hwnd) : IDisposable
     public IDXGISwapChain1? SwapChain;
     public ID3D11RenderTargetView? Rtv;
     public int Width, Height;
-    public ID3D11Buffer? SliceVb, MaskVb;
-    public int SliceCount, MaskCount;
+    /// <summary>Slices agrupados pela fonte (-1 = composição inteira; n = grupo de layers n).</summary>
+    public readonly List<(int Source, ID3D11Buffer Vb, int Count)> SliceBatches = [];
+    public ID3D11Buffer? MaskVb;
+    public int MaskCount;
+
+    public void ClearBatches()
+    {
+        foreach (var b in SliceBatches) b.Vb.Dispose();
+        SliceBatches.Clear();
+    }
 
     public void Dispose()
     {
-        SliceVb?.Dispose(); MaskVb?.Dispose();
+        ClearBatches(); MaskVb?.Dispose();
         Rtv?.Dispose(); SwapChain?.Dispose();
     }
 }
@@ -112,7 +120,13 @@ partial class Renderer
                     CreateSwapChain(o, spec.Width, spec.Height);
                     _outputs.Add(o);
                 }
-                UploadVertices(ref o.SliceVb, ref o.SliceCount, spec.SliceVertices);
+                o.ClearBatches();
+                foreach (var (source, verts) in spec.SliceBatches)
+                {
+                    ID3D11Buffer? vb = null; int count = 0;
+                    UploadVertices(ref vb, ref count, verts);
+                    if (vb != null) o.SliceBatches.Add((source, vb, count));
+                }
                 UploadVertices(ref o.MaskVb, ref o.MaskCount, spec.MaskVertices);
             }
         }
@@ -165,7 +179,7 @@ partial class Renderer
     }
 
     /// <summary>Desenha os slices e máscaras de cada tela e apresenta.</summary>
-    void RenderOutputs(RenderTexture comp, float time)
+    void RenderOutputs(RenderTexture comp, Dictionary<int, RenderTexture> groups, float time)
     {
         var ctx = _ctx!;
         bool first = true;
@@ -185,12 +199,14 @@ partial class Renderer
             ctx.PSSetSampler(0, _sampler);
 
             uint stride = MappingMesh.FloatsPerVertex * sizeof(float);
-            if (o.SliceVb != null)
+            foreach (var (source, vb, count) in o.SliceBatches)
             {
-                ctx.IASetVertexBuffer(0, o.SliceVb, stride);
+                var tex = source < 0 ? comp : groups.GetValueOrDefault(source);
+                if (tex == null) continue;
+                ctx.IASetVertexBuffer(0, vb, stride);
                 ctx.PSSetShader(_psSlice);
-                ctx.PSSetShaderResource(0, comp.Srv);
-                ctx.Draw((uint)o.SliceCount, 0);
+                ctx.PSSetShaderResource(0, tex.Srv);
+                ctx.Draw((uint)count, 0);
             }
             if (o.MaskVb != null)
             {

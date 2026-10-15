@@ -455,7 +455,7 @@ sealed partial class Renderer : IDisposable
             SendStreams(_comp[result]!);
             UpdatePreview(_comp[result]!, time);
             UpdateStageFeed(_comp[result]!, time);
-            RenderOutputs(_comp[result]!, time);
+            RenderOutputs(_comp[result]!, ComposeGroups(time), time);
 
             frames++;
             if (fpsClock.ElapsedMilliseconds >= 1000)
@@ -489,6 +489,7 @@ sealed partial class Renderer : IDisposable
         _psBlend?.Dispose();
         _psTransition?.Dispose();
         DisposeStreams();
+        DisposeGroups();
         DisposeOutputs();
         DisposeAttacks();
         DisposeLyrics();

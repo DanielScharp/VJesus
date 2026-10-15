@@ -485,3 +485,34 @@ button.danger { color: #ff8a8a; }
 .warn-box { margin: 8px 0; padding: 8px; border: 1px solid #c62828; border-radius: 6px; background: rgba(198, 40, 40, .12); font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
 .import-box { border: 1px solid var(--accent); border-radius: 8px; padding: 8px 10px; margin: 6px 0 10px; }
 .import-box h3 { margin: 0 0 4px; color: var(--accent); }
+
+/* ---------- ímã e painel de LED ---------- */
+button.magnet.active { background: #1e88e5; border-color: #1e88e5; color: #fff; }
+.snap-hint { fill: none; stroke: #4fc3f7; stroke-width: 3; pointer-events: none; }
+.in-rect.other-src rect { stroke-dasharray: 8 5; }
+.out-slice.led .fill { cursor: default; }
+.item-src { color: var(--muted); font-size: 11px; }
+.groups { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 8px; }
+.groups h3 { margin: 4px 0; font-size: 12px; text-transform: uppercase; color: var(--muted); }
+.groups .group { border: 1px solid var(--line); border-radius: 6px; padding: 6px; margin-bottom: 6px; }
+.groups .group .name { flex: 1; min-width: 0; }
+.groups label.check { font-size: 12px; margin: 2px 0; gap: 5px; }
+.led-map { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin: 10px 0; }
+.led-map h2 { margin: 0 0 6px; font-size: 14px; }
+.led-map h3 { margin: 6px 0; font-size: 12px; text-transform: uppercase; color: var(--muted); }
+.led-head { align-items: center; gap: 12px; flex-wrap: wrap; }
+.led-head label.check { margin: 0; gap: 4px; }
+.led-body { display: grid; grid-template-columns: minmax(300px, 1fr) minmax(420px, 1.2fr); gap: 14px; }
+.led-phys { width: 100%; max-height: 300px; }
+.led-part rect { stroke-width: 6; vector-effect: non-scaling-stroke; cursor: move; }
+.led-part.active rect { stroke-width: 3; stroke-dasharray: 6 3; }
+.led-part text { fill: #fff; pointer-events: none; font-weight: 600; }
+.led-part text.sub { fill: #ddd; font-weight: 400; }
+.led-parts table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.led-parts th { text-align: left; color: var(--muted); font-weight: 500; padding: 2px; }
+.led-parts td { padding: 2px; }
+.led-parts td input { width: 100%; box-sizing: border-box; }
+.led-parts td input[type=number] { width: 62px; }
+.led-parts tr.active td { background: rgba(255, 176, 32, .1); }
+.led-parts .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+.led-parts td:first-child { display: flex; align-items: center; }
