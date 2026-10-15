@@ -74,6 +74,8 @@ Aba **Letras**: biblioteca de músicas com busca (título, artista ou trecho, se
   ```
 
   Ordem de prioridade: estilo padrão → cena da música → cena do slide → ajustes do slide → formatação do trecho.
+* **Transição do slide** (no painel Aparência, numa cena ou só num slide pelo ✎): fade, corte, subir, descer, entrar pela direita/esquerda, zoom, aproximar, **palavra por palavra**, **linha por linha** e **máquina de escrever**, com duração. No texto: `{estilo: transicao=palavra; duracao=1200}`.
+* **Palavra animada**: selecione o trecho no editor do slide → escolha a animação (balançar, flutuar, pulsar, onda, brilhar, tremer, piscar, girar), força e velocidade → **Animar trecho**. No texto: `<anim balancar 1 0.6>palavra</anim>`. As animações rodam na GPU (a letra é desenhada uma vez e as palavras são movidas a cada quadro), e aparecem animadas também na prévia dos slides.
 * Biblioteca, cenas e estilo ficam em `%AppData%\VJApp\letras.json`.
 
 ## Tela de retorno (músicos)

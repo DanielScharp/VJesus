@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { send, type Composition, type LyricScene, type LyricStyle, type LyricsState, type Song } from './bridge'
-import { normalize, parseRich, replaceSlide, splitSlides, stripTags, type Slide } from './lyrics'
+import { normalize, replaceSlide, SLIDE_TRANSITIONS, splitSlides, stripTags, WORD_ANIMS, type Slide } from './lyrics'
+import { RichText } from './RichText'
 
 type Props = {
   songs: Song[]
@@ -16,20 +17,7 @@ type Props = {
 
 const newId = () => Math.random().toString(16).slice(2, 12)
 
-/** Texto com as marcações de trecho desenhado como na tela (prévia dos slides). */
-function RichText({ text }: { text: string }) {
-  return (
-    <>
-      {parseRich(text).map((r, i) => (
-        <span key={i} style={{
-          fontWeight: r.bold ? 700 : undefined, fontStyle: r.italic ? 'italic' : undefined,
-          textDecoration: r.underline ? 'underline' : undefined, color: r.color ?? undefined,
-          fontSize: r.scale !== 1 ? `${r.scale}em` : undefined,
-        }}>{r.text}</span>
-      ))}
-    </>
-  )
-}
+
 
 /**
  * Aba Letras (no estilo do Holyrics): biblioteca, editor, slides clicáveis, cenas (estilos com nome)
@@ -165,7 +153,7 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
                       <button className="small edit" title="Editar só este slide"
                         onClick={(e) => { e.stopPropagation(); setEditingSlide(i) }}>✎</button>
                     </span>
-                    <span className="slide-text"><RichText text={sl.text} /></span>
+                    <span className="slide-text"><RichText text={sl.text} animate /></span>
                   </div>
                 )
               })}
@@ -300,7 +288,12 @@ function StylePanel({ style, fonts, onChange }: { style: LyricStyle; fonts: stri
           <input type="range" min={0} max={1} step={0.01} value={style.boxOpacity} onChange={(e) => onChange({ boxOpacity: Number(e.target.value) })} />
         </label>
       )}
-      <label>Fade <output>{style.fadeMs} ms</output>
+      <label>Transição do slide <output />
+        <select value={style.transition ?? 'fade'} onChange={(e) => onChange({ transition: e.target.value })}>
+          {SLIDE_TRANSITIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+      </label>
+      <label>Duração <output>{style.fadeMs} ms</output>
         <input type="range" min={0} max={1500} step={50} value={style.fadeMs} onChange={(e) => onChange({ fadeMs: Number(e.target.value) })} />
       </label>
     </>
@@ -339,6 +332,9 @@ function SlideEditor({ index, slide, scenes, songSceneName, onSave, onCancel }: 
 }) {
   const [draft, setDraft] = useState<Slide>(slide)
   const [color, setColor] = useState('#FFCC00')
+  const [animType, setAnimType] = useState('balancar')
+  const [animIntensity, setAnimIntensity] = useState(1)
+  const [animSpeed, setAnimSpeed] = useState(0.6)
   const area = useRef<HTMLTextAreaElement>(null)
   const o = draft.overrides
   const setOverride = (k: string, v: string) => {
@@ -375,6 +371,13 @@ function SlideEditor({ index, slide, scenes, songSceneName, onSave, onCancel }: 
           {SIZES.map(([v, l]) => <option key={v} value={v}>{l} ({v})</option>)}
         </select>
         <span className="sep" />
+        <select value={animType} onChange={(e) => setAnimType(e.target.value)} title="Animação do trecho">
+          {WORD_ANIMS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+        <label className="mini">força <input type="range" min={0.2} max={3} step={0.1} value={animIntensity} onChange={(e) => setAnimIntensity(Number(e.target.value))} /></label>
+        <label className="mini">velocidade <input type="range" min={0.2} max={3} step={0.1} value={animSpeed} onChange={(e) => setAnimSpeed(Number(e.target.value))} /></label>
+        <button className="small" onClick={() => wrap(`<anim ${animType} ${animIntensity} ${animSpeed}>`, '</anim>')}>Animar trecho</button>
+        <span className="sep" />
         <button className="small" title="Tira a formatação do trecho selecionado (ou do slide todo)" onClick={() => {
           const el = area.current
           if (!el) return
@@ -386,7 +389,7 @@ function SlideEditor({ index, slide, scenes, songSceneName, onSave, onCancel }: 
 
       <textarea ref={area} rows={6} value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })} />
 
-      <div className="slide-preview"><RichText text={draft.text} /></div>
+      <div className="slide-preview"><RichText text={draft.text} animate /></div>
 
       <div className="slide-options">
         <label>Seção <output />
@@ -399,6 +402,15 @@ function SlideEditor({ index, slide, scenes, songSceneName, onSave, onCancel }: 
           </select>
         </label>
         <h3>Ajustes só deste slide (vazio = igual à cena)</h3>
+        <label>Transição <output />
+          <select value={o.transicao ?? ''} onChange={(e) => setOverride('transicao', e.target.value)}>
+            <option value="">herdar</option>
+            {SLIDE_TRANSITIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </label>
+        <label>Duração (ms) <output />
+          <input className="name" type="number" min={0} max={5000} step={50} placeholder="herdar" value={o.duracao ?? ''} onChange={(e) => setOverride('duracao', e.target.value)} />
+        </label>
         <label>Tamanho <output />
           <input className="name" type="number" min={12} max={300} placeholder="herdar" value={o.tamanho ?? ''} onChange={(e) => setOverride('tamanho', e.target.value)} />
         </label>

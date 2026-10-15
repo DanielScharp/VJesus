@@ -1,17 +1,44 @@
-﻿using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using VJApp.Model;
 
 namespace VJApp.Engine;
 
+/// <summary>Animação contínua de um trecho (&lt;anim tipo intensidade velocidade&gt;).</summary>
+sealed record WordAnim(string Type, float Intensity, float Speed);
+
 /// <summary>
-/// A letra que está no telão: desenha o texto (contorno, sombra, caixa, trechos com formatação
-/// própria) numa imagem 1920×1080 com fundo transparente e faz o fade entre um slide e outro.
-/// Qualquer layer com um clip "Letras" mostra esta mesma imagem, misturada com os vídeos.
+/// Um pedaço da imagem do slide que a GPU desenha e movimenta sozinho: uma palavra, uma linha,
+/// um grupo animado ou o slide inteiro. Coordenadas em pixels da composição (1920×1080).
+/// </summary>
+sealed record LyricSprite(RectangleF Rect, bool FromAnimLayer, int Index, int Line, WordAnim? Anim);
+
+/// <summary>
+/// Um slide pronto para a GPU: as palavras paradas, as palavras animadas e a caixa de fundo em
+/// imagens separadas (fundo transparente), mais a lista de pedaços e a transição de entrada.
+/// </summary>
+sealed class LyricsFrame
+{
+    public required byte[]? Static { get; init; }
+    public required byte[]? Animated { get; init; }
+    public required byte[]? Box { get; init; }
+    public required List<LyricSprite> Sprites { get; init; }
+    public required RectangleF BoxRect { get; init; }
+    public required string Transition { get; init; }
+    public required float TransitionSeconds { get; init; }
+    public int WordCount { get; init; }
+    public int LineCount { get; init; }
+    public bool Empty => Sprites.Count == 0 && Box == null;
+}
+
+/// <summary>
+/// A letra que está no telão. Desenha o slide (contorno, sombra, caixa, trechos formatados) em
+/// imagens separadas e entrega para o motor, que anima a entrada/saída do slide e as palavras
+/// marcadas com &lt;anim&gt; direto na GPU a cada quadro.
 /// </summary>
 sealed class LyricsFeed
 {
@@ -19,82 +46,49 @@ sealed class LyricsFeed
     const int Bytes = Width * Height * 4;
 
     readonly object _lock = new();
-    readonly Stopwatch _clock = Stopwatch.StartNew();
-    byte[] _from = new byte[Bytes];   // imagem antes do fade
-    byte[] _to = new byte[Bytes];     // imagem depois do fade
-    readonly byte[] _mixed = new byte[Bytes];
-    double _fadeStart, _fadeSeconds;
-    int _version, _mixedStep = -1;
+    LyricsFrame _frame = EmptyFrame("fade", 0.3f);
+    int _version;
     int _renderSeq;
+
+    static LyricsFrame EmptyFrame(string transition, float seconds) => new()
+    {
+        Static = null, Animated = null, Box = null, Sprites = [], BoxRect = RectangleF.Empty,
+        Transition = transition, TransitionSeconds = seconds,
+    };
 
     /// <summary>Muda o texto (null ou vazio = telão sem letra). O desenho acontece fora da thread da UI.</summary>
     public void Show(string? text, LyricStyle style)
     {
         int seq = Interlocked.Increment(ref _renderSeq);
-        var styleCopy = style.Clone();
+        var s = style.Clone();
         Task.Run(() =>
         {
-            var pixels = Render(text, styleCopy);
+            var frame = Render(text, s);
             lock (_lock)
             {
                 if (seq != _renderSeq) return; // já pediram outro texto
-                // começa o fade a partir do que está na tela agora
-                CurrentPixels().CopyTo(_from, 0);
-                _to = pixels;
-                _fadeStart = _clock.Elapsed.TotalSeconds;
-                _fadeSeconds = Math.Max(0, styleCopy.FadeMs / 1000.0);
-                _mixedStep = -1;
+                _frame = frame;
                 _version++;
             }
         });
     }
 
-    /// <summary>Imagem atual (com o fade calculado) e uma versão que muda quando a imagem muda. Render thread.</summary>
-    public (int Version, byte[] Pixels) Snapshot()
+    /// <summary>Slide atual e uma versão que muda a cada slide novo. Render thread.</summary>
+    public (int Version, LyricsFrame Frame) Snapshot()
     {
-        lock (_lock)
-        {
-            double t = _fadeSeconds <= 0 ? 1 : (_clock.Elapsed.TotalSeconds - _fadeStart) / _fadeSeconds;
-            if (t >= 1) return (_version * 64 + 63, _to);
-            // fade em 30 passos: cada passo é uma versão nova
-            int step = (int)(Math.Clamp(t, 0, 1) * 30);
-            if (step != _mixedStep)
-            {
-                Mix(_from, _to, _mixed, step / 30f);
-                _mixedStep = step;
-            }
-            return (_version * 64 + step, _mixed);
-        }
-    }
-
-    byte[] CurrentPixels()
-    {
-        double t = _fadeSeconds <= 0 ? 1 : (_clock.Elapsed.TotalSeconds - _fadeStart) / _fadeSeconds;
-        if (t >= 1 || _mixedStep < 0) return _to;
-        return _mixed;
-    }
-
-    static void Mix(byte[] a, byte[] b, byte[] dst, float t)
-    {
-        int k = (int)(t * 256);
-        int ik = 256 - k;
-        Parallel.For(0, Height, y =>
-        {
-            int start = y * Width * 4, end = start + Width * 4;
-            for (int i = start; i < end; i++) dst[i] = (byte)((a[i] * ik + b[i] * k) >> 8);
-        });
+        lock (_lock) return (_version, _frame);
     }
 
     // ---------------- texto com formatação por trecho ----------------
 
     /// <summary>Um trecho de texto com a mesma formatação.</summary>
-    sealed record Run(string Text, bool Bold, bool Italic, bool Underline, Color? Color, float Scale);
+    sealed record Run(string Text, bool Bold, bool Italic, bool Underline, Color? Color, float Scale, WordAnim? Anim);
 
-    static readonly Regex Tag = new(@"<(/?)(b|i|u|cor|tam)(?:\s+([^>]*))?>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static readonly Regex Tag = new(@"<(/?)(b|i|u|cor|tam|anim)(?:\s+([^>]*))?>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>
-    /// Lê as marcações de trecho: &lt;b&gt; negrito, &lt;i&gt; itálico, &lt;u&gt; sublinhado,
-    /// &lt;cor #RRGGBB&gt; cor e &lt;tam 130%&gt; tamanho relativo. Retorna uma lista de linhas, cada uma com seus trechos.
+    /// Lê as marcações de trecho: &lt;b&gt; negrito, &lt;i&gt; itálico, &lt;u&gt; sublinhado, &lt;cor #RRGGBB&gt; cor,
+    /// &lt;tam 130%&gt; tamanho e &lt;anim balançar 1 1&gt; animação. Retorna as linhas, cada uma com seus trechos.
     /// </summary>
     static List<List<Run>> Parse(string text, LyricStyle style)
     {
@@ -102,8 +96,10 @@ sealed class LyricsFeed
         bool bold = style.Bold, italic = style.Italic, underline = false;
         var colors = new Stack<Color?>();
         var scales = new Stack<float>();
+        var anims = new Stack<WordAnim?>();
         Color? color = null;
         float scale = 1;
+        WordAnim? anim = null;
 
         void Emit(string s)
         {
@@ -112,7 +108,7 @@ sealed class LyricsFeed
             for (int i = 0; i < parts.Length; i++)
             {
                 if (i > 0) lines.Add([]);
-                if (parts[i].Length > 0) lines[^1].Add(new Run(parts[i], bold, italic, underline, color, scale));
+                if (parts[i].Length > 0) lines[^1].Add(new Run(parts[i], bold, italic, underline, color, scale, anim));
             }
         }
 
@@ -137,15 +133,28 @@ sealed class LyricsFeed
                     else
                     {
                         scales.Push(scale);
-                        if (float.TryParse(arg.TrimEnd('%').Replace(',', '.'), System.Globalization.NumberStyles.Float,
-                                System.Globalization.CultureInfo.InvariantCulture, out var pct))
+                        if (float.TryParse(arg.TrimEnd('%').Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var pct))
                             scale = Math.Clamp(arg.EndsWith('%') ? pct / 100 : pct, 0.2f, 4f);
                     }
+                    break;
+                case "anim":
+                    if (close) anim = anims.Count > 0 ? anims.Pop() : null;
+                    else { anims.Push(anim); anim = ParseAnim(arg); }
                     break;
             }
         }
         Emit(text[pos..]);
         return lines;
+    }
+
+    /// <summary>"balançar 1.2 0.8" → tipo, intensidade (padrão 1) e velocidade (padrão 1).</summary>
+    static WordAnim ParseAnim(string arg)
+    {
+        var parts = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        float F(int i, float def) => parts.Length > i && float.TryParse(parts[i].Replace(',', '.'), NumberStyles.Float,
+            CultureInfo.InvariantCulture, out var v) ? Math.Clamp(v, 0.05f, 5f) : def;
+        string type = parts.Length > 0 ? Lyrics.Fold(parts[0]) : "balancar";
+        return new WordAnim(type, F(1, 1), F(2, 1));
     }
 
     /// <summary>Remove as marcações (para medir/mostrar o texto puro).</summary>
@@ -154,18 +163,36 @@ sealed class LyricsFeed
     sealed record Piece(string Text, Run Run, float Size, float Width, bool Space);
     sealed record Line(List<Piece> Pieces, float Width, float Height, float Ascent);
 
-    /// <summary>Desenha o texto, diminuindo a fonte até caber. BGRA com alpha.</summary>
-    public static byte[] Render(string? text, LyricStyle style)
+    /// <summary>Transições que movem palavra por palavra ou linha por linha (precisam de um pedaço por palavra/linha).</summary>
+    static bool PerWord(string t) => t is "palavra" or "maquina";
+    static bool PerLine(string t) => t is "linha";
+
+    /// <summary>Desenha o slide, diminuindo a fonte até caber, e separa os pedaços que a GPU vai mover.</summary>
+    public static LyricsFrame Render(string? text, LyricStyle style)
     {
-        var pixels = new byte[Bytes];
-        if (string.IsNullOrWhiteSpace(StripTags(text ?? ""))) return pixels;
-        using var bmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb);
-        using (var g = Graphics.FromImage(bmp))
+        string transition = Lyrics.Fold(style.Transition ?? "fade");
+        float seconds = Math.Max(0, style.FadeMs / 1000f);
+        if (string.IsNullOrWhiteSpace(StripTags(text ?? ""))) return EmptyFrame(transition, seconds);
+
+        using var staticBmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb);
+        using var animBmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb);
+        using var boxBmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb);
+        var sprites = new List<LyricSprite>();
+        bool anyAnim = false, anyBox = false;
+        RectangleF boxRect = RectangleF.Empty;
+        int wordCount = 0, lineCount;
+
+        using (var gs = Graphics.FromImage(staticBmp))
+        using (var ga = Graphics.FromImage(animBmp))
+        using (var gb = Graphics.FromImage(boxBmp))
         {
-            g.Clear(System.Drawing.Color.Transparent);
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.TextRenderingHint = TextRenderingHint.AntiAlias;
-            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            foreach (var g in new[] { gs, ga, gb })
+            {
+                g.Clear(System.Drawing.Color.Transparent);
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.TextRenderingHint = TextRenderingHint.AntiAlias;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            }
 
             FontFamily family;
             try { family = new FontFamily(style.FontFamily); }
@@ -175,13 +202,13 @@ sealed class LyricsFeed
             var area = new RectangleF(margin, margin * 0.6f, Width - 2 * margin, Height - 1.2f * margin);
             var paragraphs = Parse(text!, style);
 
-            // reduz o tamanho até caber na área
             List<Line> lines = [];
             for (float size = Math.Max(12, style.FontSize); size >= 12; size *= 0.92f)
             {
-                lines = Layout(g, family, paragraphs, size, area.Width, style.LineSpacing);
+                lines = Layout(gs, family, paragraphs, size, area.Width, style.LineSpacing);
                 if (lines.Sum(l => l.Height) <= area.Height && lines.All(l => l.Width <= area.Width + 1)) break;
             }
+            lineCount = lines.Count;
 
             float total = lines.Sum(l => l.Height);
             float y = style.Position switch
@@ -191,13 +218,17 @@ sealed class LyricsFeed
                 _ => area.Top + (area.Height - total) / 2,
             };
 
-            // monta um contorno vetorial por trecho (cada um com sua cor)
-            var all = new GraphicsPath();
-            var colored = new List<(GraphicsPath Path, Color? Color)>();
+            // um contorno vetorial por palavra; as animadas vão para outra imagem
+            var staticAll = new GraphicsPath();
+            var animAll = new GraphicsPath();
+            var colored = new List<(GraphicsPath Path, Color? Color, bool Anim)>();
+            var words = new List<(RectangleF Rect, int Line, WordAnim? Anim)>();
             using var format = (StringFormat)StringFormat.GenericTypographic.Clone();
             format.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces;
-            foreach (var line in lines)
+            float pad = style.OutlineWidth + (style.Shadow ? 8 : 2);
+            for (int li = 0; li < lines.Count; li++)
             {
+                var line = lines[li];
                 float x = style.Align switch
                 {
                     "left" => area.Left,
@@ -213,47 +244,102 @@ sealed class LyricsFeed
                         float ascent = p.Size * family.GetCellAscent(fs) / family.GetEmHeight(fs);
                         var path = new GraphicsPath();
                         path.AddString(p.Text, family, (int)fs, p.Size, new PointF(x, baseline - ascent), format);
-                        all.AddPath(path, false);
-                        colored.Add((path, p.Run.Color));
+                        bool isAnim = p.Run.Anim != null;
+                        (isAnim ? animAll : staticAll).AddPath(path, false);
+                        colored.Add((path, p.Run.Color, isAnim));
+                        var b = path.GetBounds();
+                        words.Add((RectangleF.Inflate(b, pad, pad), li, p.Run.Anim));
+                        anyAnim |= isAnim;
                     }
                     x += p.Width;
                 }
                 y += line.Height;
             }
+            wordCount = words.Count;
 
-            var bounds = all.GetBounds();
-            if (style.Box && bounds.Width > 0)
+            var union = staticAll.GetBounds();
+            var animBounds = animAll.GetBounds();
+            if (animBounds.Width > 0) union = union.Width > 0 ? RectangleF.Union(union, animBounds) : animBounds;
+            if (style.Box && union.Width > 0)
             {
-                var box = RectangleF.Inflate(bounds, 30, 18);
+                boxRect = RectangleF.Inflate(union, 30, 18);
                 using var brush = new SolidBrush(ParseColor(style.BoxColor, style.BoxOpacity));
-                using var rounded = Rounded(box, 18);
-                g.FillPath(brush, rounded);
+                using var rounded = Rounded(boxRect, 18);
+                gb.FillPath(brush, rounded);
+                anyBox = true;
             }
-            if (style.Shadow)
-            {
-                using var shadow = (GraphicsPath)all.Clone();
-                using var m = new Matrix();
-                m.Translate(5, 6);
-                shadow.Transform(m);
-                using var sb = new SolidBrush(System.Drawing.Color.FromArgb(150, 0, 0, 0));
-                g.FillPath(sb, shadow);
-            }
-            if (style.OutlineWidth > 0)
-            {
-                using var pen = new Pen(ParseColor(style.OutlineColor, 1), style.OutlineWidth * 2) { LineJoin = LineJoin.Round };
-                g.DrawPath(pen, all);
-            }
-            var baseColor = ParseColor(style.Color, 1);
-            foreach (var (path, color) in colored)
-            {
-                using var fill = new SolidBrush(color ?? baseColor);
-                g.FillPath(fill, path);
-                path.Dispose();
-            }
-            all.Dispose();
+
+            DrawText(gs, staticAll, colored.Where(c => !c.Anim), style);
+            if (anyAnim) DrawText(ga, animAll, colored.Where(c => c.Anim), style);
+            foreach (var c in colored) c.Path.Dispose();
+            staticAll.Dispose();
+            animAll.Dispose();
             family.Dispose();
+
+            // pedaços parados: o slide inteiro, uma linha ou uma palavra cada (conforme a transição)
+            var staticWords = words.Select((w, i) => (w, i)).Where(t => t.w.Anim == null).ToList();
+            if (PerWord(transition))
+                foreach (var (w, i) in staticWords) sprites.Add(new LyricSprite(w.Rect, false, i, w.Line, null));
+            else if (PerLine(transition))
+                foreach (var g in staticWords.GroupBy(t => t.w.Line))
+                    sprites.Add(new LyricSprite(g.Select(t => t.w.Rect).Aggregate(RectangleF.Union), false, g.Key, g.Key, null));
+            else if (staticWords.Count > 0)
+                sprites.Add(new LyricSprite(new RectangleF(0, 0, Width, Height), false, 0, 0, null));
+
+            // grupos animados: palavras seguidas, na mesma linha, com a mesma animação, se mexem juntas
+            for (int i = 0; i < words.Count; i++)
+            {
+                if (words[i].Anim is not { } a) continue;
+                var rect = words[i].Rect;
+                int j = i;
+                while (j + 1 < words.Count && words[j + 1].Anim == a && words[j + 1].Line == words[i].Line)
+                    rect = RectangleF.Union(rect, words[++j].Rect);
+                sprites.Add(new LyricSprite(rect, true, i, words[i].Line, a));
+                i = j;
+            }
         }
 
+        return new LyricsFrame
+        {
+            Static = ToBytes(staticBmp),
+            Animated = anyAnim ? ToBytes(animBmp) : null,
+            Box = anyBox ? ToBytes(boxBmp) : null,
+            Sprites = sprites,
+            BoxRect = boxRect,
+            Transition = transition,
+            TransitionSeconds = seconds,
+            WordCount = wordCount,
+            LineCount = lineCount,
+        };
+    }
+
+    static void DrawText(Graphics g, GraphicsPath all, IEnumerable<(GraphicsPath Path, Color? Color, bool Anim)> pieces, LyricStyle style)
+    {
+        if (style.Shadow)
+        {
+            using var shadow = (GraphicsPath)all.Clone();
+            using var m = new Matrix();
+            m.Translate(5, 6);
+            shadow.Transform(m);
+            using var sb = new SolidBrush(System.Drawing.Color.FromArgb(150, 0, 0, 0));
+            g.FillPath(sb, shadow);
+        }
+        if (style.OutlineWidth > 0)
+        {
+            using var pen = new Pen(ParseColor(style.OutlineColor, 1), style.OutlineWidth * 2) { LineJoin = LineJoin.Round };
+            g.DrawPath(pen, all);
+        }
+        var baseColor = ParseColor(style.Color, 1);
+        foreach (var (path, color, _) in pieces)
+        {
+            using var fill = new SolidBrush(color ?? baseColor);
+            g.FillPath(fill, path);
+        }
+    }
+
+    static byte[] ToBytes(Bitmap bmp)
+    {
+        var pixels = new byte[Bytes];
         var data = bmp.LockBits(new Rectangle(0, 0, Width, Height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
         for (int y = 0; y < Height; y++)
             System.Runtime.InteropServices.Marshal.Copy(data.Scan0 + y * data.Stride, pixels, y * Width * 4, Width * 4);
@@ -280,7 +366,6 @@ sealed class LyricsFeed
 
         foreach (var para in paragraphs)
         {
-            // palavras e espaços como peças separadas
             var pieces = new List<Piece>();
             foreach (var run in para)
             {

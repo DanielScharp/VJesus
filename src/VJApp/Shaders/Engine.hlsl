@@ -120,6 +120,7 @@ float4 videoSource(float2 uv)
     float2 v = (uv - 0.5) * scale + 0.5;
     if (any(v < 0) || any(v > 1)) return float4(0, 0, 0, 0);
     float4 c = Tex0.SampleLevel(LinearClamp, v * UvScale, 0);
+    if (ColorMode > 2.5) return c.a > 0.0001 ? float4(c.rgb / c.a, c.a) : float4(0, 0, 0, 0); // pré-multiplicado (letras)
     if (ColorMode > 1.5) return float4(scaledYCoCgToRgb(c), 1);
     if (ColorMode > 0.5) return c;
     return float4(c.rgb, 1);
@@ -290,4 +291,43 @@ float4 PSAttack(VSOut i) : SV_Target
         c = lerp(c, AColor, band * k);
     }
     return float4(c, 1);
+}
+// ---------- letras: pedaços (palavras, linhas, caixa) que se movem sozinhos ----------
+
+cbuffer SpriteParams : register(b4)
+{
+    float4 SDest;       // x, y, largura, altura (pixels da composição)
+    float4 SSrc;        // mesmo retângulo na imagem de origem (0..1)
+    float2 STranslate;  // deslocamento (pixels)
+    float  SRotation;   // radianos
+    float  SScale;
+    float2 SPivot;      // centro do giro/escala (pixels)
+    float  SOpacity;
+    float  SBrightness;
+};
+
+struct SpriteOut
+{
+    float4 pos : SV_Position;
+    float2 uv  : TEXCOORD0;
+};
+
+SpriteOut VSSprite(uint id : SV_VertexID)
+{
+    // dois triângulos: 0 1 2 / 2 1 3
+    static const float2 corners[6] = { float2(0, 0), float2(1, 0), float2(0, 1), float2(0, 1), float2(1, 0), float2(1, 1) };
+    float2 k = corners[id];
+    float2 p = SDest.xy + k * SDest.zw - SPivot;
+    float s = sin(SRotation), c = cos(SRotation);
+    p = float2(p.x * c - p.y * s, p.x * s + p.y * c) * SScale + SPivot + STranslate;
+    SpriteOut o;
+    o.pos = float4(p.x / CompSize.x * 2 - 1, 1 - p.y / CompSize.y * 2, 0, 1);
+    o.uv = SSrc.xy + k * SSrc.zw;
+    return o;
+}
+
+float4 PSSprite(SpriteOut i) : SV_Target
+{
+    float4 c = Tex0.SampleLevel(LinearClamp, i.uv, 0);
+    return float4(saturate(c.rgb * SBrightness), c.a * SOpacity);
 }

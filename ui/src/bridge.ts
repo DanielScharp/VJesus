@@ -66,6 +66,7 @@ export type LyricStyle = {
   color: string; outlineColor: string; outlineWidth: number; shadow: boolean
   box: boolean; boxColor: string; boxOpacity: number
   position: 'top' | 'center' | 'bottom'; margin: number; lineSpacing: number; fadeMs: number
+  transition: string
 }
 export type LyricsState = { songId: string | null; slide: number; text: string | null; blank: boolean }
 

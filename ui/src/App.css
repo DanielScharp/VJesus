@@ -415,3 +415,24 @@ kbd { font: 11px Consolas, monospace; background: #000; border: 1px solid var(--
 .attack-props label { grid-template-columns: 110px 70px 1fr; font-size: 12px; }
 .attack-props input.name { margin: 0; flex: 1; }
 .quick-colors { gap: 4px; margin-left: 8px; }
+
+/* ---------- prévia das animações de trecho ---------- */
+.anim { display: inline-block; animation-duration: var(--as, 1.6s); animation-iteration-count: infinite; animation-timing-function: ease-in-out; transform-origin: 50% 60%; }
+.anim-balancar { animation-name: aBalancar; }
+.anim-flutuar { animation-name: aFlutuar; }
+.anim-pulsar { animation-name: aPulsar; }
+.anim-onda { animation-name: aOnda; }
+.anim-brilhar { animation-name: aBrilhar; }
+.anim-tremer { animation-name: aTremer; animation-duration: .12s; animation-timing-function: steps(2); }
+.anim-piscar { animation-name: aPiscar; animation-timing-function: steps(1); }
+.anim-girar { animation-name: aGirar; animation-timing-function: linear; animation-duration: calc(var(--as, 1s) * 4); }
+@keyframes aBalancar { 0%,100% { transform: rotate(calc(-6deg * var(--ai, 1))); } 50% { transform: rotate(calc(6deg * var(--ai, 1))); } }
+@keyframes aFlutuar { 0%,100% { transform: translateY(calc(-.12em * var(--ai, 1))); } 50% { transform: translateY(calc(.12em * var(--ai, 1))); } }
+@keyframes aPulsar { 0%,100% { transform: scale(1); } 50% { transform: scale(calc(1 + .08 * var(--ai, 1))); } }
+@keyframes aOnda { 0%,100% { transform: translateY(calc(-.1em * var(--ai, 1))) rotate(-2deg); } 50% { transform: translateY(calc(.1em * var(--ai, 1))) rotate(2deg); } }
+@keyframes aBrilhar { 0%,100% { filter: brightness(1); } 50% { filter: brightness(calc(1 + .6 * var(--ai, 1))); } }
+@keyframes aTremer { 0% { transform: translate(-1px, 1px); } 100% { transform: translate(1px, -1px); } }
+@keyframes aPiscar { 0%,60% { opacity: 1; } 61%,100% { opacity: .2; } }
+@keyframes aGirar { to { transform: rotate(360deg); } }
+.format-bar label.mini { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; margin: 0; }
+.format-bar label.mini input { width: 60px; }

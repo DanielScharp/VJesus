@@ -189,6 +189,7 @@ sealed partial class Renderer : IDisposable
         _outgoing = new RenderTexture(_device, CompWidth, CompHeight);
         InitOutputs(Compiler.Compile(src, "VSSlice", path, "vs_5_0").ToArray(), src, path);
         InitAttacks(src, path);
+        InitLyrics(src, path);
     }
 
     ID3D11Buffer CreateCb<T>() where T : unmanaged =>
@@ -306,7 +307,7 @@ sealed partial class Renderer : IDisposable
             Blend = slot.Blend,
             SourceKind = (float)source.Kind,
             VideoAspect = source.Lyrics != null ? (float)LyricsFeed.Width / LyricsFeed.Height : source.Aspect,
-            ColorMode = source.Lyrics != null ? (float)HapColor.Rgba : fromPlayer ? (float)p!.Color : 0,
+            ColorMode = source.Lyrics != null ? 3 : fromPlayer ? (float)p!.Color : 0,
             UvScaleX = fromPlayer ? (float)p!.Width / p.TextureWidth : 1,
             UvScaleY = fromPlayer ? (float)p!.Height / p.TextureHeight : 1,
         };
@@ -355,6 +356,8 @@ sealed partial class Renderer : IDisposable
         {
             slot.Current?.Update(_device!, _ctx!);
             slot.Outgoing?.Update(_device!, _ctx!);
+            if (slot.Current?.Lyrics != null) UpdateLyrics(slot.Current, now, (float)now);
+            if (slot.Outgoing?.Lyrics != null) UpdateLyrics(slot.Outgoing, now, (float)now);
 
             // fim da transição: o clip anterior é liberado
             if (slot.Outgoing != null)
@@ -488,6 +491,7 @@ sealed partial class Renderer : IDisposable
         DisposeStreams();
         DisposeOutputs();
         DisposeAttacks();
+        DisposeLyrics();
         _vs?.Dispose();
         _ctx?.Dispose();
         _device?.Dispose();

@@ -15,31 +15,24 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
     public readonly SourceKind Kind = kind;
     public readonly VideoPlayer? Player = player;
     public readonly LyricsFeed? Lyrics = lyrics;
-    int _lyricsVersion = -1;
+    /// <summary>Letra animada desta layer (montada pelo Renderer a cada quadro).</summary>
+    public LyricsGpu? LyricsGpu;
     public readonly SpoutReceiver? Spout = spoutSender != null ? new SpoutReceiver(spoutSender) : null;
     public VideoFrame? ShownFrame;
     public ID3D11Texture2D? Texture;
     public ID3D11ShaderResourceView? Srv;
 
     /// <summary>Textura de entrada para o shader (do vídeo ou do Spout).</summary>
-    public ID3D11ShaderResourceView? InputSrv => Spout?.Srv ?? Srv;
+    public ID3D11ShaderResourceView? InputSrv => LyricsGpu?.Target?.Srv ?? Spout?.Srv ?? Srv;
 
     /// <summary>Pronta para desenhar? (vídeo precisa do primeiro quadro, Spout precisa do sender)</summary>
-    public bool Ready => Kind != SourceKind.Video || ShownFrame != null || Spout?.Srv != null || _lyricsVersion >= 0;
+    public bool Ready => Kind != SourceKind.Video || ShownFrame != null || Spout?.Srv != null || LyricsGpu?.Drawn == true;
 
     public float Aspect => Spout is { Srv: not null } s ? (float)s.Width / s.Height
         : Player != null ? (float)Player.Width / Player.Height : 16f / 9;
 
     public void CreateGpu(ID3D11Device device)
     {
-        if (Lyrics != null)
-        {
-            Texture = device.CreateTexture2D(new Texture2DDescription(
-                Format.B8G8R8A8_UNorm, LyricsFeed.Width, LyricsFeed.Height, 1, 1,
-                BindFlags.ShaderResource, ResourceUsage.Dynamic, CpuAccessFlags.Write));
-            Srv = device.CreateShaderResourceView(Texture);
-            return;
-        }
         if (Player is not { } p) return;
         Texture = device.CreateTexture2D(new Texture2DDescription(
             p.TextureFormat, (uint)p.TextureWidth, (uint)p.TextureHeight, 1, 1,
@@ -51,18 +44,6 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
     public unsafe void Update(ID3D11Device device, ID3D11DeviceContext ctx)
     {
         Spout?.Update(device);
-        if (Lyrics != null && Texture != null)
-        {
-            var (version, pixels) = Lyrics.Snapshot();
-            if (version == _lyricsVersion) return;
-            _lyricsVersion = version;
-            var map = ctx.Map(Texture, 0, MapMode.WriteDiscard);
-            fixed (byte* src = pixels)
-                for (int y = 0; y < LyricsFeed.Height; y++)
-                    Buffer.MemoryCopy(src + y * LyricsFeed.Width * 4, (byte*)map.DataPointer + y * map.RowPitch, map.RowPitch, LyricsFeed.Width * 4);
-            ctx.Unmap(Texture, 0);
-            return;
-        }
         if (Player is not { } player || Texture == null) return;
         var frame = player.TakeFrame(ShownFrame);
         if (frame == null) return;
@@ -81,6 +62,7 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
     public void Dispose()
     {
         Spout?.Dispose();
+        LyricsGpu?.Dispose();
         Srv?.Dispose();
         Texture?.Dispose();
         if (Player is { } p) Task.Run(p.Dispose);

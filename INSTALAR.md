@@ -21,7 +21,7 @@ Já vem no Windows 11 e na maioria dos Windows 10 atualizados. Se a janela do VJ
 - https://developer.microsoft.com/microsoft-edge/webview2/ → **Evergreen Bootstrapper** → baixar e executar.
 
 ### 2. Baixe o VJApp
-1. Entre em https://github.com/DanielScharp/vjapp/releases/latest (o repositório é **privado**: faça login no GitHub com a conta **DanielScharp**) e baixe **`VJApp-v1.0.0-win-x64.zip`**.
+1. Entre em https://github.com/DanielScharp/vjapp/releases/latest (o repositório é **privado**: faça login no GitHub com a conta **DanielScharp**) e baixe o arquivo **`VJApp-vX.Y.Z-win-x64.zip`** da versão mais recente.
 2. Clique com o botão direito no zip → **Propriedades** → marque **Desbloquear** (se aparecer) → OK.
 3. Extraia para uma pasta fixa, por exemplo `C:\VJApp` (evite a pasta Downloads e pastas sincronizadas com OneDrive).
 

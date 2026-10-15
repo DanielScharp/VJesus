@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -55,8 +55,13 @@ sealed class LyricStyle
     /// <summary>Margem lateral/vertical em pixels da composição (1920×1080).</summary>
     public float Margin { get; set; } = 120;
     public float LineSpacing { get; set; } = 1.1f;
-    /// <summary>Duração do fade entre slides (ms).</summary>
+    /// <summary>Duração da transição entre slides (ms).</summary>
     public int FadeMs { get; set; } = 300;
+    /// <summary>
+    /// Como o slide entra: fade, corte, subir, descer, esquerda, direita, zoom, aproximar,
+    /// palavra (palavra por palavra), linha (linha por linha) ou maquina (máquina de escrever).
+    /// </summary>
+    public string Transition { get; set; } = "fade";
 
     public LyricStyle Clone() => (LyricStyle)MemberwiseClone();
 
@@ -87,6 +92,8 @@ sealed class LyricStyle
                     case "caixa": s.Box = B(); break;
                     case "corcaixa": s.BoxColor = value; break;
                     case "margem": s.Margin = F(); break;
+                    case "transicao": s.Transition = Lyrics.Fold(value); break;
+                    case "duracao": s.FadeMs = (int)F(); break;
                 }
             }
             catch { /* valor inválido: ignora este ajuste */ }

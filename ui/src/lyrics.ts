@@ -70,21 +70,37 @@ export function replaceSlide(text: string, index: number, slide: Slide): string 
 
 /** Texto sem marcações (para busca e prévias simples). */
 export function stripTags(text: string) {
-  return text.replace(/<\/?(b|i|u|cor|tam)(\s+[^>]*)?>/gi, '')
+  return text.replace(/<\/?(b|i|u|cor|tam|anim)(\s+[^>]*)?>/gi, '')
 }
 
-export type RichRun = { text: string; bold: boolean; italic: boolean; underline: boolean; color: string | null; scale: number }
+/** Transições de slide (mesmos nomes do motor). */
+export const SLIDE_TRANSITIONS: [string, string][] = [
+  ['fade', 'Fade (suave)'], ['corte', 'Corte seco'], ['subir', 'Subir'], ['descer', 'Descer'],
+  ['esquerda', 'Entrar pela direita'], ['direita', 'Entrar pela esquerda'], ['zoom', 'Zoom (crescer)'],
+  ['aproximar', 'Aproximar (diminuir)'], ['palavra', 'Palavra por palavra'], ['linha', 'Linha por linha'],
+  ['maquina', 'Máquina de escrever'],
+]
+
+/** Animações de trecho (<anim tipo intensidade velocidade>). */
+export const WORD_ANIMS: [string, string][] = [
+  ['balancar', 'Balançar'], ['flutuar', 'Flutuar'], ['pulsar', 'Pulsar'], ['onda', 'Onda'],
+  ['brilhar', 'Brilhar'], ['tremer', 'Tremer'], ['piscar', 'Piscar'], ['girar', 'Girar'],
+]
+
+export type RichAnim = { type: string; intensity: number; speed: number }
+export type RichRun = { text: string; bold: boolean; italic: boolean; underline: boolean; color: string | null; scale: number; anim: RichAnim | null }
 
 /** Lê as marcações de trecho em pedaços com formatação (para a prévia dos slides na UI). */
 export function parseRich(text: string): RichRun[] {
   const runs: RichRun[] = []
   let bold = false, italic = false, underline = false
   let color: string | null = null, scale = 1
-  const colors: (string | null)[] = [], scales: number[] = []
-  const re = /<(\/?)(b|i|u|cor|tam)(?:\s+([^>]*))?>/gi
+  let anim: RichAnim | null = null
+  const colors: (string | null)[] = [], scales: number[] = [], anims: (RichAnim | null)[] = []
+  const re = /<(\/?)(b|i|u|cor|tam|anim)(?:\s+([^>]*))?>/gi
   let pos = 0
   let m: RegExpExecArray | null
-  const emit = (s: string) => { if (s) runs.push({ text: s, bold, italic, underline, color, scale }) }
+  const emit = (s: string) => { if (s) runs.push({ text: s, bold, italic, underline, color, scale, anim }) }
   while ((m = re.exec(text))) {
     emit(text.slice(pos, m.index))
     pos = m.index + m[0].length
@@ -98,6 +114,14 @@ export function parseRich(text: string): RichRun[] {
       case 'tam':
         if (close) scale = scales.pop() ?? 1
         else { scales.push(scale); const v = parseFloat(arg); if (!isNaN(v)) scale = arg.endsWith('%') ? v / 100 : v }
+        break
+      case 'anim':
+        if (close) anim = anims.pop() ?? null
+        else {
+          anims.push(anim)
+          const [t, i, s] = arg.split(/\s+/)
+          anim = { type: normalize(t || 'balancar'), intensity: parseFloat(i) || 1, speed: parseFloat(s) || 1 }
+        }
         break
     }
   }
