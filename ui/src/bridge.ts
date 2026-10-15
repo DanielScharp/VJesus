@@ -103,7 +103,7 @@ export type AttackPreset = {
   key: string | null; holdWhilePressed: boolean
 }
 
-export type BibleVersion = { id: string; name: string; shortName: string; language: string; languageName: string; books: number; verses: number; publicDomain: boolean; licenseUrl: string }
+export type BibleVersion = { id: string; name: string; shortName: string; language: string; languageName: string; books: number; verses: number; publicDomain: boolean; licenseUrl: string; copyright?: string; provider?: string | null }
 export type BibleSettings = {
   mainVersion: string | null; compare: string[]; onScreen: string[]; sceneId: string | null
   reference: 'abaixo' | 'acima' | 'nenhuma'; showVersion: boolean; referenceScale: number; referenceColor: string; history: string[]
@@ -137,7 +137,8 @@ export type EngineMessage =
   | { type: 'fonts'; list: string[] }
   | ({ type: 'stage' } & StageState)
   | { type: 'attacks'; list: AttackPreset[] }
-  | { type: 'bibleState'; installed: BibleVersion[]; downloading: string[]; settings: BibleSettings; live: BiblePassage | null }
+  | { type: 'bibleState'; installed: BibleVersion[]; downloading: string[]; settings: BibleSettings; live: BiblePassage | null; youVersionKey: boolean }
+  | { type: 'bibleYvVersions'; language: string; list: BibleVersion[]; error?: string }
   | { type: 'bibleCatalog'; list: BibleVersion[]; error?: string }
   | { type: 'bibleBooks'; version: string | null; books: BibleBookInfo[] }
   | { type: 'bibleChapter'; book: string; chapter: number; texts: Record<string, string[] | null> }
@@ -205,6 +206,9 @@ export type UiMessage =
   | { type: 'bibleDownload' | 'bibleDelete'; id: string }
   | { type: 'bibleSettings'; settings: BibleSettings }
   | { type: 'bibleImport'; name: string; shortName: string }
+  | { type: 'bibleYvKey'; key: string; language?: string }
+  | { type: 'bibleYvVersions'; language: string }
+  | { type: 'bibleYvAdd'; id: string }
   | { type: 'bibleBooks'; version: string }
   | { type: 'bibleChapter'; book: string; chapter: number; versions: string[] }
   | { type: 'bibleSearch'; version: string; query: string }

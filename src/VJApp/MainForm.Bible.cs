@@ -54,6 +54,17 @@ sealed partial class MainForm
             case "bibleImport":
                 ImportBible(((string?)msg["name"])?.Trim(), ((string?)msg["shortName"])?.Trim());
                 break;
+            case "bibleYvKey":
+                _bible.YouVersion.SetKey((string?)msg["key"]);
+                SendBibleState();
+                if (_bible.YouVersion.HasKey) _ = SendYouVersionListAsync((string?)msg["language"] ?? "pt");
+                break;
+            case "bibleYvVersions":
+                _ = SendYouVersionListAsync((string?)msg["language"] ?? "pt");
+                break;
+            case "bibleYvAdd":
+                if ((string?)msg["id"] is { } yid && _yvList.FirstOrDefault(v => v.Id == yid) is { } yinfo) _ = AddYouVersionAsync(yinfo);
+                break;
             case "bibleBooks":
                 SendBibleBooks((string?)msg["version"]);
                 break;
@@ -62,14 +73,7 @@ sealed partial class MainForm
                 var versions = msg["versions"]?.AsArray().Select(v => (string?)v).OfType<string>().Distinct().ToList() ?? [];
                 string book = (string)msg["book"]!;
                 int chapter = (int)msg["chapter"]!;
-                Send(new
-                {
-                    type = "bibleChapter",
-                    book, chapter,
-                    texts = versions.ToDictionary(v => v, v =>
-                        _bible.Get(v)?.ById.GetValueOrDefault(book) is { } b && chapter >= 1 && chapter <= b.Chapters.Count
-                            ? b.Chapters[chapter - 1] : null),
-                });
+                _ = SendBibleChapterAsync(versions, book, chapter);
                 break;
             }
             case "bibleSearch":
@@ -87,7 +91,7 @@ sealed partial class MainForm
             case "bibleShow":
             {
                 int verse = (int?)msg["verse"] ?? 1;
-                ShowBible(new BiblePassage((string)msg["book"]!, (int)msg["chapter"]!, verse, Math.Max(verse, (int?)msg["verseEnd"] ?? verse)));
+                _ = ShowBibleAsync(new BiblePassage((string)msg["book"]!, (int)msg["chapter"]!, verse, Math.Max(verse, (int?)msg["verseEnd"] ?? verse)));
                 break;
             }
         }
@@ -173,6 +177,7 @@ sealed partial class MainForm
             downloading = _bibleDownloading.ToArray(),
             settings = s,
             live = _liveBible,
+            youVersionKey = _bible.YouVersion.HasKey,
         });
     }
 
@@ -289,7 +294,7 @@ sealed partial class MainForm
             }
         }
         int end = Math.Min(verse + span - 1, book.Chapters[chapter - 1].Count);
-        ShowBible(new BiblePassage(p.Book, chapter, verse, end));
+        _ = ShowBibleAsync(new BiblePassage(p.Book, chapter, verse, end));
     }
 
     /// <summary>Para a tela de retorno: referência e o próximo versículo.</summary>
@@ -303,4 +308,87 @@ sealed partial class MainForm
 
     LyricStyle BibleStyle() =>
         _lyrics.Scenes.FirstOrDefault(s => s.Id == _bible.Settings.SceneId)?.Style ?? _lyrics.Style;
+}
+
+/// <summary>Versões da YouVersion: texto buscado na hora, capítulo por capítulo.</summary>
+sealed partial class MainForm
+{
+    List<BibleVersionInfo> _yvList = [];
+
+    async Task SendYouVersionListAsync(string language)
+    {
+        try
+        {
+            _yvList = await _bible.YouVersion.VersionsAsync(language);
+            Send(new { type = "bibleYvVersions", language, list = _yvList });
+        }
+        catch (Exception ex)
+        {
+            Send(new { type = "bibleYvVersions", language, list = Array.Empty<BibleVersionInfo>(), error = ex.Message });
+        }
+    }
+
+    async Task AddYouVersionAsync(BibleVersionInfo info)
+    {
+        if (!_bibleDownloading.Add(info.Id)) return;
+        SendBibleState();
+        try
+        {
+            var added = await _bible.AddYouVersionAsync(info);
+            var s = _bible.Settings;
+            s.MainVersion ??= added.Id;
+            if (!s.Compare.Contains(added.Id)) s.Compare.Add(added.Id);
+            _bible.SaveSettings();
+            Send(new { type = "notice", message = $"Versão adicionada pela YouVersion: {added.Name}" });
+        }
+        catch (Exception ex)
+        {
+            Send(new { type = "error", message = $"Não consegui adicionar {info.ShortName} da YouVersion: {ex.Message}" });
+        }
+        finally
+        {
+            _bibleDownloading.Remove(info.Id);
+            SendBibleState();
+        }
+    }
+
+    /// <summary>Busca nas versões online o que faltar do capítulo (avisando se der erro).</summary>
+    async Task<bool> EnsureChapterAsync(IEnumerable<string> versions, string book, int chapter)
+    {
+        bool ok = true;
+        foreach (var v in versions.Distinct())
+        {
+            try { await _bible.EnsureAsync(v, book, chapter); }
+            catch (Exception ex)
+            {
+                ok = false;
+                Send(new { type = "error", message = $"{_bible.Get(v)?.Info.ShortName ?? v}: {ex.Message}" });
+            }
+        }
+        return ok;
+    }
+
+    async Task SendBibleChapterAsync(List<string> versions, string book, int chapter)
+    {
+        await EnsureChapterAsync(versions, book, chapter);
+        Send(new
+        {
+            type = "bibleChapter",
+            book, chapter,
+            texts = versions.ToDictionary(v => v, v =>
+                _bible.Get(v)?.ById.GetValueOrDefault(book) is { } b && chapter >= 1 && chapter <= b.Chapters.Count
+                    ? b.Chapters[chapter - 1] : null),
+        });
+    }
+
+    async Task ShowBibleAsync(BiblePassage p)
+    {
+        var s = _bible.Settings;
+        var versions = (s.OnScreen.Count > 0 ? s.OnScreen : []).Append(s.MainVersion).OfType<string>().ToList();
+        await EnsureChapterAsync(versions, p.Book, p.Chapter);
+        ShowBible(p);
+        // já deixa o próximo capítulo pronto para o → não esperar a internet
+        if (_bible.Get(s.MainVersion)?.ById.GetValueOrDefault(p.Book) is { } b && p.Chapter < b.Chapters.Count)
+            _ = EnsureChapterAsync(versions, p.Book, p.Chapter + 1);
+    }
 }

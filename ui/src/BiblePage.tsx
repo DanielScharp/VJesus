@@ -20,6 +20,7 @@ const remembered = (() => {
 export function BiblePage({ scenes, comp }: Props) {
   const [installed, setInstalled] = useState<BibleVersion[]>([])
   const [downloading, setDownloading] = useState<string[]>([])
+  const [yvKey, setYvKey] = useState(false)
   const [settings, setSettings] = useState<BibleSettings | null>(null)
   const [live, setLive] = useState<BiblePassage | null>(null)
   const [books, setBooks] = useState<BibleBookInfo[]>([])
@@ -39,7 +40,7 @@ export function BiblePage({ scenes, comp }: Props) {
     const off = onMessage((msg) => {
       switch (msg.type) {
         case 'bibleState':
-          setInstalled(msg.installed); setDownloading(msg.downloading); setSettings(msg.settings); setLive(msg.live)
+          setInstalled(msg.installed); setDownloading(msg.downloading); setSettings(msg.settings); setLive(msg.live); setYvKey(msg.youVersionKey)
           break
         case 'bibleBooks': setBooks(msg.books); break
         case 'bibleChapter': setTexts(msg.texts); break
@@ -267,8 +268,9 @@ export function BiblePage({ scenes, comp }: Props) {
                     <span className="vnum">{i + 1}</span> {t}
                   </div>
                 ))}
-                {verses.length === 0 && <p className="meta">Este livro não existe nesta versão.</p>}
+                {verses.length === 0 && <p className="meta">{info(main ?? '')?.provider === 'youversion' ? 'Buscando na YouVersion…' : 'Este livro não existe nesta versão.'}</p>}
               </div>
+              {info(main ?? '')?.copyright && <p className="meta copyright">{info(main ?? '')!.copyright}</p>}
             </>
           )}
         </section>
@@ -364,7 +366,7 @@ export function BiblePage({ scenes, comp }: Props) {
       </div>
 
       {catalogOpen && (
-        <Catalog catalog={catalog} error={catalogError} installed={installed} downloading={downloading} onClose={() => setCatalogOpen(false)} />
+        <Catalog catalog={catalog} error={catalogError} installed={installed} downloading={downloading} yvKey={yvKey} onClose={() => setCatalogOpen(false)} />
       )}
     </div>
   )
@@ -386,8 +388,8 @@ function Highlight({ text, query }: { text: string; query: string }) {
   return <>{parts.map((p, i) => (p.m ? <mark key={i}>{p.t}</mark> : <span key={i}>{p.t}</span>))}</>
 }
 
-function Catalog({ catalog, error, installed, downloading, onClose }: {
-  catalog: BibleVersion[] | null; error: string | null; installed: BibleVersion[]; downloading: string[]; onClose: () => void
+function Catalog({ catalog, error, installed, downloading, yvKey, onClose }: {
+  catalog: BibleVersion[] | null; error: string | null; installed: BibleVersion[]; downloading: string[]; yvKey: boolean; onClose: () => void
 }) {
   const [lang, setLang] = useState('por')
   const [q, setQ] = useState('')
@@ -422,6 +424,7 @@ function Catalog({ catalog, error, installed, downloading, onClose }: {
           Todas as versões livres (domínio público ou licença aberta) da Free Use Bible API, em {languages.length} idiomas.
           Baixe uma vez e use sem internet.
         </p>
+        <YouVersionBox hasKey={yvKey} installed={installed} downloading={downloading} />
         <ImportBox />
         {installed.length > 0 && (
           <>
@@ -429,7 +432,7 @@ function Catalog({ catalog, error, installed, downloading, onClose }: {
             <div className="catalog-list">
               {installed.map((v) => (
                 <div key={v.id} className="catalog-item">
-                  <span><b>{v.shortName}</b> {v.name} <span className="meta">{v.languageName}</span></span>
+                  <span><b>{v.shortName}</b> {v.name} <span className="meta">{v.provider === 'youversion' ? 'YouVersion (online)' : v.languageName}</span></span>
                   <button className="small danger" onClick={() => send({ type: 'bibleDelete', id: v.id })}>Remover</button>
                 </div>
               ))}
@@ -486,6 +489,70 @@ function ImportBox() {
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome (ex.: Nova Almeida Atualizada)" style={{ flex: 1 }} />
         <button className="primary" onClick={() => send({ type: 'bibleImport', name, shortName: short })}>Escolher arquivo…</button>
       </div>
+    </div>
+  )
+}
+
+/** Versões pela API da YouVersion com a chave de aplicação da pessoa (texto buscado na hora, precisa de internet). */
+function YouVersionBox({ hasKey, installed, downloading }: { hasKey: boolean; installed: BibleVersion[]; downloading: string[] }) {
+  const [key, setKey] = useState('')
+  const [editing, setEditing] = useState(!hasKey)
+  const [lang, setLang] = useState('pt')
+  const [list, setList] = useState<BibleVersion[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [q, setQ] = useState('')
+
+  useEffect(() => onMessage((msg) => {
+    if (msg.type === 'bibleYvVersions') { setList(msg.list); setError(msg.error ?? null) }
+  }), [])
+  useEffect(() => { if (hasKey) { setList(null); send({ type: 'bibleYvVersions', language: lang }) } }, [hasKey, lang])
+  useEffect(() => { if (hasKey) setEditing(false) }, [hasKey])
+
+  const has = (id: string) => installed.some((v) => v.id === id)
+  const shown = (list ?? []).filter((v) => !q || normalize(`${v.name} ${v.shortName}`).includes(normalize(q)))
+
+  return (
+    <div className="import-box yv-box">
+      <h3>YouVersion (com a sua chave de aplicação)</h3>
+      {editing ? (
+        <div className="row">
+          <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="Cole a App Key do portal da YouVersion" style={{ flex: 1 }} />
+          <button className="primary" disabled={!key.trim()} onClick={() => { send({ type: 'bibleYvKey', key: key.trim(), language: lang }); setKey('') }}>Salvar chave</button>
+          {hasKey && <button className="small" onClick={() => setEditing(false)}>Cancelar</button>}
+        </div>
+      ) : (
+        <>
+          <div className="row catalog-filter">
+            <span className="meta">Chave salva (criptografada neste PC).</span>
+            <button className="small" onClick={() => setEditing(true)}>Trocar chave</button>
+            <button className="small danger-text" onClick={() => { if (window.confirm('Apagar a chave da YouVersion deste PC?')) send({ type: 'bibleYvKey', key: '' }) }}>Apagar chave</button>
+            <span className="spacer" />
+            <select value={lang} onChange={(e) => setLang(e.target.value)}>
+              <option value="pt">Português</option>
+              <option value="en">Inglês</option>
+              <option value="es">Espanhol</option>
+              <option value="*">Todos os idiomas</option>
+            </select>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrar" />
+          </div>
+          {error && <p className="warn-text">{error}</p>}
+          {!list && !error && <p className="meta">Carregando as versões liberadas para a sua chave…</p>}
+          {list && list.length === 0 && !error && <p className="meta">Nenhuma versão liberada para a sua chave neste idioma.</p>}
+          <div className="catalog-list yv-list">
+            {shown.map((v) => (
+              <div key={v.id} className="catalog-item">
+                <span><b>{v.shortName}</b> {v.name} <span className="meta">{v.languageName}{v.copyright ? ` · ${v.copyright.slice(0, 90)}` : ''}</span></span>
+                {has(v.id)
+                  ? <span className="meta">adicionada</span>
+                  : <button className="small" disabled={downloading.includes(v.id)} onClick={() => send({ type: 'bibleYvAdd', id: v.id })}>
+                      {downloading.includes(v.id) ? 'Adicionando…' : 'Adicionar'}
+                    </button>}
+              </div>
+            ))}
+          </div>
+          <p className="meta">O texto vem da YouVersion na hora em que você abre o capítulo (precisa de internet); a pesquisa por palavras funciona só nas versões baixadas.</p>
+        </>
+      )}
     </div>
   )
 }

@@ -528,3 +528,4 @@ input.rename { font-size: 13px; padding: 3px 6px; width: 140px; }
 .grid { overflow-x: auto; }
 .menu button:disabled { opacity: .4; }
 .grid .layer-head { position: sticky; left: 0; z-index: 2; }
+.yv-box { border-color: #4fc3f7; } .yv-box h3 { color: #4fc3f7; } .yv-list { max-height: 220px; overflow: auto; }

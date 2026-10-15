@@ -16,6 +16,9 @@ sealed class BibleVersionInfo
     public int Verses { get; set; }
     public bool PublicDomain { get; set; }
     public string LicenseUrl { get; set; } = "";
+    public string Copyright { get; set; } = "";
+    /// <summary>null = texto guardado no PC; "youversion" = texto buscado na hora pela API.</summary>
+    public string? Provider { get; set; }
 }
 
 /// <summary>Livro: Chapters[c][v] = texto do versículo v+1 do capítulo c+1 ("" quando a versão não tem).</summary>
@@ -36,6 +39,9 @@ sealed class BibleText
 
     /// <summary>Texto sem acentos e em minúsculas, para a pesquisa por palavras (montado na primeira busca).</summary>
     [JsonIgnore] public List<(BibleBook Book, int Chapter, int Verse, string Folded)>? SearchIndex;
+
+    /// <summary>Capítulos já buscados na API (versões online).</summary>
+    [JsonIgnore] public HashSet<string> LoadedChapters { get; } = [];
 
     public string? Verse(string book, int chapter, int verse) =>
         ById.TryGetValue(book, out var b) && chapter >= 1 && chapter <= b.Chapters.Count
@@ -75,6 +81,29 @@ sealed class BibleStore
     static string VersionPath(string id) => Path.Combine(Dir, string.Concat(id.Split(Path.GetInvalidFileNameChars())) + ".json");
 
     readonly Dictionary<string, BibleText> _loaded = [];
+
+    public readonly YouVersionClient YouVersion = new();
+
+    /// <summary>Adiciona uma versão da YouVersion: guarda só a estrutura (livros e capítulos).</summary>
+    public async Task<BibleVersionInfo> AddYouVersionAsync(BibleVersionInfo info)
+    {
+        var text = await YouVersion.IndexAsync(info);
+        Save(text);
+        return text.Info;
+    }
+
+    /// <summary>Garante o texto do capítulo (versões online buscam na API na primeira vez).</summary>
+    public async Task EnsureAsync(string id, string book, int chapter)
+    {
+        var t = Get(id);
+        if (t?.Info.Provider != YouVersionClient.Provider) return;
+        var key = $"{book}.{chapter}";
+        if (t.LoadedChapters.Contains(key) || !t.ById.TryGetValue(book, out var b) || chapter < 1 || chapter > b.Chapters.Count) return;
+        var verses = await YouVersion.ChapterAsync(t.Info, book, chapter, b.Chapters[chapter - 1].Count);
+        b.Chapters[chapter - 1] = verses;
+        t.LoadedChapters.Add(key);
+        t.SearchIndex = null;
+    }
 
     public BibleSettings Settings { get; set; } = Load<BibleSettings>(SettingsPath) ?? new();
 
