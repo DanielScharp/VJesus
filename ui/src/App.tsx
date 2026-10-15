@@ -8,6 +8,7 @@ import { EffectsPanel } from './EffectsPanel'
 import { ActiveEffectsBar, EffectChips } from './EffectChips'
 import { LayerSettings, TempoBar } from './Tempo'
 import { LyricsPage } from './LyricsPage'
+import { BiblePage } from './BiblePage'
 import { StagePage } from './StagePage'
 import { MonitorsBar } from './MonitorsBar'
 import { AttacksBar } from './AttacksBar'
@@ -15,7 +16,7 @@ import { MappingEditor } from './MappingEditor'
 import { ControlPanel, StreamingPanel } from './ControlPanel'
 import './App.css'
 
-type Tab = 'clips' | 'mapping' | 'lyrics' | 'stage'
+type Tab = 'clips' | 'mapping' | 'lyrics' | 'bible' | 'stage'
 
 function App() {
   const [tab, setTab] = useState<Tab>('clips')
@@ -131,6 +132,7 @@ function App() {
           <button className={tab === 'clips' ? 'active' : ''} onClick={() => setTab('clips')}>Clips e efeitos</button>
           <button className={tab === 'mapping' ? 'active' : ''} onClick={() => setTab('mapping')}>Mapeamento</button>
           <button className={tab === 'lyrics' ? 'active' : ''} onClick={() => setTab('lyrics')}>Letras</button>
+          <button className={tab === 'bible' ? 'active' : ''} onClick={() => setTab('bible')}>Bíblia</button>
           <button className={tab === 'stage' ? 'active' : ''} onClick={() => setTab('stage')}>Retorno</button>
         </nav>
         <TempoBar bpm={tempo.bpm} beat={tempo.beat} />
@@ -161,6 +163,8 @@ function App() {
       {tab === 'lyrics' && (
         <LyricsPage songs={songs} style={lyricStyle} scenes={scenes} onStyleLocal={setLyricStyle} onScenesLocal={setScenes} state={lyricsState} fonts={fonts} preview={preview} comp={comp} />
       )}
+
+      {tab === 'bible' && <BiblePage scenes={scenes} comp={comp} />}
 
       {tab === 'mapping' && (mapping
         ? <MappingEditor mapping={mapping} onChange={setMapping} displays={displays} preview={preview}

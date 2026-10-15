@@ -48,6 +48,7 @@ sealed partial class MainForm
                 break;
             case "lyricsText":
                 _liveSongId = null;
+                _liveBible = null;
                 _liveSlide = -1;
                 _liveText = (string?)msg["text"];
                 _blank = false;
@@ -112,6 +113,7 @@ sealed partial class MainForm
         var slides = LyricsLibrary.Slides(song.Text);
         if (slides.Count == 0) return;
         _liveSongId = songId;
+        _liveBible = null;
         _liveSlide = Math.Clamp(slide, 0, slides.Count - 1);
         _liveText = slides[_liveSlide].Text;
         _blank = false;
@@ -121,16 +123,20 @@ sealed partial class MainForm
     /// <summary>Fim da música: tira a letra do telão e da tela de retorno (atual e próximo).</summary>
     void ClearLyrics()
     {
+        bool wasBible = _liveBible != null;
+        _liveBible = null;
         _liveSongId = null;
         _liveSlide = -1;
         _liveText = null;
         _blank = false;
         UpdateLyricsOutput(quiet: true);
+        if (wasBible) SendBibleState();
     }
 
     /// <summary>Próximo/anterior slide da música no telão (teclado, OSC, celular).</summary>
     void StepSlide(int direction)
     {
+        if (_liveBible != null) { StepBible(direction); return; }
         if (_liveSongId == null) return;
         ShowSlide(_liveSongId, _liveSlide + direction);
     }
@@ -138,6 +144,7 @@ sealed partial class MainForm
     /// <summary>Estilo do que está no telão: cena da música, cena e ajustes do slide.</summary>
     LyricStyle LiveStyle()
     {
+        if (_liveBible != null) return BibleStyle();
         if (_liveSongId == null) return _lyrics.Style;
         var song = _lyrics.Songs.FirstOrDefault(s => s.Id == _liveSongId);
         var slides = song != null ? LyricsLibrary.Slides(song.Text) : [];

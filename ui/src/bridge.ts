@@ -93,6 +93,14 @@ export type AttackPreset = {
   key: string | null; holdWhilePressed: boolean
 }
 
+export type BibleVersion = { id: string; name: string; shortName: string; language: string; languageName: string; books: number; verses: number; publicDomain: boolean; licenseUrl: string }
+export type BibleSettings = {
+  mainVersion: string | null; compare: string[]; onScreen: string[]; sceneId: string | null
+  reference: 'abaixo' | 'acima' | 'nenhuma'; showVersion: boolean; referenceScale: number; referenceColor: string; history: string[]
+}
+export type BiblePassage = { book: string; chapter: number; verse: number; verseEnd: number }
+export type BibleBookInfo = { id: string; name: string; chapters: number[] }
+export type BibleHit = { book: string; bookName: string; chapter: number; verse: number; text: string }
 export type LayerPlayback = { position: number; duration: number; playing: boolean } | null
 
 export type EngineMessage =
@@ -119,6 +127,11 @@ export type EngineMessage =
   | { type: 'fonts'; list: string[] }
   | ({ type: 'stage' } & StageState)
   | { type: 'attacks'; list: AttackPreset[] }
+  | { type: 'bibleState'; installed: BibleVersion[]; downloading: string[]; settings: BibleSettings; live: BiblePassage | null }
+  | { type: 'bibleCatalog'; list: BibleVersion[]; error?: string }
+  | { type: 'bibleBooks'; version: string | null; books: BibleBookInfo[] }
+  | { type: 'bibleChapter'; book: string; chapter: number; texts: Record<string, string[] | null> }
+  | { type: 'bibleSearch'; query: string; total: number; hits: BibleHit[] }
 
 type Cell = { layer: number; column: number }
 
@@ -172,6 +185,13 @@ export type UiMessage =
   | { type: 'effectMove'; target: number; index: number; direction: -1 | 1 }
   | { type: 'effectToggle'; target: number; index: number; enabled: boolean }
   | { type: 'effectParam'; target: number; index: number; param: string; value: number }
+  | { type: 'bibleHello' | 'bibleCatalog' }
+  | { type: 'bibleDownload' | 'bibleDelete'; id: string }
+  | { type: 'bibleSettings'; settings: BibleSettings }
+  | { type: 'bibleBooks'; version: string }
+  | { type: 'bibleChapter'; book: string; chapter: number; versions: string[] }
+  | { type: 'bibleSearch'; version: string; query: string }
+  | { type: 'bibleShow'; book: string; chapter: number; verse: number; verseEnd?: number }
 
 type WebView = {
   postMessage(msg: unknown): void

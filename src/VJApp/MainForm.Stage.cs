@@ -129,6 +129,8 @@ sealed partial class MainForm
             if (_liveSlide >= 0 && _liveSlide < slides.Count) label = slides[_liveSlide].Label;
             if (_liveSlide + 1 < slides.Count) next = slides[_liveSlide + 1].Text;
         }
+        else if (_liveBible != null)
+            (title, next) = BibleStageInfo(_liveBible);
         var payload = new
         {
             type = "stage",

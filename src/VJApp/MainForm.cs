@@ -157,6 +157,7 @@ sealed partial class MainForm : Form
             case "tap": Tap(); break;
             case var lyricsType when lyricsType?.StartsWith("lyrics") == true: OnLyricsMessage(lyricsType, msg); break;
             case var stageType when stageType?.StartsWith("stage") == true: OnStageMessage(stageType, msg); break;
+            case var bibleType when bibleType?.StartsWith("bible") == true: OnBibleMessage(bibleType, msg); break;
             case var attackType when attackType?.StartsWith("attack") == true: OnAttackMessage(attackType, msg); break;
             case "setBpm": SetBpm((float)msg["bpm"]!); break;
             case "beatResync": _renderer.ResyncBeat(); break;

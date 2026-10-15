@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { StageElement, StageState, StageTimer } from './bridge'
 import { RichText } from './RichText'
 
@@ -66,7 +66,7 @@ export function StageView({ state, editable, selected, onSelect, onMove, preview
             {config.showSongTitle && (live.title || live.label) && (
               <div className="stage-caption">{[live.title, live.label].filter(Boolean).join(' · ')}</div>
             )}
-            {text ? <div className={live.blank ? 'stage-blanked' : ''}><RichText text={text} /></div>
+            {text ? <FitText className={live.blank ? 'stage-blanked' : ''} text={text} />
               : editable ? <div className="stage-sample">Slide atual aparece aqui</div> : null}
             {live.blank && text && <div className="stage-tag">TELA EM BRANCO</div>}
           </>
@@ -76,7 +76,7 @@ export function StageView({ state, editable, selected, onSelect, onMove, preview
         return live.next ? (
           <>
             <div className="stage-caption">{config.nextLabel}</div>
-            <div><RichText text={live.next} /></div>
+            <FitText text={live.next} />
           </>
         ) : editable ? <div className="stage-sample">{config.nextLabel}: próximo slide</div> : null
       case 'clock': {
@@ -146,4 +146,21 @@ export function StageView({ state, editable, selected, onSelect, onMove, preview
       })}
     </div>
   )
+}
+
+/** Texto que diminui sozinho até caber na caixa (versículos e slides longos no retorno). */
+function FitText({ text, className }: { text: string; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    const box = el?.closest('.stage-el') as HTMLElement | null
+    if (!el || !box) return
+    let scale = 1
+    el.style.fontSize = '1em'
+    while (scale > 0.3 && box.scrollHeight > box.clientHeight + 1) {
+      scale *= 0.9
+      el.style.fontSize = `${scale}em`
+    }
+  })
+  return <div ref={ref} className={className}><RichText text={text} /></div>
 }
