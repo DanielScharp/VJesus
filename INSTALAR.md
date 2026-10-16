@@ -45,6 +45,9 @@ Na aba **Bíblia**, clique em **Versões…** e baixe as que quiser (precisa de 
 - **Painel de LED**: escolha um modelo (ex.: 2 laterais verticais + centro), informe os pixels de cada parte como estão na processadora e arraste as partes no mapa do palco. Em **Separados** cada parte recebe uma layer, um grupo de layers ou a composição; em **Unido** uma imagem só atravessa todas as partes conforme o mapa.
 - **Grupos de layers**: junte layers (ex.: "Centro" = layers 2 e 3) para mandar a um slice ou parte do LED.
 
+### Fontes
+Na aba **Letras**, painel de estilo, clique em **Mais fontes**: digite o nome de uma fonte do Google Fonts (ex.: Poppins) e clique em **Baixar**, ou importe arquivos .ttf, .otf ou o .zip. As fontes ficam em `%AppData%\VJApp\fontes` (não precisa instalar no Windows) e servem para as letras e a Bíblia.
+
 ### 4. Opcionais (instale só o que for usar)
 
 | Para quê | O que instalar | Link |

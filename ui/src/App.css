@@ -574,3 +574,13 @@ input.output-edit {
   background: var(--bg); color: var(--text); border: 1px solid var(--accent); border-radius: 4px;
   padding: 1px 4px; font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; box-sizing: border-box;
 }
+
+/* ---------- fontes ---------- */
+.fonts-box { margin: 2px 0 8px; }
+.fonts-panel { border: 1px solid var(--line); border-radius: 6px; padding: 8px; margin-top: 6px; display: flex; flex-direction: column; gap: 6px; }
+.fonts-panel .row { gap: 6px; align-items: center; }
+.fonts-panel input { flex: 1; min-width: 0; }
+.fonts-list { display: flex; flex-direction: column; gap: 2px; max-height: 160px; overflow: auto; }
+.font-item { display: flex; justify-content: space-between; align-items: center; }
+.font-item.active .link { color: var(--accent); font-weight: 600; }
+button.link { background: transparent; border: 0; padding: 2px 4px; text-align: left; }

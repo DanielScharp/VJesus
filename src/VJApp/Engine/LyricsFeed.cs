@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
@@ -194,9 +194,7 @@ sealed class LyricsFeed
                 g.PixelOffsetMode = PixelOffsetMode.HighQuality;
             }
 
-            FontFamily family;
-            try { family = new FontFamily(style.FontFamily); }
-            catch { family = FontFamily.GenericSansSerif; }
+            var (family, ownedFamily) = FontStore.Find(style.FontFamily);
 
             float margin = Math.Clamp(style.Margin, 0, Width / 3f);
             var area = new RectangleF(margin, margin * 0.6f, Width - 2 * margin, Height - 1.2f * margin);
@@ -240,10 +238,10 @@ sealed class LyricsFeed
                 {
                     if (!p.Space)
                     {
-                        var fs = FontStyleFor(family, p.Run);
-                        float ascent = p.Size * family.GetCellAscent(fs) / family.GetEmHeight(fs);
+                        var (ff, fs) = Face(family, p.Run);
+                        float ascent = p.Size * ff.GetCellAscent(fs) / ff.GetEmHeight(fs);
                         var path = new GraphicsPath();
-                        path.AddString(p.Text, family, (int)fs, p.Size, new PointF(x, baseline - ascent), format);
+                        path.AddString(p.Text, ff, (int)fs, p.Size, new PointF(x, baseline - ascent), format);
                         bool isAnim = p.Run.Anim != null;
                         (isAnim ? animAll : staticAll).AddPath(path, false);
                         colored.Add((path, p.Run.Color, isAnim));
@@ -274,7 +272,7 @@ sealed class LyricsFeed
             foreach (var c in colored) c.Path.Dispose();
             staticAll.Dispose();
             animAll.Dispose();
-            family.Dispose();
+            if (ownedFamily) family.Dispose();
 
             // pedaços parados: o slide inteiro, uma linha ou uma palavra cada (conforme a transição)
             var staticWords = words.Select((w, i) => (w, i)).Where(t => t.w.Anim == null).ToList();
@@ -347,6 +345,9 @@ sealed class LyricsFeed
         return pixels;
     }
 
+    /// <summary>Família e estilo de um trecho (usa o arquivo próprio de negrito/itálico das fontes importadas).</summary>
+    static (FontFamily Family, FontStyle Style) Face(FontFamily family, Run run) => FontStore.Face(family, FontStyleFor(family, run));
+
     static FontStyle FontStyleFor(FontFamily family, Run run)
     {
         var fs = FontStyle.Regular;
@@ -370,8 +371,8 @@ sealed class LyricsFeed
             foreach (var run in para)
             {
                 float s = size * run.Scale;
-                var fs = FontStyleFor(family, run);
-                using var font = new Font(family, s, fs, GraphicsUnit.Pixel);
+                var (ff, fs) = Face(family, run);
+                using var font = new Font(ff, s, fs, GraphicsUnit.Pixel);
                 foreach (Match m in Regex.Matches(run.Text, @"\s+|\S+"))
                 {
                     bool space = char.IsWhiteSpace(m.Value[0]);
@@ -387,7 +388,7 @@ sealed class LyricsFeed
                 while (current.Count > 0 && current[^1].Space) { width -= current[^1].Width; current.RemoveAt(current.Count - 1); }
                 float maxSize = current.Count > 0 ? current.Max(p => p.Size) : size;
                 float ascent = current.Count > 0
-                    ? current.Max(p => { var fs = FontStyleFor(family, p.Run); return p.Size * family.GetCellAscent(fs) / family.GetEmHeight(fs); })
+                    ? current.Max(p => { var (ff, fs) = Face(family, p.Run); return p.Size * ff.GetCellAscent(fs) / ff.GetEmHeight(fs); })
                     : size * 0.8f;
                 var fsMain = FontStyle.Regular;
                 float lineHeight = maxSize * family.GetLineSpacing(fsMain) / family.GetEmHeight(fsMain) * spacing;

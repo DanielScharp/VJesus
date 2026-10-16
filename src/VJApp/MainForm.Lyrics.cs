@@ -219,6 +219,66 @@ sealed partial class MainForm
     void SendFonts()
     {
         using var fonts = new InstalledFontCollection();
-        Send(new { type = "fonts", list = fonts.Families.Select(f => f.Name).ToArray() });
+        var imported = FontStore.Families.Distinct().OrderBy(f => f).ToArray();
+        Send(new
+        {
+            type = "fonts",
+            list = imported.Concat(fonts.Families.Select(f => f.Name)).Distinct().ToArray(),
+            imported,
+        });
+    }
+
+    /// <summary>Fontes próprias do VJApp: importar arquivos, baixar do Google Fonts, apagar.</summary>
+    void OnFontMessage(string type, JsonNode msg)
+    {
+        switch (type)
+        {
+            case "fontsImport":
+            {
+                using var dlg = new OpenFileDialog
+                {
+                    Title = "Importar fontes (.ttf, .otf ou o .zip baixado do Google Fonts)",
+                    Filter = "Fontes|*.ttf;*.otf;*.zip|Todos os arquivos|*.*",
+                    Multiselect = true,
+                };
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    int n = FontStore.Import(dlg.FileNames);
+                    Send(new { type = "notice", message = n > 0 ? $"{n} arquivo(s) de fonte importado(s)" : "Nenhum arquivo .ttf ou .otf encontrado" });
+                }
+                catch (Exception ex) { Send(new { type = "error", message = $"Não consegui importar as fontes: {ex.Message}" }); }
+                FontsChanged();
+                break;
+            }
+            case "fontsList":
+                SendFonts();
+                break;
+            case "fontsGoogle":
+                _ = DownloadGoogleFontAsync((string?)msg["family"] ?? "");
+                break;
+            case "fontsDelete":
+                if ((string?)msg["family"] is { } fam) { FontStore.Delete(fam); FontsChanged(); }
+                break;
+        }
+    }
+
+    async Task DownloadGoogleFontAsync(string family)
+    {
+        Send(new { type = "fontsBusy", family });
+        try
+        {
+            int n = await FontStore.DownloadGoogleAsync(family);
+            Send(new { type = "notice", message = $"Fonte {family.Trim()} instalada no VJApp ({n} estilos)" });
+        }
+        catch (Exception ex) { Send(new { type = "error", message = $"Google Fonts: {ex.Message}" }); }
+        Send(new { type = "fontsBusy", family = (string?)null });
+        FontsChanged();
+    }
+
+    void FontsChanged()
+    {
+        SendFonts();
+        UpdateLyricsOutput(quiet: true); // redesenha o que está no telão com a fonte nova
     }
 }

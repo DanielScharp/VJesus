@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { send, type Composition, type LyricScene, type LyricStyle, type LyricsState, type Song } from './bridge'
 import { normalize, replaceSlide, SLIDE_TRANSITIONS, splitSlides, stripTags, WORD_ANIMS, type Slide } from './lyrics'
 import { RichText } from './RichText'
+import { FontsBox } from './FontsBox'
 
 type Props = {
   songs: Song[]
@@ -246,6 +247,7 @@ function StylePanel({ style, fonts, onChange }: { style: LyricStyle; fonts: stri
           {(fonts.includes(style.fontFamily) ? fonts : [style.fontFamily, ...fonts]).map((f) => <option key={f}>{f}</option>)}
         </select>
       </label>
+      <FontsBox current={style.fontFamily} onUse={(f) => onChange({ fontFamily: f })} />
       <label>Tamanho <output>{Math.round(style.fontSize)}</output>
         <input type="range" min={24} max={200} step={1} value={style.fontSize} onChange={(e) => onChange({ fontSize: Number(e.target.value) })} />
       </label>

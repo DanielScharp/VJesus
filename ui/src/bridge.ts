@@ -134,7 +134,8 @@ export type EngineMessage =
   | { type: 'effects'; list: EffectDef[] }
   | { type: 'lyricsLibrary'; songs: Song[]; style: LyricStyle; scenes: LyricScene[] }
   | ({ type: 'lyricsState' } & LyricsState)
-  | { type: 'fonts'; list: string[] }
+  | { type: 'fonts'; list: string[]; imported?: string[] }
+  | { type: 'fontsBusy'; family: string | null }
   | ({ type: 'stage' } & StageState)
   | { type: 'attacks'; list: AttackPreset[] }
   | { type: 'bibleState'; installed: BibleVersion[]; downloading: string[]; settings: BibleSettings; live: BiblePassage | null; youVersionKey: boolean }
@@ -206,6 +207,8 @@ export type UiMessage =
   | { type: 'bibleDownload' | 'bibleDelete'; id: string }
   | { type: 'bibleSettings'; settings: BibleSettings }
   | { type: 'bibleImport'; name: string; shortName: string }
+  | { type: 'fontsImport' | 'fontsList' }
+  | { type: 'fontsGoogle' | 'fontsDelete'; family: string }
   | { type: 'bibleYvKey'; key: string; language?: string }
   | { type: 'bibleYvVersions'; language: string }
   | { type: 'bibleYvAdd'; id: string }
