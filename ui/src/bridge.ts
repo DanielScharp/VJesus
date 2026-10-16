@@ -134,7 +134,7 @@ export type EngineMessage =
   | { type: 'effects'; list: EffectDef[] }
   | { type: 'lyricsLibrary'; songs: Song[]; style: LyricStyle; scenes: LyricScene[] }
   | ({ type: 'lyricsState' } & LyricsState)
-  | { type: 'fonts'; list: string[]; imported?: string[] }
+  | { type: 'fonts'; list: string[]; imported?: string[]; faces?: { family: string; url: string; bold: boolean; italic: boolean }[] }
   | { type: 'fontsBusy'; family: string | null }
   | ({ type: 'stage' } & StageState)
   | { type: 'attacks'; list: AttackPreset[] }

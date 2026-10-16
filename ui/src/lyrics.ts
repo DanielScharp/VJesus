@@ -70,7 +70,7 @@ export function replaceSlide(text: string, index: number, slide: Slide): string 
 
 /** Texto sem marcações (para busca e prévias simples). */
 export function stripTags(text: string) {
-  return text.replace(/<\/?(b|i|u|cor|tam|anim)(\s+[^>]*)?>/gi, '')
+  return text.replace(/<\/?(b|i|u|cor|tam|anim|fonte)(\s+[^>]*)?>/gi, '')
 }
 
 /** Transições de slide (mesmos nomes do motor). */
@@ -88,7 +88,7 @@ export const WORD_ANIMS: [string, string][] = [
 ]
 
 export type RichAnim = { type: string; intensity: number; speed: number }
-export type RichRun = { text: string; bold: boolean; italic: boolean; underline: boolean; color: string | null; scale: number; anim: RichAnim | null }
+export type RichRun = { text: string; bold: boolean; italic: boolean; underline: boolean; color: string | null; scale: number; anim: RichAnim | null; font: string | null }
 
 /** Lê as marcações de trecho em pedaços com formatação (para a prévia dos slides na UI). */
 export function parseRich(text: string): RichRun[] {
@@ -96,11 +96,13 @@ export function parseRich(text: string): RichRun[] {
   let bold = false, italic = false, underline = false
   let color: string | null = null, scale = 1
   let anim: RichAnim | null = null
+  let font: string | null = null
+  const fonts: (string | null)[] = []
   const colors: (string | null)[] = [], scales: number[] = [], anims: (RichAnim | null)[] = []
-  const re = /<(\/?)(b|i|u|cor|tam|anim)(?:\s+([^>]*))?>/gi
+  const re = /<(\/?)(b|i|u|cor|tam|anim|fonte)(?:\s+([^>]*))?>/gi
   let pos = 0
   let m: RegExpExecArray | null
-  const emit = (s: string) => { if (s) runs.push({ text: s, bold, italic, underline, color, scale, anim }) }
+  const emit = (s: string) => { if (s) runs.push({ text: s, bold, italic, underline, color, scale, anim, font }) }
   while ((m = re.exec(text))) {
     emit(text.slice(pos, m.index))
     pos = m.index + m[0].length
@@ -115,6 +117,7 @@ export function parseRich(text: string): RichRun[] {
         if (close) scale = scales.pop() ?? 1
         else { scales.push(scale); const v = parseFloat(arg); if (!isNaN(v)) scale = arg.endsWith('%') ? v / 100 : v }
         break
+      case 'fonte': if (close) font = fonts.pop() ?? null; else { fonts.push(font); font = arg.replace(/"/g, '') || null } break
       case 'anim':
         if (close) anim = anims.pop() ?? null
         else {

@@ -99,6 +99,9 @@ sealed partial class MainForm : Form
         {
             string dist = Path.Combine(AppContext.BaseDirectory, "ui");
             core.SetVirtualHostNameToFolderMapping(UiHost, dist, CoreWebView2HostResourceAccessKind.Allow);
+            // fontes importadas (para a prévia das letras usar as mesmas fontes do telão)
+            Directory.CreateDirectory(VJApp.Engine.FontStore.Dir);
+            core.SetVirtualHostNameToFolderMapping("fonts.vj", VJApp.Engine.FontStore.Dir, CoreWebView2HostResourceAccessKind.Allow);
             core.Navigate($"https://{UiHost}/index.html");
         }
         _playbackTimer.Start();

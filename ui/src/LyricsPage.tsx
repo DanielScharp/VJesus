@@ -114,7 +114,7 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
             setEditing(null)
           }} />
         ) : song && editingSlide !== null && slides[editingSlide] ? (
-          <SlideEditor index={editingSlide} slide={slides[editingSlide]} scenes={scenes}
+          <SlideEditor index={editingSlide} slide={slides[editingSlide]} scenes={scenes} fonts={fonts}
             songSceneName={songScene?.name ?? 'Padrão'}
             onCancel={() => setEditingSlide(null)}
             onSave={(sl, project) => {
@@ -324,10 +324,11 @@ function SongEditor({ song, onSave, onCancel }: { song: Song; onSave: (s: Song) 
 const SIZES = [['70%', 'Menor'], ['85%', 'Pouco menor'], ['115%', 'Pouco maior'], ['130%', 'Maior'], ['160%', 'Bem maior']]
 
 /** Editor de um slide só: texto com barra de formatação, cena do slide e ajustes que valem só aqui. */
-function SlideEditor({ index, slide, scenes, songSceneName, onSave, onCancel }: {
+function SlideEditor({ index, slide, scenes, fonts, songSceneName, onSave, onCancel }: {
   index: number
   slide: Slide
   scenes: LyricScene[]
+  fonts: string[]
   songSceneName: string
   onSave: (s: Slide, project: boolean) => void
   onCancel: () => void
@@ -337,6 +338,7 @@ function SlideEditor({ index, slide, scenes, songSceneName, onSave, onCancel }: 
   const [animType, setAnimType] = useState('balancar')
   const [animIntensity, setAnimIntensity] = useState(1)
   const [animSpeed, setAnimSpeed] = useState(0.6)
+  const [wordFont, setWordFont] = useState('')
   const area = useRef<HTMLTextAreaElement>(null)
   const o = draft.overrides
   const setOverride = (k: string, v: string) => {
@@ -379,6 +381,12 @@ function SlideEditor({ index, slide, scenes, songSceneName, onSave, onCancel }: 
         <label className="mini">força <input type="range" min={0.2} max={3} step={0.1} value={animIntensity} onChange={(e) => setAnimIntensity(Number(e.target.value))} /></label>
         <label className="mini">velocidade <input type="range" min={0.2} max={3} step={0.1} value={animSpeed} onChange={(e) => setAnimSpeed(Number(e.target.value))} /></label>
         <button className="small" onClick={() => wrap(`<anim ${animType} ${animIntensity} ${animSpeed}>`, '</anim>')}>Animar trecho</button>
+        <span className="sep" />
+        <select value={wordFont} onChange={(e) => setWordFont(e.target.value)} title="Fonte do trecho" style={{ maxWidth: 170, fontFamily: wordFont ? `"${wordFont}"` : undefined }}>
+          <option value="">Fonte do trecho…</option>
+          {fonts.map((f) => <option key={f} value={f} style={{ fontFamily: `"${f}"` }}>{f}</option>)}
+        </select>
+        <button className="small" disabled={!wordFont} onClick={() => wrap(`<fonte ${wordFont}>`, '</fonte>')}>Aplicar fonte</button>
         <span className="sep" />
         <button className="small" title="Tira a formatação do trecho selecionado (ou do slide todo)" onClick={() => {
           const el = area.current

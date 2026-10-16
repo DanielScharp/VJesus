@@ -43,6 +43,8 @@ sealed class StageWindow : Form
         {
             string dist = Path.Combine(AppContext.BaseDirectory, "ui");
             core.SetVirtualHostNameToFolderMapping("app.vj", dist, CoreWebView2HostResourceAccessKind.Allow);
+            Directory.CreateDirectory(VJApp.Engine.FontStore.Dir);
+            core.SetVirtualHostNameToFolderMapping("fonts.vj", VJApp.Engine.FontStore.Dir, CoreWebView2HostResourceAccessKind.Allow);
             core.Navigate("https://app.vj/index.html#stage");
         }
     }

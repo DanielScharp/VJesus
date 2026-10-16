@@ -14,6 +14,7 @@ export function RichText({ text, animate }: { text: string; animate?: boolean })
             fontWeight: r.bold ? 700 : undefined, fontStyle: r.italic ? 'italic' : undefined,
             textDecoration: r.underline ? 'underline' : undefined, color: r.color ?? undefined,
             fontSize: r.scale !== 1 ? `${r.scale}em` : undefined,
+            fontFamily: r.font ? `"${r.font}", system-ui, sans-serif` : undefined,
             ...(animate && r.anim ? { ['--ai' as string]: r.anim.intensity, ['--as' as string]: `${1 / r.anim.speed}s` } : {}),
           }}>{r.text}</span>
       ))}

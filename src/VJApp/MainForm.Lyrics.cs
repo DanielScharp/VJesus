@@ -220,12 +220,22 @@ sealed partial class MainForm
     {
         using var fonts = new InstalledFontCollection();
         var imported = FontStore.Families.Distinct().OrderBy(f => f).ToArray();
-        Send(new
+        var payload = new
         {
             type = "fonts",
             list = imported.Concat(fonts.Families.Select(f => f.Name)).Distinct().ToArray(),
             imported,
-        });
+            // arquivos para a interface carregar (@font-face) e mostrar as prévias com a fonte certa
+            faces = FontStore.Files.Select(f => new
+            {
+                family = f.Family,
+                url = "https://fonts.vj/" + string.Join("/", Path.GetRelativePath(FontStore.Dir, f.File).Split(Path.DirectorySeparatorChar).Select(Uri.EscapeDataString)),
+                bold = f.Bold,
+                italic = f.Italic,
+            }),
+        };
+        Send(payload);
+        _stageWindow?.Post(JsonSerializer.Serialize(payload, Json));
     }
 
     /// <summary>Fontes próprias do VJApp: importar arquivos, baixar do Google Fonts, apagar.</summary>

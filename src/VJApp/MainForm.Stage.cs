@@ -49,6 +49,7 @@ sealed partial class MainForm
                 break;
             case "stageHello":
                 SendStage();
+                SendFonts(); // a tela de retorno carrega as fontes importadas (trechos com <fonte>)
                 break;
         }
     }

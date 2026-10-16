@@ -25,7 +25,7 @@ static class FontStore
     static readonly List<PrivateFontCollection> _old = []; // coleções antigas ficam vivas (podem estar em uso no desenho)
 
     /// <summary>Arquivos de fonte de cada família.</summary>
-    public static List<(string Family, string File)> Files { get; private set; } = [];
+    public static List<(string Family, string File, bool Bold, bool Italic)> Files { get; private set; } = [];
 
     public static void Reload()
     {
@@ -69,7 +69,7 @@ static class FontStore
             _old.AddRange(_faces.Values);
             _faces = faces;
             _families = families;
-            Files = [.. loaded.Select(x => (x.Name, x.File))];
+            Files = [.. loaded.Select(x => { var (b, i) = StyleOf(x.Mem, x.Len); return (x.Name, x.File, b, i); })];
         }
     }
 
@@ -131,6 +131,21 @@ static class FontStore
         }
         try { return (new FontFamily(name), true); }
         catch { return (FontFamily.GenericSansSerif, false); }
+    }
+
+    static readonly Dictionary<string, FontFamily> _installed = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Família para usar sem Dispose (trechos com &lt;fonte&gt;): importada ou do Windows, guardada para reaproveitar.</summary>
+    public static FontFamily Shared(string name)
+    {
+        var (f, owned) = Find(name);
+        if (!owned) return f;
+        lock (Lock)
+        {
+            if (_installed.TryGetValue(name, out var cached)) { f.Dispose(); return cached; }
+            _installed[name] = f;
+            return f;
+        }
     }
 
     /// <summary>Copia .ttf/.otf (ou o conteúdo de um .zip) para a pasta de fontes. Retorna quantos arquivos entraram.</summary>

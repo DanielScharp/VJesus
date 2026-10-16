@@ -82,9 +82,9 @@ sealed class LyricsFeed
     // ---------------- texto com formatação por trecho ----------------
 
     /// <summary>Um trecho de texto com a mesma formatação.</summary>
-    sealed record Run(string Text, bool Bold, bool Italic, bool Underline, Color? Color, float Scale, WordAnim? Anim);
+    sealed record Run(string Text, bool Bold, bool Italic, bool Underline, Color? Color, float Scale, WordAnim? Anim, string? Font = null);
 
-    static readonly Regex Tag = new(@"<(/?)(b|i|u|cor|tam|anim)(?:\s+([^>]*))?>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static readonly Regex Tag = new(@"<(/?)(b|i|u|cor|tam|anim|fonte)(?:\s+([^>]*))?>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>
     /// Lê as marcações de trecho: &lt;b&gt; negrito, &lt;i&gt; itálico, &lt;u&gt; sublinhado, &lt;cor #RRGGBB&gt; cor,
@@ -97,6 +97,8 @@ sealed class LyricsFeed
         var colors = new Stack<Color?>();
         var scales = new Stack<float>();
         var anims = new Stack<WordAnim?>();
+        var fonts = new Stack<string?>();
+        string? font = null;
         Color? color = null;
         float scale = 1;
         WordAnim? anim = null;
@@ -108,7 +110,7 @@ sealed class LyricsFeed
             for (int i = 0; i < parts.Length; i++)
             {
                 if (i > 0) lines.Add([]);
-                if (parts[i].Length > 0) lines[^1].Add(new Run(parts[i], bold, italic, underline, color, scale, anim));
+                if (parts[i].Length > 0) lines[^1].Add(new Run(parts[i], bold, italic, underline, color, scale, anim, font));
             }
         }
 
@@ -140,6 +142,10 @@ sealed class LyricsFeed
                 case "anim":
                     if (close) anim = anims.Count > 0 ? anims.Pop() : null;
                     else { anims.Push(anim); anim = ParseAnim(arg); }
+                    break;
+                case "fonte":
+                    if (close) font = fonts.Count > 0 ? fonts.Pop() : null;
+                    else { fonts.Push(font); font = arg.Trim().Trim('"') is { Length: > 0 } fname ? fname : null; }
                     break;
             }
         }
@@ -346,7 +352,12 @@ sealed class LyricsFeed
     }
 
     /// <summary>Família e estilo de um trecho (usa o arquivo próprio de negrito/itálico das fontes importadas).</summary>
-    static (FontFamily Family, FontStyle Style) Face(FontFamily family, Run run) => FontStore.Face(family, FontStyleFor(family, run));
+    static (FontFamily Family, FontStyle Style) Face(FontFamily family, Run run)
+    {
+        // <fonte Nome>: o trecho usa outra família (importada ou do Windows)
+        if (run.Font != null) family = FontStore.Shared(run.Font);
+        return FontStore.Face(family, FontStyleFor(family, run));
+    }
 
     static FontStyle FontStyleFor(FontFamily family, Run run)
     {

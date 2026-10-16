@@ -9,6 +9,7 @@ import { ActiveEffectsBar, EffectChips } from './EffectChips'
 import { LayerSettings, TempoBar } from './Tempo'
 import { LyricsPage } from './LyricsPage'
 import { ProjectMenu } from './ProjectMenu'
+import { injectFontFaces } from './fontFaces'
 import { BiblePage } from './BiblePage'
 import { StagePage } from './StagePage'
 import { MonitorsBar } from './MonitorsBar'
@@ -79,7 +80,7 @@ function App() {
         case 'liveSources': setLive(msg); break
         case 'lyricsLibrary': setSongs(msg.songs); setLyricStyle(msg.style); setScenes(msg.scenes ?? []); break
         case 'lyricsState': setLyricsState(msg); break
-        case 'fonts': setFonts(msg.list); break
+        case 'fonts': setFonts(msg.list); injectFontFaces(msg.faces); break
         case 'stage': setStage(msg); break
         case 'stagePreview': setStagePreview(msg.data); break
         case 'attacks': setAttacks(msg.list); break
