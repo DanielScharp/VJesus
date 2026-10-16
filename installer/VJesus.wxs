@@ -20,7 +20,7 @@
 
     <Icon Id="VJesusIcon" SourceFile="$(sys.SOURCEFILEDIR)..\src\VJApp\vjesus.ico" />
     <Property Id="ARPPRODUCTICON" Value="VJesusIcon" />
-    <Property Id="ARPHELPLINK" Value="https://github.com/DanielScharp/vjapp" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/DanielScharp/VJesus" />
     <Property Id="ARPCOMMENTS" Value="VJ, projection mapping, letras e Bíblia" />
 
     <!-- tela do instalador: boas-vindas, termos, pasta, instalar, abrir ao terminar -->

@@ -21,7 +21,7 @@ Já vem no Windows 11 e na maioria dos Windows 10 atualizados. Se a janela do VJ
 - https://developer.microsoft.com/microsoft-edge/webview2/ → **Evergreen Bootstrapper** → baixar e executar.
 
 ### 2. Instale o VJesus (instalador)
-1. Entre em https://github.com/DanielScharp/vjapp/releases/latest (o repositório é **privado**: faça login no GitHub com a conta **DanielScharp**) e baixe **`VJesus-vX.Y.Z-instalador.msi`**.
+1. Entre em https://github.com/DanielScharp/VJesus/releases/latest e baixe **`VJesus-vX.Y.Z-instalador.msi`**.
 2. Dê dois cliques no `.msi`. Se o Windows mostrar *"O Windows protegeu o computador"* → **Mais informações** → **Executar assim mesmo** (o instalador ainda não é assinado digitalmente).
 3. Siga as telas (termos → pasta → Instalar). Não pede senha de administrador: instala só para o seu usuário, em `%LocalAppData%\Programs\VJesus`.
 4. No fim, deixe marcado **Abrir o VJesus agora**.
@@ -113,8 +113,8 @@ As bibliotecas do programa (Vortice/Direct3D 11, FFmpeg, WebView2, NAudio, DryWe
 
 ### Baixar, compilar e rodar
 ```powershell
-git clone https://github.com/DanielScharp/vjapp.git
-cd vjapp
+git clone https://github.com/DanielScharp/VJesus.git
+cd VJesus
 dotnet run --project src/VJApp
 ```
 A primeira compilação demora alguns minutos (baixa pacotes e compila a interface).
