@@ -4,6 +4,7 @@ import {
 } from './bridge'
 import { NT_START, parseRef, refLabel, shortName } from './bible'
 import { normalize } from './lyrics'
+import { matches } from './shortcuts'
 
 type Props = { scenes: LyricScene[]; comp: Composition | null }
 
@@ -108,19 +109,19 @@ export function BiblePage({ scenes, comp }: Props) {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || catalogOpen) return
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (matches(e, 'biblia.abaixo') || matches(e, 'biblia.acima')) {
         e.preventDefault()
-        const d = e.key === 'ArrowDown' ? 1 : -1
+        const d = matches(e, 'biblia.abaixo') ? 1 : -1
         const v = Math.min(Math.max(1, (sel?.verse ?? 0) + d), verses.length || 1)
         setSel({ verse: v, verseEnd: v })
-      } else if (e.key === 'Enter' && sel) {
+      } else if (matches(e, 'biblia.projetar') && sel) {
         e.preventDefault()
         project(book, chapter, sel.verse, sel.verseEnd)
-      } else if (['ArrowRight', 'PageDown', ' '].includes(e.key) && live) {
+      } else if (matches(e, 'biblia.proximo') && live) {
         e.preventDefault(); send({ type: 'lyricsStep', direction: 1 })
-      } else if (['ArrowLeft', 'PageUp'].includes(e.key) && live) {
+      } else if (matches(e, 'biblia.anterior') && live) {
         e.preventDefault(); send({ type: 'lyricsStep', direction: -1 })
-      } else if (e.key === '/' || (e.ctrlKey && e.key.toLowerCase() === 'f')) {
+      } else if (matches(e, 'biblia.buscar')) {
         e.preventDefault(); inputRef.current?.focus(); inputRef.current?.select()
       }
     }

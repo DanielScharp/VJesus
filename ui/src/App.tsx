@@ -9,6 +9,8 @@ import { ActiveEffectsBar, EffectChips } from './EffectChips'
 import { LayerSettings, TempoBar } from './Tempo'
 import { LyricsPage } from './LyricsPage'
 import { ProjectMenu } from './ProjectMenu'
+import { ShortcutsDialog } from './ShortcutsDialog'
+import { isTyping, matches, setCustom } from './shortcuts'
 import { injectFontFaces } from './fontFaces'
 import { BiblePage } from './BiblePage'
 import { StagePage } from './StagePage'
@@ -51,6 +53,18 @@ function App() {
   const [stage, setStage] = useState<StageState | null>(null)
   const [stagePreview, setStagePreview] = useState<string | null>(null)
   const [attacks, setAttacks] = useState<AttackPreset[]>([])
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+
+  // atalhos que valem em qualquer aba: encerrar letra/versículo e parar ataques
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (isTyping(e)) return
+      if (matches(e, 'telao.encerrar')) { e.preventDefault(); send({ type: 'lyricsClear' }) }
+      else if (matches(e, 'ataques.parar')) { e.preventDefault(); send({ type: 'attackStopAll' }) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const [masterVolume, setMasterVolume] = useState(1)
   const [audioInfo, setAudioInfo] = useState<{ device: string | null; error: string | null }>({ device: null, error: null })
 
@@ -84,6 +98,7 @@ function App() {
         case 'stage': setStage(msg); break
         case 'stagePreview': setStagePreview(msg.data); break
         case 'attacks': setAttacks(msg.list); break
+        case 'shortcuts': setCustom(msg.shortcuts); break
         case 'master': setBrightness(msg.brightness); setSpeed(msg.speed); setTestCard(msg.testCard); break
       }
     })
@@ -130,7 +145,7 @@ function App() {
     <div className="app">
       <header className="topbar">
         <h1>VJApp</h1>
-        <ProjectMenu project={project} />
+        <ProjectMenu project={project} onShortcuts={() => setShortcutsOpen(true)} />
         <nav className="row tabs">
           <button className={tab === 'clips' ? 'active' : ''} onClick={() => setTab('clips')}>Clips e efeitos</button>
           <button className={tab === 'mapping' ? 'active' : ''} onClick={() => setTab('mapping')}>Mapeamento</button>
@@ -144,6 +159,7 @@ function App() {
         </span>
       </header>
 
+      {shortcutsOpen && <ShortcutsDialog attacks={attacks} onClose={() => setShortcutsOpen(false)} />}
       {error && <div className="error" onClick={() => setError(null)}>{error}</div>}
       {notice && <div className="notice">{notice}</div>}
 

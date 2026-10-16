@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { send, TRANSITIONS, type Layer, type Transition } from './bridge'
+import { matches } from './shortcuts'
 
 /** BPM no topo: número editável, TAP, ressincronizar e 4 luzes que acompanham a batida. */
 export function TempoBar({ bpm, beat }: { bpm: number; beat: number }) {
@@ -23,7 +24,7 @@ export function TempoBar({ bpm, beat }: { bpm: number; beat: number }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName
-      if ((e.key === 't' || e.key === 'T') && tag !== 'INPUT' && tag !== 'SELECT' && !e.repeat) send({ type: 'tap' })
+      if (matches(e, 'tempo.tap') && tag !== 'INPUT' && tag !== 'SELECT' && tag !== 'TEXTAREA' && !e.repeat) send({ type: 'tap' })
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

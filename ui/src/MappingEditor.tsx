@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { send, type Composition, type Display, type LayerGroup, type MappingSetup, type Mask, type OutputScreen, type Pt, type Slice } from './bridge'
 import { applyLed } from './led'
+import { matches } from './shortcuts'
 import { LedMap, type SourceOption } from './LedMap'
 import {
   defaultPoints, resampleGrid, SCREEN_TARGETS, shapeTargets, sliceCorners, snapPoint, snapShape, snapValue,
@@ -156,7 +157,8 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
       if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'SELECT') return
       const px = (e.shiftKey ? 10 : 1) / pxW
       const py = (e.shiftKey ? 10 : 1) / pxH
-      const d = { ArrowLeft: [-px, 0], ArrowRight: [px, 0], ArrowUp: [0, -py], ArrowDown: [0, py] }[e.key]
+      const d = matches(e, 'mapa.esquerda', true) ? [-px, 0] : matches(e, 'mapa.direita', true) ? [px, 0]
+        : matches(e, 'mapa.cima', true) ? [0, -py] : matches(e, 'mapa.baixo', true) ? [0, py] : null
       if (!d) return
       e.preventDefault()
       const pts = (slice ?? mask)!.points.map((p, i) => (i === point ? { x: p.x + d[0], y: p.y + d[1] } : p))

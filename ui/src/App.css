@@ -584,3 +584,19 @@ input.output-edit {
 .font-item { display: flex; justify-content: space-between; align-items: center; }
 .font-item.active .link { color: var(--accent); font-weight: 600; }
 button.link { background: transparent; border: 0; padding: 2px 4px; text-align: left; }
+
+/* ---------- atalhos de teclado ---------- */
+.dropdown-sep { border-top: 1px solid var(--line); margin: 4px 0; }
+.modal.shortcuts { width: min(980px, 95vw); }
+.sc-search { flex: 1; max-width: 320px; }
+.sc-list { overflow: auto; padding-right: 4px; }
+.sc-list h3 { margin: 14px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+.sc-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.sc-row.capturing { background: rgba(255, 176, 32, .12); }
+.sc-label { font-weight: 600; }
+.sc-keys { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: flex-end; }
+.sc-key { display: inline-flex; align-items: center; gap: 1px; }
+.sc-key kbd, .dropdown kbd { background: var(--btn); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; font: 12px system-ui, sans-serif; }
+.dropdown kbd:empty { display: none; }
+.sc-press { color: var(--accent); font-weight: 600; }
+.sc-conflict { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px; border: 1px solid var(--accent); border-radius: 6px; margin-bottom: 8px; }

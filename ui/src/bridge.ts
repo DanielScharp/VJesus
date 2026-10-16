@@ -136,6 +136,7 @@ export type EngineMessage =
   | ({ type: 'lyricsState' } & LyricsState)
   | { type: 'fonts'; list: string[]; imported?: string[]; faces?: { family: string; url: string; bold: boolean; italic: boolean }[] }
   | { type: 'fontsBusy'; family: string | null }
+  | { type: 'shortcuts'; shortcuts: Record<string, string[]> | null }
   | ({ type: 'stage' } & StageState)
   | { type: 'attacks'; list: AttackPreset[] }
   | { type: 'bibleState'; installed: BibleVersion[]; downloading: string[]; settings: BibleSettings; live: BiblePassage | null; youVersionKey: boolean }
@@ -208,6 +209,7 @@ export type UiMessage =
   | { type: 'bibleSettings'; settings: BibleSettings }
   | { type: 'bibleImport'; name: string; shortName: string }
   | { type: 'fontsImport' | 'fontsList' }
+  | { type: 'shortcutsSave'; shortcuts: Record<string, string[]> }
   | { type: 'fontsGoogle' | 'fontsDelete'; family: string }
   | { type: 'bibleYvKey'; key: string; language?: string }
   | { type: 'bibleYvVersions'; language: string }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { send, type AttackPreset, type AttackType } from './bridge'
+import { ACTIONS, keysOf, normalizeKey, shortcutsPaused } from './shortcuts'
 
 const TYPES: { id: AttackType; name: string; hint: string; amount?: [string, number, number, number] }[] = [
   { id: 'flash', name: 'Flash de cor', hint: 'A tela vira a cor escolhida e volta (preto = blackout).' },
@@ -11,8 +12,7 @@ const TYPES: { id: AttackType; name: string; hint: string; amount?: [string, num
   { id: 'sweep', name: 'Varredura', hint: 'Uma faixa de cor atravessa a tela.', amount: ['Largura', 0.02, 0.5, 0.01] },
 ]
 
-// teclas que já têm outra função no app
-const RESERVED = ['t', 'T', 'b', 'B', 'Escape', 'Delete', ' ', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Enter', 'Tab']
+// teclas de outras funções do app: vêm da central de atalhos (Menu → Atalhos de teclado)
 
 const newId = () => Math.random().toString(16).slice(2, 10)
 const keyLabel = (k?: string | null) => (!k ? '' : k === ' ' ? 'Espaço' : k.length === 1 ? k.toUpperCase() : k)
@@ -46,14 +46,14 @@ export function AttacksBar({ attacks }: { attacks: AttackPreset[] }) {
   // atalhos de teclado (em qualquer aba, menos digitando)
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (isTyping(e) || e.repeat || e.ctrlKey || e.altKey || e.metaKey) return
-      const a = listRef.current.find((x) => x.key && (x.key === e.key || x.key.toLowerCase() === e.key.toLowerCase()))
+      if (isTyping(e) || e.repeat || e.ctrlKey || e.altKey || e.metaKey || shortcutsPaused()) return
+      const a = listRef.current.find((x) => x.key && normalizeKey(x.key) === normalizeKey(e.key))
       if (!a) return
       e.preventDefault()
       fire(a)
     }
     const up = (e: KeyboardEvent) => {
-      const a = listRef.current.find((x) => x.key && (x.key === e.key || x.key.toLowerCase() === e.key.toLowerCase()))
+      const a = listRef.current.find((x) => x.key && normalizeKey(x.key) === normalizeKey(e.key))
       if (a) release(a)
     }
     window.addEventListener('keydown', down)
@@ -102,7 +102,8 @@ function AttackEditor({ attacks, onTest }: { attacks: AttackPreset[]; onTest: (a
       e.stopImmediatePropagation()
       setCapturing(false)
       if (e.key === 'Backspace') { set({ key: null }); return }
-      if (RESERVED.includes(e.key)) { window.alert(`A tecla ${keyLabel(e.key)} já é usada pelo app. Escolha outra.`); return }
+      const used = ACTIONS.find((x) => keysOf(x.id).includes(normalizeKey(e.key)))
+      if (used) { window.alert(`A tecla ${keyLabel(e.key)} já é usada em "${used.label}". Troque em Menu → Atalhos de teclado ou escolha outra.`); return }
       const other = attacks.find((x) => x.id !== a?.id && x.key?.toLowerCase() === e.key.toLowerCase())
       if (other && !window.confirm(`${keyLabel(e.key)} já é do ataque "${other.name}". Passar para este?`)) return
       save(attacks.map((x) => x.id === a?.id ? { ...x, key: e.key } : other && x.id === other.id ? { ...x, key: null } : x))

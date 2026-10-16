@@ -141,6 +141,7 @@ sealed partial class MainForm : Form
                         primary = s.Primary,
                     }),
                 });
+                SendShortcuts();
                 SendEffectLibrary();
                 SendComposition();
                 SendMapping();
@@ -162,6 +163,7 @@ sealed partial class MainForm : Form
             case var stageType when stageType?.StartsWith("stage") == true: OnStageMessage(stageType, msg); break;
             case var bibleType when bibleType?.StartsWith("bible") == true: OnBibleMessage(bibleType, msg); break;
             case var fontType when fontType?.StartsWith("fonts") == true: OnFontMessage(fontType, msg); break;
+            case var scType when scType?.StartsWith("shortcuts") == true: OnShortcutsMessage(scType, msg); break;
             case var attackType when attackType?.StartsWith("attack") == true: OnAttackMessage(attackType, msg); break;
             case "setBpm": SetBpm((float)msg["bpm"]!); break;
             case "beatResync": _renderer.ResyncBeat(); break;

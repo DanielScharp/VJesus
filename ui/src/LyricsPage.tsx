@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { send, type Composition, type LyricScene, type LyricStyle, type LyricsState, type Song } from './bridge'
 import { normalize, replaceSlide, SLIDE_TRANSITIONS, splitSlides, stripTags, WORD_ANIMS, type Slide } from './lyrics'
 import { RichText } from './RichText'
+import { matches } from './shortcuts'
 import { FontsBox } from './FontsBox'
 
 type Props = {
@@ -47,21 +48,19 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
   const songScene = scenes.find((s) => s.id === song?.sceneId)
   const lyricsInGrid = comp?.layers.some((l) => l.clips.some((c) => c?.kind === 'lyrics')) ?? false
 
-  // atalhos: → / PageDown / espaço = próximo, ← / PageUp = anterior, B ou Esc = tela em branco
+  // atalhos da aba (configuráveis em Menu → Atalhos de teclado): próximo, anterior, tela em branco
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName
       if (editing || editingSlide !== null || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-      if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) {
+      if (matches(e, 'letras.proximo')) {
         e.preventDefault()
         if (state.songId) send({ type: 'lyricsStep', direction: 1 })
         else if (song) send({ type: 'lyricsShow', songId: song.id, slide: 0 })
-      } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+      } else if (matches(e, 'letras.anterior')) {
         e.preventDefault()
         send({ type: 'lyricsStep', direction: -1 })
-      } else if (e.key === 'Delete' || (e.key === 'Escape' && e.shiftKey)) {
-        send({ type: 'lyricsClear' }) // fim da música: sai do telão e do retorno
-      } else if (e.key === 'b' || e.key === 'B' || e.key === 'Escape') {
+      } else if (matches(e, 'letras.branco')) {
         send({ type: 'lyricsBlank' })
       }
     }
