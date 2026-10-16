@@ -42,6 +42,7 @@ sealed partial class MainForm : Form
     public MainForm()
     {
         Text = AppInfo.Name;
+        Icon = AppInfo.Icon;
         ClientSize = new Size(1400, 900);
         Controls.Add(_web);
         _players = new VideoPlayer?[_comp.Layers.Count];
@@ -80,7 +81,7 @@ sealed partial class MainForm : Form
         StartAudio();
         ApplyStageWindow();
 
-        await _web.EnsureCoreWebView2Async();
+        await _web.EnsureCoreWebView2Async(await AppInfo.WebViewEnvironment());
         var core = _web.CoreWebView2;
         core.WebMessageReceived += OnWebMessage;
         // links externos (ex.: endereço do controle remoto) abrem no navegador padrão

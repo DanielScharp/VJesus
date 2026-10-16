@@ -20,16 +20,20 @@ Há dois caminhos. Para **usar** o programa, siga o **Caminho A** (não precisa 
 Já vem no Windows 11 e na maioria dos Windows 10 atualizados. Se a janela do VJesus abrir em branco, instale:
 - https://developer.microsoft.com/microsoft-edge/webview2/ → **Evergreen Bootstrapper** → baixar e executar.
 
-### 2. Baixe o VJesus
-1. Entre em https://github.com/DanielScharp/vjapp/releases/latest (o repositório é **privado**: faça login no GitHub com a conta **DanielScharp**) e baixe o arquivo **`VJesus-vX.Y.Z-win-x64.zip`** da versão mais recente.
-2. Clique com o botão direito no zip → **Propriedades** → marque **Desbloquear** (se aparecer) → OK.
-3. Extraia para uma pasta fixa, por exemplo `C:\VJesus` (evite a pasta Downloads e pastas sincronizadas com OneDrive).
+### 2. Instale o VJesus (instalador)
+1. Entre em https://github.com/DanielScharp/vjapp/releases/latest (o repositório é **privado**: faça login no GitHub com a conta **DanielScharp**) e baixe **`VJesus-vX.Y.Z-instalador.msi`**.
+2. Dê dois cliques no `.msi`. Se o Windows mostrar *"O Windows protegeu o computador"* → **Mais informações** → **Executar assim mesmo** (o instalador ainda não é assinado digitalmente).
+3. Siga as telas (termos → pasta → Instalar). Não pede senha de administrador: instala só para o seu usuário, em `%LocalAppData%\Programs\VJesus`.
+4. No fim, deixe marcado **Abrir o VJesus agora**.
 
-### 3. Abra
-- Execute **`VJesus.exe`**. Na primeira vez o Windows pode mostrar *"O Windows protegeu o computador"* → **Mais informações** → **Executar assim mesmo** (o programa não é assinado digitalmente).
+O instalador cria os atalhos no **menu Iniciar** e na **área de trabalho** e faz os arquivos `.vjproj` abrirem no VJesus.
+
+- **Atualizar:** baixe o `.msi` da versão nova e instale por cima (a versão antiga é substituída).
+- **Desinstalar:** *Configurações → Aplicativos → Aplicativos instalados → VJesus → Desinstalar*. Suas configurações em `%AppData%\VJesus` ficam guardadas (apague a pasta se quiser zerar tudo).
+- **Sem instalar (portátil):** também há o **`VJesus-vX.Y.Z-win-x64.zip`**: extraia numa pasta fixa (ex.: `C:\VJesus`; antes, botão direito no zip → Propriedades → **Desbloquear**) e execute `VJesus.exe`.
+
+### 3. Primeira vez
 - O **Firewall do Windows** vai perguntar sobre acesso à rede: marque **Redes privadas** e permita. Isso é necessário para o **controle pelo celular** (porta 8080), **OSC** (porta 7000) e **NDI**.
-- Na primeira vez, o VJesus cria o atalho **VJesus** na área de trabalho e passa a abrir os arquivos `.vjproj` com duplo clique.
-
 ### Projetos e salvamento automático
 - **Salvar** grava tudo num arquivo `.vjproj`: grade de clips, efeitos, transições, BPM, mapeamento, **letras** (músicas, cenas, estilos, transições e palavras animadas), **tela de retorno** e **ataques**.
 - Os **vídeos e imagens** usados são copiados para a pasta **`<nome do projeto> - mídia`**, ao lado do `.vjproj`. Para levar o show para outro computador, copie o arquivo e essa pasta juntos.
@@ -82,7 +86,7 @@ Copie a pasta inteira para o mesmo lugar no outro computador. Os **vídeos** nã
 ### Atualizar para uma versão nova
 > O programa se chamava **VJApp**. Ao abrir o VJesus pela primeira vez, a pasta `%AppData%\VJApp` vira `%AppData%\VJesus` sozinha (nada se perde) e o atalho da área de trabalho é trocado.
 
-Baixe o zip novo da página **Releases** e extraia **por cima** da pasta antiga (com o VJesus fechado). Suas configurações em `%AppData%\VJesus` são mantidas.
+Instale o `.msi` novo por cima (ou, na versão portátil, extraia o zip novo **por cima** da pasta antiga com o VJesus fechado). Suas configurações em `%AppData%\VJesus` são mantidas.
 
 ---
 

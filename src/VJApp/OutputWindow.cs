@@ -8,6 +8,7 @@ sealed class OutputWindow : Form
     public OutputWindow()
     {
         Text = $"{AppInfo.Name} - Saída";
+        Icon = AppInfo.Icon;
         BackColor = Color.Black;
         ClientSize = new Size(960, 540);
         StartPosition = FormStartPosition.Manual;

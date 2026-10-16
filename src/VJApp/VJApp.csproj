@@ -4,6 +4,7 @@
     <OutputType>WinExe</OutputType>
     <AssemblyName>VJesus</AssemblyName>
     <Product>VJesus</Product>
+    <ApplicationIcon>vjesus.ico</ApplicationIcon>
     <RootNamespace>VJApp</RootNamespace>
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>

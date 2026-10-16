@@ -1,0 +1,81 @@
+<!--
+  Instalador do VJesus (WiX 5). Gerado por scripts\gerar-pacote.ps1:
+    dotnet wix build installer\VJesus.wxs -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext
+      -culture pt-BR -d Version=X.Y.Z -bindpath App=artifacts\VJesus -o artifacts\VJesus-vX.Y.Z-instalador.msi
+
+  - Instala só para o usuário (não pede administrador) em %LocalAppData%\Programs\VJesus.
+  - Atalhos no menu Iniciar e na área de trabalho; .vjproj abre no VJesus.
+  - Aparece em Configurações → Aplicativos (desinstalar e "modificar").
+  - Versão nova instala por cima da antiga (atualização). As configurações em %AppData%\VJesus
+    não são apagadas na desinstalação.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Package Name="VJesus" Manufacturer="VJesus" Version="$(Version)" Language="1046" Codepage="1252"
+           UpgradeCode="6F0B3E52-8C1A-4D37-9E2B-5A4C9D1E7F21" Scope="perUser" Compressed="yes">
+
+    <MajorUpgrade DowngradeErrorMessage="Já existe uma versão mais nova do VJesus instalada." AllowSameVersionUpgrades="yes" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="VJesusIcon" SourceFile="$(sys.SOURCEFILEDIR)..\src\VJApp\vjesus.ico" />
+    <Property Id="ARPPRODUCTICON" Value="VJesusIcon" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/DanielScharp/vjapp" />
+    <Property Id="ARPCOMMENTS" Value="VJ, projection mapping, letras e Bíblia" />
+
+    <!-- tela do instalador: boas-vindas, termos, pasta, instalar, abrir ao terminar -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(sys.SOURCEFILEDIR)licenca.rtf" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Abrir o VJesus agora" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WixShellExecTarget" Value="[#VJesusExe]" />
+    <CustomAction Id="LaunchApp" DllEntry="WixShellExec" Impersonate="yes" BinaryRef="Wix4UtilCA_X86" />
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApp"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed" />
+    </UI>
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="VJesus" />
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="Principal" Title="VJesus" Level="1">
+      <ComponentGroupRef Id="Programa" />
+      <ComponentRef Id="Atalhos" />
+      <ComponentRef Id="TipoDeArquivo" />
+    </Feature>
+
+    <!-- todos os arquivos publicados (programa, FFmpeg, interface, shaders…) -->
+    <ComponentGroup Id="Programa" Directory="INSTALLFOLDER">
+      <Component Id="Executavel" Guid="2B7E4C1D-3F5A-4E8B-9C0D-1A2B3C4D5E6F">
+        <File Id="VJesusExe" Source="!(bindpath.App)\VJesus.exe" KeyPath="yes" />
+      </Component>
+      <Files Include="!(bindpath.App)\**">
+        <Exclude Files="!(bindpath.App)\VJesus.exe" />
+      </Files>
+    </ComponentGroup>
+
+    <!-- menu Iniciar e área de trabalho -->
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="DesktopFolder" />
+    <Component Id="Atalhos" Directory="INSTALLFOLDER" Guid="7C1D2E3F-4A5B-4C6D-8E7F-9A0B1C2D3E4F">
+      <Shortcut Id="AtalhoMenu" Directory="ProgramMenuFolder" Name="VJesus" Description="VJ, projection mapping, letras e Bíblia"
+                Target="[#VJesusExe]" WorkingDirectory="INSTALLFOLDER" Icon="VJesusIcon" />
+      <Shortcut Id="AtalhoDesktop" Directory="DesktopFolder" Name="VJesus" Description="VJ, projection mapping, letras e Bíblia"
+                Target="[#VJesusExe]" WorkingDirectory="INSTALLFOLDER" Icon="VJesusIcon" />
+      <RegistryValue Root="HKCU" Key="Software\VJesus" Name="Atalhos" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <!-- duplo clique em .vjproj abre no VJesus -->
+    <Component Id="TipoDeArquivo" Directory="INSTALLFOLDER" Guid="9E8D7C6B-5A4F-4E3D-2C1B-0A9F8E7D6C5B">
+      <RegistryValue Root="HKCU" Key="Software\VJesus" Name="TipoDeArquivo" Type="integer" Value="1" KeyPath="yes" />
+      <ProgId Id="VJesus.Projeto" Description="Projeto VJesus" Icon="VJesusExe" IconIndex="0">
+        <Extension Id="vjproj" ContentType="application/x-vjesus-project">
+          <Verb Id="open" Command="Abrir" TargetFile="VJesusExe" Argument="&quot;%1&quot;" />
+        </Extension>
+      </ProgId>
+    </Component>
+  </Package>
+</Wix>

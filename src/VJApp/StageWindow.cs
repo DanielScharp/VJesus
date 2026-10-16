@@ -19,6 +19,7 @@ sealed class StageWindow : Form
     {
         _onReady = onReady;
         Text = $"{AppInfo.Name} - Retorno";
+        Icon = AppInfo.Icon;
         BackColor = Color.Black;
         StartPosition = FormStartPosition.Manual;
         ClientSize = new Size(960, 540);
@@ -28,7 +29,7 @@ sealed class StageWindow : Form
     protected override async void OnShown(EventArgs e)
     {
         base.OnShown(e);
-        await _web.EnsureCoreWebView2Async();
+        await _web.EnsureCoreWebView2Async(await AppInfo.WebViewEnvironment());
         var core = _web.CoreWebView2;
         core.Settings.AreDefaultContextMenusEnabled = false;
         core.WebMessageReceived += (_, ev) =>
