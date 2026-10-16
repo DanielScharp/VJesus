@@ -1,4 +1,4 @@
-# Instala as ferramentas para compilar o VJApp (Caminho B do INSTALAR.md) usando o winget.
+# Instala as ferramentas para compilar o VJesus (Caminho B do INSTALAR.md) usando o winget.
 # Uso: powershell -ExecutionPolicy Bypass -File scripts\instalar-dependencias.ps1
 
 $pacotes = @(

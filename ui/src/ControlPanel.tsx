@@ -77,8 +77,8 @@ export function ControlPanel({ info, learn, onLearn }: Props) {
 
 /** Spout (outros programas no mesmo PC, ex.: OBS com plugin Spout) e NDI (pela rede). */
 export function StreamingPanel({ info }: { info: StreamingInfo }) {
-  const [spoutName, setSpoutName] = useState(info.spout ?? 'VJApp')
-  const [ndiName, setNdiName] = useState(info.ndi ?? 'VJApp')
+  const [spoutName, setSpoutName] = useState(info.spout ?? 'VJesus')
+  const [ndiName, setNdiName] = useState(info.ndi ?? 'VJesus')
   const apply = (spout: string | null, ndi: string | null) => send({ type: 'setStreaming', spout, ndi })
 
   return (

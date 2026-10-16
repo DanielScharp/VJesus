@@ -1,6 +1,8 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using VJApp;
+
 namespace VJApp.Model;
 
 /// <summary>Tipo de fonte de um clip.</summary>
@@ -116,7 +118,7 @@ sealed class Composition
     static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public static string DefaultPath => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VJApp", "composicao.json");
+        AppInfo.DataDir, "composicao.json");
 
     public static Composition CreateDefault()
     {

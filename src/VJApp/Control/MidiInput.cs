@@ -2,6 +2,8 @@ using System.Text.Json;
 using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Multimedia;
 
+using VJApp;
+
 namespace VJApp.Control;
 
 /// <summary>Uma ligação de MIDI learn: um controle físico → um endereço de controle do app.</summary>
@@ -18,7 +20,7 @@ sealed record MidiBinding(string Device, string Kind, int Channel, int Number, s
 sealed class MidiInput : IDisposable
 {
     static string BindingsPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VJApp", "midi.json");
+        AppInfo.DataDir, "midi.json");
 
     readonly List<InputDevice> _devices = [];
     readonly Action<string, float> _onControl;

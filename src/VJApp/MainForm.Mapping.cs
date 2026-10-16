@@ -79,7 +79,7 @@ sealed partial class MainForm
                 w.ClientSizeChanged += (_, _) => _renderer?.ResizeOutput(w.Handle, w.ClientSize.Width, w.ClientSize.Height);
                 _windows[screen.Id] = win;
             }
-            win.Text = $"VJApp - {screen.Name}";
+            win.Text = $"{AppInfo.Name} - {screen.Name}";
 
             var place = (screen.Display, screen.Fullscreen);
             if (!_placement.TryGetValue(screen.Id, out var last) || last != place)

@@ -1,6 +1,6 @@
 export type FontFace = { family: string; url: string; bold: boolean; italic: boolean }
 
-/** Carrega na interface as fontes importadas no VJApp (as prévias usam as mesmas fontes do telão). */
+/** Carrega na interface as fontes importadas no VJesus (as prévias usam as mesmas fontes do telão). */
 export function injectFontFaces(faces: FontFace[] | undefined) {
   if (!faces) return
   let el = document.getElementById('vj-fonts') as HTMLStyleElement | null

@@ -4,15 +4,17 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 
+using VJApp;
+
 namespace VJApp.Engine;
 
 /// <summary>
-/// Fontes do VJApp (além das instaladas no Windows): arquivos .ttf/.otf em %AppData%\VJApp\fontes,
+/// Fontes do VJesus (além das instaladas no Windows): arquivos .ttf/.otf em %AppData%\VJesus\fontes,
 /// importados de arquivo/zip ou baixados do Google Fonts pelo nome. Não precisa instalar no Windows.
 /// </summary>
 static class FontStore
 {
-    public static string Dir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VJApp", "fontes");
+    public static string Dir => Path.Combine(AppInfo.DataDir, "fontes");
     static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(60) };
     static readonly object Lock = new();
     /// <summary>

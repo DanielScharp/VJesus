@@ -3,7 +3,7 @@ import { onMessage, send } from './bridge'
 
 /**
  * Fontes próprias: baixar do Google Fonts pelo nome (ex.: Poppins) ou importar .ttf/.otf/.zip.
- * Ficam no VJApp (não precisa instalar no Windows) e aparecem na lista de fontes das letras e da Bíblia.
+ * Ficam no VJesus (não precisa instalar no Windows) e aparecem na lista de fontes das letras e da Bíblia.
  */
 export function FontsBox({ current, onUse }: { current: string; onUse: (family: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -55,14 +55,14 @@ export function FontsBox({ current, onUse }: { current: string; onUse: (family: 
               {imported.map((f) => (
                 <div key={f} className={`font-item ${f === current ? 'active' : ''}`}>
                   <button className="small link" onClick={() => onUse(f)} title="Usar esta fonte">{f}</button>
-                  <button className="small danger-text" title="Remover do VJApp" onClick={() => {
-                    if (window.confirm(`Remover a fonte "${f}" do VJApp?`)) send({ type: 'fontsDelete', family: f })
+                  <button className="small danger-text" title="Remover do VJesus" onClick={() => {
+                    if (window.confirm(`Remover a fonte "${f}" do VJesus?`)) send({ type: 'fontsDelete', family: f })
                   }}>✕</button>
                 </div>
               ))}
             </div>
           )}
-          <p className="meta">As fontes ficam guardadas no VJApp, sem instalar no Windows. Variações como “Poppins Medium” e “Poppins Light” aparecem como fontes separadas.</p>
+          <p className="meta">As fontes ficam guardadas no VJesus, sem instalar no Windows. Variações como “Poppins Medium” e “Poppins Light” aparecem como fontes separadas.</p>
         </div>
       )}
     </div>

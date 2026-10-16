@@ -1,4 +1,4 @@
-﻿using System.Drawing.Text;
+using System.Drawing.Text;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -238,7 +238,7 @@ sealed partial class MainForm
         _stageWindow?.Post(JsonSerializer.Serialize(payload, Json));
     }
 
-    /// <summary>Fontes próprias do VJApp: importar arquivos, baixar do Google Fonts, apagar.</summary>
+    /// <summary>Fontes próprias do VJesus: importar arquivos, baixar do Google Fonts, apagar.</summary>
     void OnFontMessage(string type, JsonNode msg)
     {
         switch (type)
@@ -279,7 +279,7 @@ sealed partial class MainForm
         try
         {
             int n = await FontStore.DownloadGoogleAsync(family);
-            Send(new { type = "notice", message = $"Fonte {family.Trim()} instalada no VJApp ({n} estilos)" });
+            Send(new { type = "notice", message = $"Fonte {family.Trim()} instalada no VJesus ({n} estilos)" });
         }
         catch (Exception ex) { Send(new { type = "error", message = $"Google Fonts: {ex.Message}" }); }
         Send(new { type = "fontsBusy", family = (string?)null });

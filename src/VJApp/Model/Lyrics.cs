@@ -2,6 +2,8 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
+using VJApp;
+
 namespace VJApp.Model;
 
 /// <summary>Uma música da biblioteca. O texto é dividido em slides por linhas em branco.</summary>
@@ -112,7 +114,7 @@ sealed class LyricsLibrary
     static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public static string DefaultPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VJApp", "letras.json");
+        AppInfo.DataDir, "letras.json");
 
     public static LyricsLibrary LoadOrDefault(string path)
     {
@@ -135,7 +137,7 @@ sealed class LyricsLibrary
                 new Song
                 {
                     Title = "Exemplo de formato",
-                    Artist = "VJApp",
+                    Artist = "VJesus",
                     Text = "[Verso 1]\nCada slide é um bloco de linhas\nSepare os blocos com uma linha em branco\n\n" +
                            "[Refrão]\n{cena: Destaque}\nUse colchetes para nomear a seção\nO <cor #FFCC00>rótulo</cor> não aparece no telão\n\n" +
                            "[Final]\nClique num slide para projetar\nSetas do teclado passam para o <b>próximo</b>",

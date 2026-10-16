@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using VJApp;
+
 namespace VJApp.Model;
 
 /// <summary>Tipo de ataque (a ordem bate com o shader PSAttack em Engine.hlsl).</summary>
@@ -37,7 +39,7 @@ sealed class AttackLibrary
     public List<AttackPreset> Attacks { get; set; } = Defaults();
 
     public static string DefaultPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VJApp", "ataques.json");
+        AppInfo.DataDir, "ataques.json");
 
     static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 

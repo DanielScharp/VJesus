@@ -1,5 +1,7 @@
 ﻿using System.Text.Json;
 
+using VJApp;
+
 namespace VJApp.Model;
 
 /// <summary>Um item da tela de retorno: onde fica (0..1 da tela), se aparece e como é o texto.</summary>
@@ -48,7 +50,7 @@ sealed class StageConfig
     };
 
     public static string DefaultPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VJApp", "retorno.json");
+        AppInfo.DataDir, "retorno.json");
 
     static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 

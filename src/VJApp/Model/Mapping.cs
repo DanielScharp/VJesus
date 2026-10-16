@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+using VJApp;
+
 namespace VJApp.Model;
 
 /// <summary>Ponto normalizado (0..1).</summary>
@@ -126,7 +128,7 @@ sealed class MappingSetup
     static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public static string DefaultPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VJApp", "mapeamento.json");
+        AppInfo.DataDir, "mapeamento.json");
 
     public static MappingSetup CreateDefault() => new()
     {

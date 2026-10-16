@@ -2,7 +2,7 @@ import { send } from './bridge'
 
 /**
  * Central de atalhos de teclado: a lista de ações (com o que cada uma faz), as teclas padrão e as
- * teclas escolhidas pela pessoa (salvas em %AppData%\VJApp\atalhos.json pelo motor).
+ * teclas escolhidas pela pessoa (salvas em %AppData%\VJesus\atalhos.json pelo motor).
  *
  * Onde vale cada atalho: "global" vale em todo o programa; os outros só na aba indicada.
  * A mesma tecla não pode estar em duas ações que valem ao mesmo tempo (global + qualquer aba,

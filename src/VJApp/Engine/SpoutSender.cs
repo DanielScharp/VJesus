@@ -47,7 +47,7 @@ sealed class SpoutSender : IDisposable
             view.Write(8, (uint)height);
             view.Write(12, (uint)Format.B8G8R8A8_UNorm);
             view.Write(16, 0u); // usage
-            var desc = Encoding.Unicode.GetBytes("VJApp");
+            var desc = Encoding.Unicode.GetBytes(AppInfo.Name);
             view.WriteArray(20, desc, 0, desc.Length);
             view.Write(276, 0u); // partnerId
         }

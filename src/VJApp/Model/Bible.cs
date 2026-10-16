@@ -2,6 +2,8 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using VJApp;
+
 namespace VJApp.Model;
 
 /// <summary>Uma versão da Bíblia disponível para baixar (catálogo da Free Use Bible API, bible.helloao.org).</summary>
@@ -67,7 +69,7 @@ sealed class BibleSettings
     public List<string> History { get; set; } = [];
 }
 
-/// <summary>Versões baixadas em %AppData%\VJApp\biblia (funciona sem internet depois de baixar).</summary>
+/// <summary>Versões baixadas em %AppData%\VJesus\biblia (funciona sem internet depois de baixar).</summary>
 sealed class BibleStore
 {
     const string Api = "https://bible.helloao.org";
@@ -75,7 +77,7 @@ sealed class BibleStore
     static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
 
     public static string Dir => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VJApp", "biblia");
+        AppInfo.DataDir, "biblia");
     static string SettingsPath => Path.Combine(Dir, "config.json");
     static string CatalogPath => Path.Combine(Dir, "catalogo.json");
     static string VersionPath(string id) => Path.Combine(Dir, string.Concat(id.Split(Path.GetInvalidFileNameChars())) + ".json");

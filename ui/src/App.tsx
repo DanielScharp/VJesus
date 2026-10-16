@@ -144,7 +144,7 @@ function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>VJApp</h1>
+        <h1>VJesus</h1>
         <ProjectMenu project={project} onShortcuts={() => setShortcutsOpen(true)} />
         <nav className="row tabs">
           <button className={tab === 'clips' ? 'active' : ''} onClick={() => setTab('clips')}>Clips e efeitos</button>

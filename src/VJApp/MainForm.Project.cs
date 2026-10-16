@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using VJApp.Model;
@@ -24,10 +24,10 @@ sealed class ProjectFile
 /// <summary>Projetos (novo/abrir/salvar/salvamento automático) e presets de mapeamento.</summary>
 sealed partial class MainForm
 {
-    const string ProjectFilter = "Projeto VJApp|*.vjproj|Todos os arquivos|*.*";
+    const string ProjectFilter = "Projeto VJesus|*.vjproj|Todos os arquivos|*.*";
     static readonly JsonSerializerOptions ProjectJson = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
 
-    static string AppDataDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VJApp");
+    static string AppDataDir => Path.Combine(AppInfo.DataDir);
     static string PresetDir => Path.Combine(AppDataDir, "presets", "mapeamento");
     static string LastProjectFile => Path.Combine(AppDataDir, "ultimo-projeto.txt");
 
@@ -211,7 +211,7 @@ sealed partial class MainForm
 
     /// <summary>
     /// A cada minuto, se algo mudou, grava no projeto aberto. Sem projeto aberto, guarda uma cópia de
-    /// segurança em %AppData%\VJApp\autosave (com os caminhos originais dos vídeos).
+    /// segurança em %AppData%\VJesus\autosave (com os caminhos originais dos vídeos).
     /// </summary>
     void StartAutosave()
     {
@@ -310,17 +310,23 @@ sealed partial class MainForm
     });
 }
 
-/// <summary>Atalho do VJApp na área de trabalho (criado uma vez; se a pessoa apagar, não volta).</summary>
+/// <summary>Atalho do VJesus na área de trabalho (criado uma vez; se a pessoa apagar, não volta).</summary>
 sealed partial class MainForm
 {
     static void EnsureDesktopShortcut()
     {
         try
         {
+            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
             var flag = Path.Combine(AppDataDir, "atalho-criado.txt");
-            var lnk = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "VJApp.lnk");
+            var lnk = Path.Combine(desktop, $"{AppInfo.Name}.lnk");
             var exe = Environment.ProcessPath;
-            if (exe == null || File.Exists(lnk) || File.Exists(flag)) return;
+            if (exe == null) return;
+            // o programa se chamava VJApp: troca o atalho antigo pelo novo (o antigo aponta para VJApp.exe)
+            var oldLnk = Path.Combine(desktop, "VJApp.lnk");
+            bool renamed = File.Exists(oldLnk);
+            if (renamed) File.Delete(oldLnk);
+            if (File.Exists(lnk) || (File.Exists(flag) && !renamed)) return;
             var shellType = Type.GetTypeFromProgID("WScript.Shell");
             if (shellType == null) return;
             dynamic shell = Activator.CreateInstance(shellType)!;
@@ -328,7 +334,7 @@ sealed partial class MainForm
             sc.TargetPath = exe;
             sc.WorkingDirectory = Path.GetDirectoryName(exe);
             sc.IconLocation = exe + ",0";
-            sc.Description = "VJApp: VJ, projection mapping e letras";
+            sc.Description = "VJesus: VJ, projection mapping, letras e Bíblia";
             sc.Save();
             Directory.CreateDirectory(AppDataDir);
             File.WriteAllText(flag, lnk);
@@ -339,7 +345,7 @@ sealed partial class MainForm
 
 sealed partial class MainForm
 {
-    /// <summary>Duplo clique num .vjproj abre no VJApp (registro só do usuário, aponta para este .exe).</summary>
+    /// <summary>Duplo clique num .vjproj abre no VJesus (registro só do usuário, aponta para este .exe).</summary>
     static void RegisterProjectFileType()
     {
         try
@@ -347,9 +353,9 @@ sealed partial class MainForm
             var exe = Environment.ProcessPath;
             if (exe == null) return;
             using var ext = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Classes\.vjproj");
-            ext.SetValue("", "VJApp.Projeto");
-            using var type = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Classes\VJApp.Projeto");
-            type.SetValue("", "Projeto VJApp");
+            ext.SetValue("", "VJesus.Projeto");
+            using var type = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Classes\VJesus.Projeto");
+            type.SetValue("", "Projeto VJesus");
             using var icon = type.CreateSubKey("DefaultIcon");
             icon.SetValue("", $"\"{exe}\",0");
             using var cmd = type.CreateSubKey(@"shell\open\command");

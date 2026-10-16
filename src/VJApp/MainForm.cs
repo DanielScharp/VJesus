@@ -41,7 +41,7 @@ sealed partial class MainForm : Form
 
     public MainForm()
     {
-        Text = "VJApp";
+        Text = AppInfo.Name;
         ClientSize = new Size(1400, 900);
         Controls.Add(_web);
         _players = new VideoPlayer?[_comp.Layers.Count];
@@ -126,7 +126,7 @@ sealed partial class MainForm : Form
             case "hello":
                 if (StartupProject is { } startup)
                 {
-                    StartupProject = null; // VJApp.exe "show.vjproj" (duplo clique no arquivo)
+                    StartupProject = null; // VJesus.exe "show.vjproj" (duplo clique no arquivo)
                     BeginInvoke(() => OpenProjectFile(startup));
                 }
                 Send(new

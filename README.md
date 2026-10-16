@@ -1,4 +1,4 @@
-# VJApp
+# VJesus
 
 App de VJ / projection mapping para Windows, inspirado no Resolume Arena.
 Motor em C# (.NET 10 + Direct3D 11 via Vortice.Windows), UI em React/TypeScript dentro do WebView2.
@@ -76,7 +76,7 @@ Aba **Letras**: biblioteca de músicas com busca (título, artista ou trecho, se
   Ordem de prioridade: estilo padrão → cena da música → cena do slide → ajustes do slide → formatação do trecho.
 * **Transição do slide** (no painel Aparência, numa cena ou só num slide pelo ✎): fade, corte, subir, descer, entrar pela direita/esquerda, zoom, aproximar, **palavra por palavra**, **linha por linha** e **máquina de escrever**, com duração. No texto: `{estilo: transicao=palavra; duracao=1200}`.
 * **Palavra animada**: selecione o trecho no editor do slide → escolha a animação (balançar, flutuar, pulsar, onda, brilhar, tremer, piscar, girar), força e velocidade → **Animar trecho**. No texto: `<anim balancar 1 0.6>palavra</anim>`. As animações rodam na GPU (a letra é desenhada uma vez e as palavras são movidas a cada quadro), e aparecem animadas também na prévia dos slides.
-* Biblioteca, cenas e estilo ficam em `%AppData%\VJApp\letras.json`.
+* Biblioteca, cenas e estilo ficam em `%AppData%\VJesus\letras.json`.
 
 ## Tela de retorno (músicos)
 
@@ -84,7 +84,7 @@ Aba **Retorno**: liga uma janela no monitor escolhido (tela cheia ou janela) com
 1. **Layer de avisos**: marque "Mostrar no retorno quando tocar" no painel da layer (aparece a etiqueta **RET** na grade). Quando um clip dessa layer toca, o retorno mostra **só as layers marcadas** — sem a letra e sem o fundo da letra; quando para, a imagem some sozinha.
 2. **Espelhar telão no retorno** (botão no monitor RETORNO e na aba Retorno, OSC `/stage/mirror`): mostra o telão inteiro até desligar.
 
-A opção "Imagem do telão em tela cheia quando aparecer" faz a imagem ocupar o retorno todo (a letra sai; relógio, cronômetro, alerta e mensagem ficam por cima). Imagem em 960×540 a ~15 fps. Config em `%AppData%\VJApp\retorno.json`.
+A opção "Imagem do telão em tela cheia quando aparecer" faz a imagem ocupar o retorno todo (a letra sai; relógio, cronômetro, alerta e mensagem ficam por cima). Imagem em 960×540 a ~15 fps. Config em `%AppData%\VJesus\retorno.json`.
 
 **Monitores do operador**: no topo de todas as abas ficam o **TELÃO** (a composição que vai para as telas) e o **RETORNO** (a mesma tela dos músicos), com o que está tocando em cada layer, o slide no ar e avisos — por exemplo, quando há letra projetada mas o clip Letras não está tocando. Dá para recolher com o botão "Monitores". OSC: `/stage/timer/start|pause|toggle|reset`, `/stage/alert/clear`.
 
@@ -94,13 +94,13 @@ Barra **Ataques** em todas as abas: efeitos rápidos por cima de tudo (inclusive
 
 * Tipos: **Flash de cor** (preto = blackout), **Strobe**, **Soco de zoom**, **Tremor**, **Inverter**, **Onda de cor**, **Varredura**.
 * Cada ataque tem cor, **entrada / segura / saída suave** (ms), intensidade, ajuste do tipo, piscadas (strobe), **tecla de atalho** e o modo **segurar enquanto pressionado**.
-* Vêm 8 prontos nas teclas **1 a 8**; "Editar ataques" cria, duplica, reordena e muda tudo (botão Testar). Ficam em `%AppData%\VJApp\ataques.json`.
+* Vêm 8 prontos nas teclas **1 a 8**; "Editar ataques" cria, duplica, reordena e muda tudo (botão Testar). Ficam em `%AppData%\VJesus\ataques.json`.
 * Também por clique (segurar o botão nos de "segurar"), MIDI learn, celular e OSC `/attack/{n}` (1 = primeiro; valor 0 solta).
 
 ## Projetos e presets
 
 * **Novo / Abrir… / Salvar / Salvar como…** no topo: um projeto `.vjproj` guarda a grade de clips, efeitos e o mapeamento.
-* O estado atual também é salvo sozinho em `%AppData%\VJApp` (volta ao reabrir o app).
+* O estado atual também é salvo sozinho em `%AppData%\VJesus` (volta ao reabrir o app).
 * **Presets de mapeamento** (aba Mapeamento): salve o ajuste de cada palco com um nome e carregue quando voltar a ele.
 
 ## Controle externo
@@ -109,7 +109,7 @@ Barra **Ataques** em todas as abas: efeitos rápidos por cima de tudo (inclusive
 |---|---|
 | OSC | UDP porta **7000** (como o Resolume), valores 0..1, botões disparam com ≥ 0.5 |
 | Celular/tablet | abra `http://<ip-do-pc>:8080/` no navegador (o endereço aparece no painel "Controle externo"; o Windows pode pedir para liberar no firewall) |
-| MIDI | botão **MIDI learn**: clique num controle da tela e mexa no knob/pad; mapeamentos ficam em `%AppData%\VJApp\midi.json` |
+| MIDI | botão **MIDI learn**: clique num controle da tela e mexa no knob/pad; mapeamentos ficam em `%AppData%\VJesus\midi.json` |
 
 Endereços (índices começam em 1):
 
@@ -132,14 +132,14 @@ No painel "Spout e NDI": a composição 1920×1080 vai como sender **Spout** (OB
 
 ## OBS
 
-**VJApp → OBS** (escolha um):
-1. Sem instalar nada: no OBS, *Fonte → Captura de jogo* (ou *Captura de janela*) e escolha a janela "VJApp - Tela 1".
-2. Spout (melhor qualidade, sem depender da janela): instale o plugin gratuito **OBS Spout2** (Off World Live), ligue **Spout** no painel "Spout e NDI" do VJApp e, no OBS, adicione a fonte *Spout2 Capture* → "VJApp".
-3. NDI (pela rede, outro PC): NDI Runtime + plugin **DistroAV** no OBS; ligue **NDI** no VJApp.
+**VJesus → OBS** (escolha um):
+1. Sem instalar nada: no OBS, *Fonte → Captura de jogo* (ou *Captura de janela*) e escolha a janela "VJesus - Tela 1".
+2. Spout (melhor qualidade, sem depender da janela): instale o plugin gratuito **OBS Spout2** (Off World Live), ligue **Spout** no painel "Spout e NDI" do VJesus e, no OBS, adicione a fonte *Spout2 Capture* → "VJesus".
+3. NDI (pela rede, outro PC): NDI Runtime + plugin **DistroAV** no OBS; ligue **NDI** no VJesus.
 
-**OBS → VJApp** (escolha um):
-1. Câmera Virtual (já vem no OBS): no OBS clique em **Iniciar câmera virtual**; no VJApp, numa célula vazia, *Entrada ao vivo → Câmera: OBS Virtual Camera*. O clip fica tentando até o OBS começar a mandar imagem.
-2. Spout: com o plugin OBS Spout2, ative *Spout Output* no OBS (Ferramentas); no VJApp, *Entrada ao vivo → Spout: <nome>*.
+**OBS → VJesus** (escolha um):
+1. Câmera Virtual (já vem no OBS): no OBS clique em **Iniciar câmera virtual**; no VJesus, numa célula vazia, *Entrada ao vivo → Câmera: OBS Virtual Camera*. O clip fica tentando até o OBS começar a mandar imagem.
+2. Spout: com o plugin OBS Spout2, ative *Spout Output* no OBS (Ferramentas); no VJesus, *Entrada ao vivo → Spout: <nome>*.
 
 Webcams e placas de captura aparecem na mesma lista de câmeras.
 
@@ -172,9 +172,9 @@ Com `$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=9222"` 
 
 - [x] Fase 0: esqueleto (UI React no WebView2, saída D3D11 a 60 fps, test card e plasma, escolha de monitor/tela cheia)
 - [x] Fase 1: tocar vídeo com FFmpeg (DXV, HAP, H.264...), loop, play/pause, seek
-- [x] Fase 2: grade de clips 4×8, opacidade e 8 blend modes por layer, disparo por coluna, thumbnails, geradores, arrastar do Explorer, composição salva em `%AppData%\VJApp\composicao.json`
+- [x] Fase 2: grade de clips 4×8, opacidade e 8 blend modes por layer, disparo por coluna, thumbnails, geradores, arrastar do Explorer, composição salva em `%AppData%\VJesus\composicao.json`
 - [x] Fase 3: 12 efeitos HLSL com parâmetros, cadeia por layer e no master, feedback, recarga automática ao editar um .hlsl
-- [x] Fase 4: mapping com várias telas de saída, slices (recorte da entrada, warp 4 cantos com perspectiva ou malha até 5×5, soft-edge, opacidade), máscaras poligonais, preview da composição; salvo em `%AppData%\VJApp\mapeamento.json`
+- [x] Fase 4: mapping com várias telas de saída, slices (recorte da entrada, warp 4 cantos com perspectiva ou malha até 5×5, soft-edge, opacidade), máscaras poligonais, preview da composição; salvo em `%AppData%\VJesus\mapeamento.json`
 - [x] Fase 5: projetos .vjproj e presets de mapeamento
 - [x] Fase 6: OSC, MIDI learn e controle remoto pelo celular
 - [x] Fase 7: Spout e NDI

@@ -20,7 +20,7 @@ sealed class SpoutReceiver(string name) : IDisposable
     uint _handle;
     long _nextCheck;
 
-    /// <summary>Nomes dos senders Spout ativos (os do próprio VJApp entram também).</summary>
+    /// <summary>Nomes dos senders Spout ativos (os do próprio VJesus entram também).</summary>
     public static List<string> ListSenders()
     {
         var list = new List<string>();

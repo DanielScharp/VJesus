@@ -18,7 +18,7 @@ sealed class StageWindow : Form
     public StageWindow(Action onReady)
     {
         _onReady = onReady;
-        Text = "VJApp - Retorno";
+        Text = $"{AppInfo.Name} - Retorno";
         BackColor = Color.Black;
         StartPosition = FormStartPosition.Manual;
         ClientSize = new Size(960, 540);
