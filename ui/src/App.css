@@ -566,3 +566,11 @@ header.topbar .stats b { display: inline-block; min-width: 46px; text-align: rig
 
 /* erro flutuando (não empurra a tela) */
 .error { position: fixed; top: 64px; right: 20px; z-index: 30; max-width: 520px; margin: 0; box-shadow: 0 8px 24px rgba(0,0,0,.45); cursor: pointer; }
+
+/* números dos sliders: clique e digite */
+output.editable { cursor: text; border-bottom: 1px dotted transparent; border-radius: 2px; padding: 0 2px; }
+output.editable:hover { border-bottom-color: var(--accent); color: var(--accent); }
+input.output-edit {
+  background: var(--bg); color: var(--text); border: 1px solid var(--accent); border-radius: 4px;
+  padding: 1px 4px; font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; box-sizing: border-box;
+}

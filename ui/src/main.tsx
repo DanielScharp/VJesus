@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import { StageApp } from './StageApp.tsx'
 import './App.css'
+import './numberEdit'
 
 // a mesma UI serve a janela de controle e a tela de retorno (index.html#stage)
 const isStage = location.hash === '#stage'
