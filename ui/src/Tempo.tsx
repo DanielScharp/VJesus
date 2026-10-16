@@ -33,11 +33,18 @@ export function TempoBar({ bpm, beat }: { bpm: number; beat: number }) {
   const flash = now - Math.floor(now) < 0.15
   return (
     <div className="tempo">
-      <input className="bpm" type="number" min={20} max={300} step={0.1}
-        value={draft ?? bpm.toFixed(1)} title="BPM"
+      <input className="bpm" type="text" inputMode="decimal" maxLength={6}
+        value={draft ?? bpm.toFixed(1)} title="BPM (20 a 300)"
         onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => { if (draft) send({ type: 'setBpm', bpm: Number(draft) }); setDraft(null) }}
-        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} />
+        onBlur={() => {
+          const v = Number((draft ?? '').replace(',', '.'))
+          if (draft && v >= 20 && v <= 300) send({ type: 'setBpm', bpm: v })
+          setDraft(null)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+          if (e.key === 'Escape') { setDraft(null); (e.target as HTMLInputElement).blur() }
+        }} />
       <span className="bpm-label">BPM</span>
       <span className="beats">
         {[0, 1, 2, 3].map((i) => <i key={i} className={i === current ? (flash ? 'on flash' : 'on') : ''} />)}

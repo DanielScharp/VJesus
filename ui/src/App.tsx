@@ -8,6 +8,7 @@ import { EffectsPanel } from './EffectsPanel'
 import { ActiveEffectsBar, EffectChips } from './EffectChips'
 import { LayerSettings, TempoBar } from './Tempo'
 import { LyricsPage } from './LyricsPage'
+import { ProjectMenu } from './ProjectMenu'
 import { BiblePage } from './BiblePage'
 import { StagePage } from './StagePage'
 import { MonitorsBar } from './MonitorsBar'
@@ -126,8 +127,9 @@ function App() {
 
   return (
     <div className="app">
-      <header>
+      <header className="topbar">
         <h1>VJApp</h1>
+        <ProjectMenu project={project} />
         <nav className="row tabs">
           <button className={tab === 'clips' ? 'active' : ''} onClick={() => setTab('clips')}>Clips e efeitos</button>
           <button className={tab === 'mapping' ? 'active' : ''} onClick={() => setTab('mapping')}>Mapeamento</button>
@@ -136,14 +138,9 @@ function App() {
           <button className={tab === 'stage' ? 'active' : ''} onClick={() => setTab('stage')}>Retorno</button>
         </nav>
         <TempoBar bpm={tempo.bpm} beat={tempo.beat} />
-        <div className="row project">
-          <span className="project-name" title="Projeto atual">{project ?? 'Sem título'}</span>
-          <button className="small" onClick={() => send({ type: 'projectNew' })}>Novo</button>
-          <button className="small" onClick={() => send({ type: 'projectOpen' })}>Abrir…</button>
-          <button className="small" onClick={() => send({ type: 'projectSave' })}>Salvar</button>
-          <button className="small" onClick={() => send({ type: 'projectSaveAs' })}>Salvar como…</button>
-        </div>
-        <span className="stats">{inApp ? `${fps} fps · composição 1920×1080` : 'fora do app (só UI)'}</span>
+        <span className="stats" title="Quadros por segundo da composição 1920×1080">
+          {inApp ? <><b>{fps.toFixed(2)}</b> fps · 1920×1080</> : 'fora do app (só UI)'}
+        </span>
       </header>
 
       {error && <div className="error" onClick={() => setError(null)}>{error}</div>}

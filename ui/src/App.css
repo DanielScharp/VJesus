@@ -529,3 +529,40 @@ input.rename { font-size: 13px; padding: 3px 6px; width: 140px; }
 .menu button:disabled { opacity: .4; }
 .grid .layer-head { position: sticky; left: 0; z-index: 2; }
 .yv-box { border-color: #4fc3f7; } .yv-box h3 { color: #4fc3f7; } .yv-list { max-height: 220px; overflow: auto; }
+
+/* ---------- barra do topo: tamanho fixo, nada pula de linha ---------- */
+header.topbar {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  white-space: nowrap;
+  padding-bottom: 8px;
+}
+header.topbar h1 { margin: 0; }
+header.topbar .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+header.topbar .tabs::-webkit-scrollbar { display: none; }
+header.topbar .tabs button { flex: 0 0 auto; }
+header.topbar .tempo { flex-wrap: nowrap; }
+header.topbar .tempo input.bpm { width: 56px; text-align: right; }
+header.topbar .stats { display: inline-block; width: 150px; text-align: right; font-variant-numeric: tabular-nums; }
+header.topbar .stats b { display: inline-block; min-width: 46px; text-align: right; color: var(--text); font-weight: 600; }
+.project-menu { position: relative; }
+.project-btn { display: inline-flex; align-items: center; gap: 8px; max-width: 280px; }
+.project-btn .project-label { color: var(--muted); font-size: 12px; }
+.project-btn .project-name { margin: 0; max-width: 170px; }
+.project-btn .caret { font-size: 10px; color: var(--muted); }
+.project-btn.active { color: #111; }
+.project-btn.active .project-label, .project-btn.active .caret { color: #111; }
+.dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 40; min-width: 240px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .45); display: flex; flex-direction: column;
+}
+.dropdown button { display: flex; justify-content: space-between; gap: 18px; background: transparent; border: 0; text-align: left; padding: 7px 10px; }
+.dropdown button:hover { background: var(--btn); }
+.dropdown kbd { font: 11px system-ui, sans-serif; color: var(--muted); }
+.dropdown-note { font-size: 11px; color: var(--muted); padding: 6px 10px 4px; border-top: 1px solid var(--line); margin-top: 4px; }
+
+/* erro flutuando (não empurra a tela) */
+.error { position: fixed; top: 64px; right: 20px; z-index: 30; max-width: 520px; margin: 0; box-shadow: 0 8px 24px rgba(0,0,0,.45); cursor: pointer; }
