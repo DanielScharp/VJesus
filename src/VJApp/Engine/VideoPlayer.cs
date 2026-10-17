@@ -113,6 +113,9 @@ sealed unsafe class VideoPlayer : IDisposable
             }
             avdevice_free_list_devices(&list);
         }
+        // a lista do FFmpeg às vezes vem vazia (ex.: Câmera Virtual do OBS); o DirectShow sempre sabe
+        foreach (var n in DirectShowDevices.VideoInputs())
+            if (!names.Contains(n)) names.Add(n);
         return names;
     }
 

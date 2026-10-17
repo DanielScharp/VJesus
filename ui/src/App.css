@@ -613,3 +613,5 @@ button.link { background: transparent; border: 0; padding: 2px 4px; text-align: 
 .grid .column-head .col-name { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 .grid .column-head:has(.col-name) .col-num { font-size: 10px; opacity: .8; }
 .grid .column-rename { flex: 0 0 var(--cell-w); width: var(--cell-w); }
+
+.menu { max-height: calc(100vh - 16px); overflow-y: auto; }

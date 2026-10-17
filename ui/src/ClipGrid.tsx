@@ -18,6 +18,16 @@ type Menu = { layer: number; column: number; x: number; y: number; filled: boole
 
 const CLIP_MIME = 'application/x-vj-clip'
 
+/** Menus de botão direito: se não couber na tela, sobe/vai para a esquerda (e rola se for muito alto). */
+function fitMenu(el: HTMLDivElement | null) {
+  if (!el) return
+  requestAnimationFrame(() => {
+    const r = el.getBoundingClientRect()
+    if (r.bottom > window.innerHeight - 8) el.style.top = `px`
+    if (r.right > window.innerWidth - 8) el.style.left = `px`
+  })
+}
+
 // resolução e fps pedidos à câmera/placa de captura (se o aparelho não aceitar, abre no padrão dele)
 const CAPTURE_SIZES: [string, string][] = [['', 'Resolução padrão'], ['1280x720', '1280×720 (HD)'], ['1920x1080', '1920×1080 (Full HD)'], ['2560x1440', '2560×1440'], ['3840x2160', '3840×2160 (4K)'], ['720x480', '720×480 (SD)']]
 const CAPTURE_FPS: [number, string][] = [[0, 'FPS padrão'], [25, '25 fps'], [30, '30 fps'], [50, '50 fps'], [60, '60 fps']]
@@ -191,14 +201,16 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
       </div>
 
       {menu && (
-        <div className="menu" style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()}>
+        <div className="menu" ref={fitMenu} style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()}>
           {(() => {
             const cell = { layer: menu.layer, column: menu.column }
             const pick = (fn: () => void) => () => { fn(); setMenu(null) }
             const current = comp.layers[menu.layer]?.clips[menu.column] ?? null
             return (
               <>
-                <button onClick={pick(() => send({ type: 'browseClip', ...cell }))}>Vídeo…</button>
+                {menu.filled && <button className="danger" onClick={pick(() => send({ type: 'removeClip', ...cell }))}>Remover este clip</button>}
+                {menu.filled && <div className="menu-label">Trocar por</div>}
+                <button onClick={pick(() => send({ type: 'browseClip', ...cell }))}>Vídeo ou imagem…</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'plasma', ...cell }))}>Gerador: Plasma</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'testCard', ...cell }))}>Gerador: Test card</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'lyrics', ...cell }))}>Letras (aba Letras)</button>
@@ -232,7 +244,6 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
                   <button key={'s' + name} onClick={pick(() => send({ type: 'setLiveClip', kind: 'spout', name, ...cell }))}>{name}</button>
                 ))}
                 {live && live.spout.length === 0 && <div className="menu-empty">nenhum programa enviando por Spout</div>}
-                {menu.filled && <button className="danger" onClick={pick(() => send({ type: 'removeClip', ...cell }))}>Remover</button>}
               </>
             )
           })()}
@@ -244,7 +255,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
         const l = layerMenu.layer
         const close = () => setLayerMenu(null)
         return (
-          <div className="menu" style={{ left: layerMenu.x, top: layerMenu.y }} onClick={(e) => e.stopPropagation()}>
+          <div className="menu" ref={fitMenu} style={{ left: layerMenu.x, top: layerMenu.y }} onClick={(e) => e.stopPropagation()}>
             <div className="menu-label">{comp.layers[l]?.name}</div>
             <button onClick={() => { setRenaming({ kind: 'layer', index: l }); close() }}>Renomear</button>
             <button onClick={() => { send({ type: 'layerAdd', layer: l }); close() }}>Inserir layer acima</button>
@@ -262,7 +273,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
       })()}
 
       {colMenu && (
-        <div className="menu" style={{ left: colMenu.x, top: colMenu.y }} onClick={(e) => e.stopPropagation()}>
+        <div className="menu" ref={fitMenu} style={{ left: colMenu.x, top: colMenu.y }} onClick={(e) => e.stopPropagation()}>
           <div className="menu-label">Coluna {colMenu.column + 1}{comp.columnNames?.[colMenu.column] ? ` · ${comp.columnNames[colMenu.column]}` : ''}</div>
           <button onClick={() => { setRenaming({ kind: 'column', index: colMenu.column }); setColMenu(null) }}>Renomear coluna</button>
           <button onClick={() => { send({ type: 'columnAdd', after: colMenu.column - 1 }); setColMenu(null) }}>Inserir coluna antes</button>
@@ -276,7 +287,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
       )}
 
       {deckMenu && (
-        <div className="menu" style={{ left: deckMenu.x, top: deckMenu.y }} onClick={(e) => e.stopPropagation()}>
+        <div className="menu" ref={fitMenu} style={{ left: deckMenu.x, top: deckMenu.y }} onClick={(e) => e.stopPropagation()}>
           <div className="menu-label">{comp.decks[deckMenu.index]?.name}</div>
           <button onClick={() => { setRenaming({ kind: 'deck', index: deckMenu.index }); setDeckMenu(null) }}>Renomear</button>
           <button disabled={deckMenu.index === 0} onClick={() => { send({ type: 'deckMove', index: deckMenu.index, direction: -1 }); setDeckMenu(null) }}>Mover para a esquerda</button>
