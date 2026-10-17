@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Sdcb.FFmpeg.Raw;
 using Vortice.DXGI;
 using static Sdcb.FFmpeg.Raw.ffmpeg;
@@ -117,7 +117,9 @@ sealed unsafe class VideoPlayer : IDisposable
     }
 
     /// <param name="path">Arquivo de vídeo, ou nome do dispositivo quando <paramref name="liveDevice"/> é true.</param>
-    public VideoPlayer(string path, bool liveDevice = false)
+    /// <param name="captureSize">Câmera/placa: resolução pedida ("1920x1080"); null = padrão do aparelho.</param>
+    /// <param name="captureFps">Câmera/placa: quadros por segundo pedidos; null = padrão.</param>
+    public VideoPlayer(string path, bool liveDevice = false, string? captureSize = null, int? captureFps = null)
     {
         FilePath = path;
         IsLive = liveDevice;
@@ -126,7 +128,9 @@ sealed unsafe class VideoPlayer : IDisposable
         {
             RegisterDevices();
             AVDictionary* opts = null;
-            av_dict_set(&opts, "rtbufsize", "128M", 0);
+            av_dict_set(&opts, "rtbufsize", "256M", 0);
+            if (!string.IsNullOrEmpty(captureSize)) av_dict_set(&opts, "video_size", captureSize, 0);
+            if (captureFps is > 0) av_dict_set(&opts, "framerate", captureFps.Value.ToString(), 0);
             int r = avformat_open_input(&fmt, "video=" + path, av_find_input_format("dshow"), &opts);
             av_dict_free(&opts);
             Check(r, $"abrir a câmera {path}");

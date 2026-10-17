@@ -7,7 +7,7 @@ namespace VJApp.Model;
 
 /// <summary>Tipo de fonte de um clip.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<ClipKind>))]
-enum ClipKind { Video, Plasma, TestCard, Camera, Spout, Lyrics }
+enum ClipKind { Video, Plasma, TestCard, Camera, Spout, Lyrics, Ndi }
 
 /// <summary>Transição ao trocar o clip de uma layer (a ordem bate com o shader).</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<TransitionType>))]
@@ -21,11 +21,15 @@ sealed class Clip
     public ClipKind Kind { get; set; }
     public string? Path { get; set; }
     public string Name { get; set; } = "";
+    /// <summary>Câmera/placa de captura: resolução pedida (ex.: "1920x1080"; null = a padrão do aparelho).</summary>
+    public string? CaptureSize { get; set; }
+    /// <summary>Câmera/placa de captura: quadros por segundo pedidos (null = padrão).</summary>
+    public int? CaptureFps { get; set; }
 
     public static Clip FromFile(string path) =>
         new() { Kind = ClipKind.Video, Path = path, Name = System.IO.Path.GetFileNameWithoutExtension(path) };
 
-    /// <summary>Entrada ao vivo: câmera/dispositivo DirectShow ou sender Spout (Path = nome).</summary>
+    /// <summary>Entrada ao vivo: câmera/placa de captura (DirectShow), sender Spout ou fonte NDI (Path = nome).</summary>
     public static Clip Live(ClipKind kind, string name) => new() { Kind = kind, Path = name, Name = name };
 
     public static Clip Generator(ClipKind kind) =>
@@ -43,6 +47,10 @@ sealed class EffectInstance
 sealed class Layer
 {
     public string Name { get; set; } = "";
+    /// <summary>Câmera/placa de captura: resolução pedida (ex.: "1920x1080"; null = a padrão do aparelho).</summary>
+    public string? CaptureSize { get; set; }
+    /// <summary>Câmera/placa de captura: quadros por segundo pedidos (null = padrão).</summary>
+    public int? CaptureFps { get; set; }
     public float Opacity { get; set; } = 1f;
     public BlendMode Blend { get; set; }
     public Clip?[] Clips { get; set; } = [];

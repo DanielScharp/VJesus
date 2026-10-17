@@ -10,7 +10,7 @@ enum SourceKind { Video = 0, Plasma = 1, TestCard = 2 }
 enum TransitionKind { Cut = 0, Crossfade = 1, Dip = 2, Wipe = 3 }
 
 /// <summary>Uma fonte tocando numa layer: vídeo/câmera (com textura), Spout, letra ou gerador. Só o render thread mexe.</summary>
-sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSender, LyricsFeed? lyrics = null)
+sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSender, LyricsFeed? lyrics = null, string? ndiSource = null)
 {
     public readonly SourceKind Kind = kind;
     public readonly VideoPlayer? Player = player;
@@ -18,17 +18,26 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
     /// <summary>Letra animada desta layer (montada pelo Renderer a cada quadro).</summary>
     public LyricsGpu? LyricsGpu;
     public readonly SpoutReceiver? Spout = spoutSender != null ? new SpoutReceiver(spoutSender) : null;
+    /// <summary>Fonte NDI da rede (null se não conseguiu abrir: sem NDI Runtime, por exemplo).</summary>
+    public readonly NdiReceiver? Ndi = OpenNdi(ndiSource);
+
+    static NdiReceiver? OpenNdi(string? name)
+    {
+        if (name == null) return null;
+        try { return new NdiReceiver(name); } catch { return null; }
+    }
     public VideoFrame? ShownFrame;
     public ID3D11Texture2D? Texture;
     public ID3D11ShaderResourceView? Srv;
 
     /// <summary>Textura de entrada para o shader (do vídeo ou do Spout).</summary>
-    public ID3D11ShaderResourceView? InputSrv => LyricsGpu?.Target?.Srv ?? Spout?.Srv ?? Srv;
+    public ID3D11ShaderResourceView? InputSrv => LyricsGpu?.Target?.Srv ?? Spout?.Srv ?? Ndi?.Srv ?? Srv;
 
     /// <summary>Pronta para desenhar? (vídeo precisa do primeiro quadro, Spout precisa do sender)</summary>
-    public bool Ready => Kind != SourceKind.Video || ShownFrame != null || Spout?.Srv != null || LyricsGpu?.Drawn == true;
+    public bool Ready => Kind != SourceKind.Video || ShownFrame != null || Spout?.Srv != null || Ndi?.Srv != null || LyricsGpu?.Drawn == true;
 
     public float Aspect => Spout is { Srv: not null } s ? (float)s.Width / s.Height
+        : Ndi is { Srv: not null } n ? (float)n.Width / n.Height
         : Player != null ? (float)Player.Width / Player.Height : 16f / 9;
 
     public void CreateGpu(ID3D11Device device)
@@ -44,6 +53,7 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
     public unsafe void Update(ID3D11Device device, ID3D11DeviceContext ctx)
     {
         Spout?.Update(device);
+        Ndi?.Update(device, ctx);
         if (Player is not { } player || Texture == null) return;
         var frame = player.TakeFrame(ShownFrame);
         if (frame == null) return;
@@ -62,6 +72,7 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
     public void Dispose()
     {
         Spout?.Dispose();
+        if (Ndi is { } ndi) Task.Run(ndi.Dispose); // desconectar da rede pode demorar
         LyricsGpu?.Dispose();
         Srv?.Dispose();
         Texture?.Dispose();
@@ -87,6 +98,7 @@ sealed class LayerSlot
     public SourceKind? PendingKind;
     public VideoPlayer? PendingPlayer;
     public string? PendingSpout;
+    public string? PendingNdi;
     public LyricsFeed? PendingLyrics;
 
     // estado do render thread (o mixer de áudio só lê as referências)

@@ -18,6 +18,10 @@ type Menu = { layer: number; column: number; x: number; y: number; filled: boole
 
 const CLIP_MIME = 'application/x-vj-clip'
 
+// resolução e fps pedidos à câmera/placa de captura (se o aparelho não aceitar, abre no padrão dele)
+const CAPTURE_SIZES: [string, string][] = [['', 'Resolução padrão'], ['1280x720', '1280×720 (HD)'], ['1920x1080', '1920×1080 (Full HD)'], ['2560x1440', '2560×1440'], ['3840x2160', '3840×2160 (4K)'], ['720x480', '720×480 (SD)']]
+const CAPTURE_FPS: [number, string][] = [[0, 'FPS padrão'], [25, '25 fps'], [30, '30 fps'], [50, '50 fps'], [60, '60 fps']]
+
 const BLEND_LABELS: Record<string, string> = {
   normal: 'Normal', add: 'Add', multiply: 'Multiply', screen: 'Screen',
   overlay: 'Overlay', difference: 'Difference', lighten: 'Lighten', darken: 'Darken',
@@ -28,8 +32,8 @@ function ClipThumb({ clip, thumb }: { clip: Clip; thumb?: string }) {
     return thumb ? <img src={thumb} alt="" draggable={false} /> : <div className="thumb-placeholder" />
   if (clip.kind === 'lyrics')
     return <div className="thumb-lyrics"><span>Aa</span><small>LETRAS</small></div>
-  if (clip.kind === 'camera' || clip.kind === 'spout')
-    return <div className="thumb-live"><span>{clip.kind === 'camera' ? 'CÂMERA AO VIVO' : 'SPOUT AO VIVO'}</span></div>
+  if (clip.kind === 'camera' || clip.kind === 'spout' || clip.kind === 'ndi')
+    return <div className="thumb-live"><span>{clip.kind === 'camera' ? ['AO VIVO', clip.captureSize, clip.captureFps ? `${clip.captureFps} fps` : null].filter(Boolean).join(' · ') : clip.kind === 'ndi' ? 'NDI AO VIVO' : 'SPOUT AO VIVO'}</span></div>
   return <div className={clip.kind === 'plasma' ? 'thumb-plasma' : 'thumb-testcard'} />
 }
 
@@ -184,21 +188,43 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
           {(() => {
             const cell = { layer: menu.layer, column: menu.column }
             const pick = (fn: () => void) => () => { fn(); setMenu(null) }
+            const current = comp.layers[menu.layer]?.clips[menu.column] ?? null
             return (
               <>
                 <button onClick={pick(() => send({ type: 'browseClip', ...cell }))}>Vídeo…</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'plasma', ...cell }))}>Gerador: Plasma</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'testCard', ...cell }))}>Gerador: Test card</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'lyrics', ...cell }))}>Letras (aba Letras)</button>
-                <div className="menu-label">Entrada ao vivo</div>
+                {current?.kind === 'camera' && (
+                  <>
+                    <div className="menu-label">Captura: {current.name}</div>
+                    <div className="menu-inline">
+                      <select value={current.captureSize ?? ''} onChange={(e) => send({ type: 'setCapture', ...cell, size: e.target.value || null, fps: current.captureFps ?? null })}>
+                        {CAPTURE_SIZES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                      <select value={current.captureFps ?? 0} onChange={(e) => send({ type: 'setCapture', ...cell, size: current.captureSize ?? null, fps: Number(e.target.value) || null })}>
+                        {CAPTURE_FPS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    </div>
+                  </>
+                )}
+                <div className="menu-label">Câmeras e placas de captura</div>
                 {!live && <div className="menu-empty">procurando…</div>}
                 {live?.cameras.map((name) => (
-                  <button key={'c' + name} onClick={pick(() => send({ type: 'setLiveClip', kind: 'camera', name, ...cell }))}>Câmera: {name}</button>
+                  <button key={'c' + name} onClick={pick(() => send({ type: 'setLiveClip', kind: 'camera', name, ...cell }))}>{name}</button>
                 ))}
+                {live && live.cameras.length === 0 && <div className="menu-empty">nenhuma câmera ou placa de captura conectada</div>}
+                <div className="menu-label">NDI (pela rede)</div>
+                {live && live.ndiAvailable === false && <div className="menu-empty">instale o NDI Tools (ndi.video/tools) e reabra o VJesus</div>}
+                {live?.ndiAvailable && !live.ndi?.length && <div className="menu-empty">procurando fontes NDI na rede…</div>}
+                {live?.ndi?.map((name) => (
+                  <button key={'n' + name} onClick={pick(() => send({ type: 'setLiveClip', kind: 'ndi', name, ...cell }))}>{name}</button>
+                ))}
+                <div className="menu-label">Spout (outros programas neste PC)</div>
                 {live?.spout.map((name) => (
-                  <button key={'s' + name} onClick={pick(() => send({ type: 'setLiveClip', kind: 'spout', name, ...cell }))}>Spout: {name}</button>
+                  <button key={'s' + name} onClick={pick(() => send({ type: 'setLiveClip', kind: 'spout', name, ...cell }))}>{name}</button>
                 ))}
-                {live && live.cameras.length + live.spout.length === 0 && <div className="menu-empty">nenhuma câmera ou sender Spout</div>}
+                {live && live.spout.length === 0 && <div className="menu-empty">nenhum programa enviando por Spout</div>}
                 {menu.filled && <button className="danger" onClick={pick(() => send({ type: 'removeClip', ...cell }))}>Remover</button>}
               </>
             )

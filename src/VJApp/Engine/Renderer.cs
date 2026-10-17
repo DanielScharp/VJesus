@@ -142,7 +142,7 @@ sealed partial class Renderer : IDisposable
     public void ReloadEffects(List<EffectDef> defs) => _pendingDefs = defs;
 
     /// <summary>Troca a fonte de uma layer (null = limpar). O clip anterior sai com a transição da layer.</summary>
-    public void SetLayerSource(int layer, SourceKind? kind, VideoPlayer? player = null, string? spoutSender = null, LyricsFeed? lyrics = null)
+    public void SetLayerSource(int layer, SourceKind? kind, VideoPlayer? player = null, string? spoutSender = null, LyricsFeed? lyrics = null, string? ndiSource = null)
     {
         var slot = Layers[layer];
         lock (slot.Lock)
@@ -151,6 +151,7 @@ sealed partial class Renderer : IDisposable
             slot.PendingKind = kind;
             slot.PendingPlayer = player;
             slot.PendingSpout = spoutSender;
+            slot.PendingNdi = ndiSource;
             slot.PendingLyrics = lyrics;
             slot.HasPending = true;
         }
@@ -256,7 +257,7 @@ sealed partial class Renderer : IDisposable
             {
                 if (!slot.HasPending) continue;
                 slot.HasPending = false;
-                incoming = slot.PendingKind is { } kind ? new LayerSource(kind, slot.PendingPlayer, slot.PendingSpout, slot.PendingLyrics) : null;
+                incoming = slot.PendingKind is { } kind ? new LayerSource(kind, slot.PendingPlayer, slot.PendingSpout, slot.PendingLyrics, slot.PendingNdi) : null;
                 slot.PendingPlayer = null;
             }
             incoming?.CreateGpu(_device!);
@@ -329,7 +330,7 @@ sealed partial class Renderer : IDisposable
             return;
         }
         var p = source.Player;
-        bool fromPlayer = p != null && source.Spout == null;
+        bool fromPlayer = p != null && source.Spout == null && source.Ndi == null;
         var lp = new LayerParams
         {
             Opacity = slot.Opacity,

@@ -2,9 +2,9 @@
 
 export type Display = { index: number; name: string; width: number; height: number; primary: boolean }
 
-export type ClipKind = 'video' | 'plasma' | 'testCard' | 'camera' | 'spout' | 'lyrics'
-export type LiveSources = { cameras: string[]; spout: string[] }
-export type Clip = { kind: ClipKind; path: string | null; name: string }
+export type ClipKind = 'video' | 'plasma' | 'testCard' | 'camera' | 'spout' | 'lyrics' | 'ndi'
+export type LiveSources = { cameras: string[]; spout: string[]; ndi?: string[]; ndiAvailable?: boolean }
+export type Clip = { kind: ClipKind; path: string | null; name: string; captureSize?: string | null; captureFps?: number | null }
 
 export const BLEND_MODES = ['normal', 'add', 'multiply', 'screen', 'overlay', 'difference', 'lighten', 'darken'] as const
 export type BlendMode = (typeof BLEND_MODES)[number]
@@ -179,7 +179,7 @@ export type UiMessage =
   | { type: 'attackFire' | 'attackRelease'; id: string }
   | { type: 'attackStopAll' | 'attacksReset' }
   | { type: 'attacksSave'; attacks: AttackPreset[] }
-  | ({ type: 'setLiveClip'; kind: 'camera' | 'spout'; name: string } & Cell)
+  | ({ type: 'setLiveClip'; kind: 'camera' | 'spout' | 'ndi'; name: string } & Cell)
   | { type: 'listLiveSources' }
   | ({ type: 'moveClip'; fromLayer: number; fromColumn: number } & Cell)
   | ({ type: 'removeClip' } & Cell)
@@ -189,6 +189,7 @@ export type UiMessage =
   | { type: 'clearAll' }
   | { type: 'columnAdd'; after?: number }
   | { type: 'layerAdd'; layer?: number }
+  | { type: 'setCapture'; layer: number; column: number; size: string | null; fps: number | null }
   | { type: 'layerRemove' | 'layerDuplicate'; layer: number }
   | { type: 'layerMove'; layer: number; direction: -1 | 1 }
   | { type: 'columnRemove'; column: number }

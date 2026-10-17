@@ -267,15 +267,33 @@ sealed partial class MainForm : Form
                 {
                     var cameras = VideoPlayer.ListCameras();
                     var spout = SpoutReceiver.ListSenders().Where(n => n != _streamActive.Spout).ToList();
-                    Send(new { type = "liveSources", cameras, spout });
+                    Send(new { type = "liveSources", cameras, spout, ndi = new List<string>(), ndiAvailable = NdiReceiver.Available });
+                    // NDI demora um pouco para achar as fontes da rede: manda de novo quando chegar
+                    if (NdiReceiver.Available)
+                    {
+                        var ndi = NdiReceiver.ListSources().Where(n => !_streamActive.Ndi?.Contains(n.Split('(').Last().TrimEnd(')')) ?? true).ToList();
+                        Send(new { type = "liveSources", cameras, spout, ndi, ndiAvailable = true });
+                    }
                 });
                 break;
 
             case "setLiveClip":
-                _comp.Layers[L()].Clips[C()] = Clip.Live((string?)msg["kind"] == "spout" ? ClipKind.Spout : ClipKind.Camera, (string)msg["name"]!);
+                _comp.Layers[L()].Clips[C()] = Clip.Live((string?)msg["kind"] switch { "spout" => ClipKind.Spout, "ndi" => ClipKind.Ndi, _ => ClipKind.Camera }, (string)msg["name"]!);
                 if (_comp.ActiveHere(_comp.Layers[L()]) == C()) ClearLayer(L());
                 CompositionChanged();
                 break;
+
+            case "setCapture":
+            {
+                // resolução/fps de uma câmera ou placa de captura (reabre se estiver tocando)
+                var cl = _comp.Layers[L()].Clips[C()];
+                if (cl?.Kind != ClipKind.Camera) break;
+                cl.CaptureSize = string.IsNullOrEmpty((string?)msg["size"]) ? null : (string?)msg["size"];
+                cl.CaptureFps = (int?)msg["fps"] is > 0 and var f ? f : null;
+                if (_comp.ActiveHere(_comp.Layers[L()]) == C()) Trigger(L(), C());
+                CompositionChanged();
+                break;
+            }
 
             case "setGenerator":
                 _comp.Layers[L()].Clips[C()] = (string?)msg["kind"] switch
@@ -423,7 +441,14 @@ sealed partial class MainForm : Form
                         if (!stillActive) return;
                         try
                         {
-                            var cam = new VideoPlayer(device, liveDevice: true);
+                            VideoPlayer cam;
+                            try { cam = new VideoPlayer(device, liveDevice: true, clip.CaptureSize, clip.CaptureFps); }
+                            catch when (clip.CaptureSize != null || clip.CaptureFps != null)
+                            {
+                                // o aparelho não aceita a resolução/fps pedida: abre no padrão dele
+                                cam = new VideoPlayer(device, liveDevice: true);
+                                Send(new { type = "error", message = $"{device} não aceita {clip.CaptureSize ?? ""} {(clip.CaptureFps is { } fps ? fps + " fps" : "")}; abri na resolução padrão do aparelho." });
+                            }
                             BeginInvoke(() =>
                             {
                                 if (_comp.Layers[layer].PlayingClip != clip) { cam.Dispose(); return; } // trocou de clip no meio
@@ -450,6 +475,15 @@ sealed partial class MainForm : Form
             case ClipKind.Lyrics:
                 _players[layer] = null;
                 _renderer!.SetLayerSource(layer, SourceKind.Video, null, null, _lyricsFeed);
+                break;
+            case ClipKind.Ndi:
+                if (!NdiReceiver.Available)
+                {
+                    Send(new { type = "error", message = "Para receber NDI, instale o NDI Tools ou o NDI Runtime (gratuito, ndi.video/tools) e reabra o VJesus." });
+                    return;
+                }
+                _players[layer] = null;
+                _renderer!.SetLayerSource(layer, SourceKind.Video, ndiSource: clip.Path);
                 break;
             case ClipKind.Spout:
                 _players[layer] = null;
