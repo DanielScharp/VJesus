@@ -27,7 +27,7 @@ sealed partial class MainForm : Form
     readonly WebView2 _web = new() { Dock = DockStyle.Fill };
     readonly System.Windows.Forms.Timer _playbackTimer = new() { Interval = 100 };
     Composition _comp = Composition.LoadOrDefault(Composition.DefaultPath);
-    readonly VideoPlayer?[] _players;
+    VideoPlayer?[] _players;
     readonly ConcurrentDictionary<string, string?> _thumbs = new();
     Renderer? _renderer;
 
@@ -330,6 +330,9 @@ sealed partial class MainForm : Form
                 SendComposition();
                 break;
 
+            case var layerType when layerType is "layerAdd" or "layerRemove" or "layerMove" or "layerDuplicate":
+                OnLayerMessage(layerType, msg);
+                break;
             case var gridType when gridType is "columnAdd" or "columnRemove" or "deckAdd" or "deckSelect" or "deckRename" or "deckRemove" or "deckMove":
                 OnGridMessage(gridType, msg);
                 break;

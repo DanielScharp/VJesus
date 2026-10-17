@@ -244,6 +244,7 @@ sealed partial class MainForm
         for (int i = 0; i < _comp.Layers.Count; i++) ClearLayer(i);
         _comp = comp;
         _mapping = mapping;
+        ResizeEngineLayers(); // o projeto pode ter outro número de layers
         for (int i = 0; i < _comp.Layers.Count; i++) ApplyLayerParams(i);
         _renderer?.SetBpm(_comp.Bpm);
         if (_audio != null) _audio.MasterVolume = _comp.MasterVolume;

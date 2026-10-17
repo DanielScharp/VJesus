@@ -37,6 +37,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
   const [menu, setMenu] = useState<Menu | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [colMenu, setColMenu] = useState<{ column: number; x: number; y: number } | null>(null)
+  const [layerMenu, setLayerMenu] = useState<{ layer: number; x: number; y: number } | null>(null)
   const [deckMenu, setDeckMenu] = useState<{ index: number; x: number; y: number } | null>(null)
   const [renaming, setRenaming] = useState<{ kind: 'deck' | 'layer'; index: number } | null>(null)
 
@@ -70,7 +71,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
   }
 
   return (
-    <div className="grid-wrap" onClick={() => { setMenu(null); setColMenu(null); setDeckMenu(null) }}>
+    <div className="grid-wrap" onClick={() => { setMenu(null); setColMenu(null); setDeckMenu(null); setLayerMenu(null) }}>
       {/* ---------- abas de clips ---------- */}
       <div className="deck-tabs">
         {comp.decks.map((d, i) => (
@@ -112,7 +113,9 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
         return (
           <div key={li} className="grid-row">
             <div className={`layer-head ${layer.playing ? 'live' : ''} ${selected === li ? 'selected' : ''}`}
-              title="Clique para editar os efeitos desta layer" onClick={() => onSelect(li)}>
+              title="Clique para editar os efeitos desta layer · botão direito: inserir, duplicar, mover ou remover"
+              onClick={() => onSelect(li)}
+              onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setLayerMenu({ layer: li, x: e.clientX, y: e.clientY }) }}>
               <div className="layer-title">
                 {renaming?.kind === 'layer' && renaming.index === li
                   ? <input className="rename" autoFocus defaultValue={layer.name} onClick={(e) => e.stopPropagation()}
@@ -171,6 +174,11 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
         )
       })}
 
+      <div className="grid-row layer-add-row">
+        <button className="small" title="Nova layer no topo (fica por cima das outras)" onClick={() => send({ type: 'layerAdd' })}>+ Layer</button>
+        <span className="meta">{comp.layers.length} layers · botão direito no nome de uma layer para inserir, duplicar, mover ou remover</span>
+      </div>
+
       {menu && (
         <div className="menu" style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()}>
           {(() => {
@@ -198,6 +206,27 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
         </div>
       )}
     </div>
+
+      {layerMenu && (() => {
+        const l = layerMenu.layer
+        const close = () => setLayerMenu(null)
+        return (
+          <div className="menu" style={{ left: layerMenu.x, top: layerMenu.y }} onClick={(e) => e.stopPropagation()}>
+            <div className="menu-label">{comp.layers[l]?.name}</div>
+            <button onClick={() => { setRenaming({ kind: 'layer', index: l }); close() }}>Renomear</button>
+            <button onClick={() => { send({ type: 'layerAdd', layer: l }); close() }}>Inserir layer acima</button>
+            <button onClick={() => { send({ type: 'layerAdd', layer: l - 1 }); close() }}>Inserir layer abaixo</button>
+            <button onClick={() => { send({ type: 'layerDuplicate', layer: l }); close() }}>Duplicar (com os clips e efeitos)</button>
+            <button disabled={l >= comp.layers.length - 1} onClick={() => { send({ type: 'layerMove', layer: l, direction: 1 }); close() }}>Mover para cima</button>
+            <button disabled={l <= 0} onClick={() => { send({ type: 'layerMove', layer: l, direction: -1 }); close() }}>Mover para baixo</button>
+            <button className="danger" disabled={comp.layers.length <= 1} onClick={() => {
+              const has = comp.layers[l].clips.some(Boolean) || comp.layers[l].playing
+              if (!has || window.confirm(`Remover a layer "${comp.layers[l].name}" e os clips dela (em todas as abas)?`)) send({ type: 'layerRemove', layer: l })
+              close()
+            }}>Remover layer</button>
+          </div>
+        )
+      })()}
 
       {colMenu && (
         <div className="menu" style={{ left: colMenu.x, top: colMenu.y }} onClick={(e) => e.stopPropagation()}>

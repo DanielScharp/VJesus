@@ -188,6 +188,9 @@ export type UiMessage =
   | { type: 'clearLayer'; layer: number }
   | { type: 'clearAll' }
   | { type: 'columnAdd'; after?: number }
+  | { type: 'layerAdd'; layer?: number }
+  | { type: 'layerRemove' | 'layerDuplicate'; layer: number }
+  | { type: 'layerMove'; layer: number; direction: -1 | 1 }
   | { type: 'columnRemove'; column: number }
   | { type: 'deckAdd'; name?: string }
   | { type: 'deckSelect' | 'deckRemove'; index: number }

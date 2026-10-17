@@ -83,7 +83,36 @@ sealed partial class Renderer : IDisposable
     double _beatAtOrigin;
     readonly object _beatLock = new();
 
-    public LayerSlot[] Layers { get; }
+    volatile LayerSlot[] _layers;
+    /// <summary>Layers do motor (a UI pode trocar o arranjo: inserir, remover, mover).</summary>
+    public LayerSlot[] Layers => _layers;
+    readonly System.Collections.Concurrent.ConcurrentQueue<LayerSlot> _retired = new();
+
+    /// <summary>
+    /// Novo arranjo de layers (chamado pela UI). As layers que saíram têm as fontes liberadas no render thread.
+    /// </summary>
+    public void SetLayers(LayerSlot[] slots)
+    {
+        var old = _layers;
+        _layers = slots;
+        foreach (var s in old)
+            if (Array.IndexOf(slots, s) < 0) _retired.Enqueue(s);
+    }
+
+    void DisposeRetired()
+    {
+        while (_retired.TryDequeue(out var s))
+        {
+            lock (s.Lock)
+            {
+                if (s.HasPending) s.PendingPlayer?.Dispose();
+                s.HasPending = false;
+                s.PendingPlayer = null;
+            }
+            s.Outgoing?.Dispose(); s.Outgoing = null;
+            s.Current?.Dispose(); s.Current = null;
+        }
+    }
 
     ID3D11Device? _device;
     ID3D11DeviceContext? _ctx;
@@ -104,7 +133,7 @@ sealed partial class Renderer : IDisposable
     public Renderer(int layerCount, List<EffectDef> effects)
     {
         _pendingDefs = effects;
-        Layers = Enumerable.Range(0, layerCount).Select(_ => new LayerSlot()).ToArray();
+        _layers = Enumerable.Range(0, layerCount).Select(_ => new LayerSlot()).ToArray();
         _thread = new Thread(Run) { IsBackground = true, Name = "Render" };
         _thread.Start();
     }
@@ -443,6 +472,7 @@ sealed partial class Renderer : IDisposable
         {
             double now = _clock.Elapsed.TotalSeconds;
             ApplyPendingOutputs();
+            DisposeRetired();
             ApplyStreaming();
             CompilePendingEffects();
             AdoptPendingSources(now);

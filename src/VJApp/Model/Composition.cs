@@ -77,6 +77,7 @@ sealed class Deck
 sealed class Composition
 {
     public const int DefaultLayers = 4;
+    public const int MaxLayers = 32;
     public const int DefaultColumns = 8;
 
     public int Columns { get; set; } = DefaultColumns;
@@ -146,8 +147,9 @@ sealed class Composition
     public Composition Normalize()
     {
         if (Columns < 1) Columns = DefaultColumns;
-        while (Layers.Count < DefaultLayers) Layers.Add(new Layer { Name = $"Layer {Layers.Count + 1}" });
-        if (Layers.Count > DefaultLayers) Layers.RemoveRange(DefaultLayers, Layers.Count - DefaultLayers);
+        // quantas layers a pessoa quiser (de 1 a 32); projeto vazio começa com 4
+        if (Layers.Count == 0) while (Layers.Count < DefaultLayers) Layers.Add(new Layer { Name = $"Layer {Layers.Count + 1}" });
+        if (Layers.Count > MaxLayers) Layers.RemoveRange(MaxLayers, Layers.Count - MaxLayers);
         foreach (var l in Layers)
         {
             if (l.Clips.Length != Columns) l.Clips = [.. l.Clips.Take(Columns), .. new Clip?[Math.Max(0, Columns - l.Clips.Length)]];
