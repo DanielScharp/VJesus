@@ -21,6 +21,8 @@ sealed class Clip
     public ClipKind Kind { get; set; }
     public string? Path { get; set; }
     public string Name { get; set; } = "";
+    /// <summary>Fundo gerado (Plasma): tipo, cores e movimento. null = arco-íris clássico.</summary>
+    public GeneratorSettings? Gen { get; set; }
     /// <summary>Câmera/placa de captura: resolução pedida (ex.: "1920x1080"; null = a padrão do aparelho).</summary>
     public string? CaptureSize { get; set; }
     /// <summary>Câmera/placa de captura: quadros por segundo pedidos (null = padrão).</summary>
@@ -36,6 +38,20 @@ sealed class Clip
         new() { Kind = kind, Name = kind == ClipKind.Plasma ? "Plasma" : "Test card" };
 }
 
+/// <summary>Ajustes do fundo gerado (para fundos leves de culto).</summary>
+sealed class GeneratorSettings
+{
+    /// <summary>ondas, nuvens, aurora, luzes, gradiente, feixes, arcoiris</summary>
+    public string Type { get; set; } = "ondas";
+    public float Speed { get; set; } = 0.4f;
+    public float Intensity { get; set; } = 0.8f;
+    public float Scale { get; set; } = 1f;
+    public float Detail { get; set; } = 0.5f;
+    /// <summary>Direção do movimento em graus.</summary>
+    public float Angle { get; set; } = 90;
+    public List<string> Colors { get; set; } = ["#0A1030", "#1E4A9A", "#8CC8FF"];
+}
+
 /// <summary>Um efeito aplicado numa layer ou no master, com os valores dos parâmetros.</summary>
 sealed class EffectInstance
 {
@@ -47,6 +63,8 @@ sealed class EffectInstance
 sealed class Layer
 {
     public string Name { get; set; } = "";
+    /// <summary>Fundo gerado (Plasma): tipo, cores e movimento. null = arco-íris clássico.</summary>
+    public GeneratorSettings? Gen { get; set; }
     /// <summary>Câmera/placa de captura: resolução pedida (ex.: "1920x1080"; null = a padrão do aparelho).</summary>
     public string? CaptureSize { get; set; }
     /// <summary>Câmera/placa de captura: quadros por segundo pedidos (null = padrão).</summary>

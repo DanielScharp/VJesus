@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Numerics;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Vortice.D3DCompiler;
 using Vortice.Direct3D;
@@ -34,6 +35,20 @@ struct LayerParams
     public float TransitionMix;   // 0..1
     public float TransitionKind;
     public float Pad0, Pad1, Pad2;
+}
+
+/// <summary>Fundo gerado (antigo Plasma): tipo, cores, velocidade, intensidade, escala. Igual ao cbuffer GenParams.</summary>
+struct GenParams
+{
+    public Vector4 Color1, Color2, Color3;
+    public float Type, Speed, Intensity, Scale;
+    public float Detail, Angle, Pad0, Pad1;
+
+    public static GenParams Default => new()
+    {
+        Color1 = new(0.02f, 0.05f, 0.18f, 1), Color2 = new(0.10f, 0.25f, 0.60f, 1), Color3 = new(0.55f, 0.75f, 1f, 1),
+        Type = 6, Speed = 1, Intensity = 1, Scale = 1, Detail = 0.5f,
+    };
 }
 
 /// <summary>Textura que serve de alvo de render e de entrada de shader.</summary>
@@ -118,7 +133,7 @@ sealed partial class Renderer : IDisposable
     ID3D11DeviceContext? _ctx;
     ID3D11VertexShader? _vs;
     ID3D11PixelShader? _psSource, _psBlend, _psTransition;
-    ID3D11Buffer? _frameCb, _layerCb, _effectCb;
+    ID3D11Buffer? _frameCb, _layerCb, _effectCb, _genCb;
     ID3D11SamplerState? _sampler;
     readonly RenderTexture?[] _comp = new RenderTexture?[2];  // composição (ping-pong)
     readonly RenderTexture?[] _work = new RenderTexture?[2];  // layer sendo processada (ping-pong)
@@ -208,6 +223,7 @@ sealed partial class Renderer : IDisposable
 
         _frameCb = CreateCb<FrameParams>();
         _layerCb = CreateCb<LayerParams>();
+        _genCb = CreateCb<GenParams>();
         _effectCb = _device.CreateBuffer(new BufferDescription(sizeof(float) * EffectDef.MaxParams, BindFlags.ConstantBuffer, ResourceUsage.Default));
         _sampler = _device.CreateSamplerState(SamplerDescription.LinearClamp);
 
@@ -299,6 +315,7 @@ sealed partial class Renderer : IDisposable
         ctx.PSSetConstantBuffer(0, _frameCb);
         ctx.PSSetConstantBuffer(1, _layerCb);
         ctx.PSSetConstantBuffer(2, _effectCb);
+        ctx.PSSetConstantBuffer(5, _genCb);
         ctx.PSSetSampler(0, _sampler);
         ctx.Draw(3, 0);
     }
@@ -342,6 +359,11 @@ sealed partial class Renderer : IDisposable
             UvScaleY = fromPlayer ? (float)p!.Height / p.TextureHeight : 1,
         };
         _ctx!.UpdateSubresource(in lp, _layerCb!);
+        if (source.Kind == SourceKind.Plasma)
+        {
+            var g = slot.Gen;
+            _ctx.UpdateSubresource(in g, _genCb!);
+        }
         Pass(_psSource!, target.Rtv, source.InputSrv);
     }
 
@@ -515,6 +537,7 @@ sealed partial class Renderer : IDisposable
         _sampler?.Dispose();
         _frameCb?.Dispose();
         _layerCb?.Dispose();
+        _genCb?.Dispose();
         _effectCb?.Dispose();
         _psSource?.Dispose();
         _psBlend?.Dispose();

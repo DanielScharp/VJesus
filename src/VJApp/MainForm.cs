@@ -283,6 +283,10 @@ sealed partial class MainForm : Form
                 CompositionChanged();
                 break;
 
+            case "setGeneratorParams":
+                SetGeneratorParams(L(), C(), msg["gen"]);
+                break;
+
             case "setCapture":
             {
                 // resolução/fps de uma câmera ou placa de captura (reabre se estiver tocando)
@@ -300,7 +304,7 @@ sealed partial class MainForm : Form
                 {
                     "testCard" => Clip.Generator(ClipKind.TestCard),
                     "lyrics" => new Clip { Kind = ClipKind.Lyrics, Name = "Letras" },
-                    _ => Clip.Generator(ClipKind.Plasma),
+                    _ => new Clip { Kind = ClipKind.Plasma, Name = "Fundo animado", Gen = msg["gen"].Deserialize<GeneratorSettings>(JsonRead) ?? new GeneratorSettings() },
                 };
                 CompositionChanged();
                 break;
@@ -491,7 +495,8 @@ sealed partial class MainForm : Form
                 break;
             case ClipKind.Plasma:
                 _players[layer] = null;
-                _renderer!.SetLayerSource(layer, SourceKind.Plasma);
+                _renderer!.Layers[layer].Gen = ToGenParams(clip.Gen);
+                _renderer.SetLayerSource(layer, SourceKind.Plasma);
                 break;
             case ClipKind.TestCard:
                 _players[layer] = null;

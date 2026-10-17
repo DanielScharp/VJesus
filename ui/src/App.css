@@ -615,3 +615,16 @@ button.link { background: transparent; border: 0; padding: 2px 4px; text-align: 
 .grid .column-rename { flex: 0 0 var(--cell-w); width: var(--cell-w); }
 
 .menu { max-height: calc(100vh - 16px); overflow-y: auto; }
+
+/* ---------- fundo animado ---------- */
+.modal.gen-panel { width: min(860px, 95vw); overflow: auto; }
+.gen-panel h3 { margin: 12px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.gen-presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.gen-preset { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 6px; font-size: 12px; }
+.gen-swatch { height: 38px; border-radius: 4px; }
+.gen-types { display: flex; flex-wrap: wrap; gap: 4px; }
+.gen-body { display: grid; grid-template-columns: 220px 1fr; gap: 18px; align-items: start; }
+.gen-colors { display: flex; gap: 10px; }
+.gen-color { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; margin: 0; }
+.gen-color input[type=color] { width: 56px; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; }
+.gen-sliders label { grid-template-columns: 110px 60px 1fr; }

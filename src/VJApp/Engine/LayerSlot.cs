@@ -91,6 +91,8 @@ sealed class LayerSlot
     public volatile float Volume = 1f;
     /// <summary>Esta layer aparece no item "Telão" da tela de retorno (quando está tocando).</summary>
     public volatile bool ToStage;
+    /// <summary>Parâmetros do fundo gerado desta layer (troca na hora, sem reiniciar o clip).</summary>
+    public GenParams Gen = GenParams.Default;
 
     // troca de fonte pedida pela UI, adotada pelo render thread
     public readonly object Lock = new();

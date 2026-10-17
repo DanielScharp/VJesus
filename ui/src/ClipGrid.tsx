@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { EffectChips, type ToggleEffect } from './EffectChips'
-import { BLEND_MODES, send, sendFiles, type EffectDef, type BlendMode, type Clip, type Composition, type LayerPlayback, type LiveSources } from './bridge'
+import { DEFAULT_GEN, GeneratorPanel, genThumbStyle } from './GeneratorPanel'
+import { BLEND_MODES, send, sendFiles, type EffectDef, type BlendMode, type Clip, type Composition, type GeneratorSettings, type LayerPlayback, type LiveSources } from './bridge'
 
 type Props = {
   comp: Composition
@@ -57,7 +58,7 @@ function ClipThumb({ clip, thumb }: { clip: Clip; thumb?: string }) {
     return <div className="thumb-lyrics"><span>Aa</span><small>LETRAS</small></div>
   if (clip.kind === 'camera' || clip.kind === 'spout' || clip.kind === 'ndi')
     return <div className="thumb-live"><span>{clip.kind === 'camera' ? ['AO VIVO', clip.captureSize, clip.captureFps ? `${clip.captureFps} fps` : null].filter(Boolean).join(' · ') : clip.kind === 'ndi' ? 'NDI AO VIVO' : 'SPOUT AO VIVO'}</span></div>
-  return <div className={clip.kind === 'plasma' ? 'thumb-plasma' : 'thumb-testcard'} />
+  return <div className={clip.kind === 'plasma' ? 'thumb-plasma' : 'thumb-testcard'} style={clip.kind === 'plasma' ? genThumbStyle(clip.gen) : undefined} />
 }
 
 export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSelect, live, library, onToggleEffect }: Props) {
@@ -65,6 +66,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [colMenu, setColMenu] = useState<{ column: number; x: number; y: number } | null>(null)
   const [layerMenu, setLayerMenu] = useState<{ layer: number; x: number; y: number } | null>(null)
+  const [genEdit, setGenEdit] = useState<{ layer: number; column: number; gen: GeneratorSettings | null } | null>(null)
   const [deckMenu, setDeckMenu] = useState<{ index: number; x: number; y: number } | null>(null)
   const [renaming, setRenaming] = useState<{ kind: 'deck' | 'layer' | 'column'; index: number } | null>(null)
 
@@ -222,9 +224,10 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
             return (
               <>
                 {menu.filled && <button className="danger" onClick={pick(() => send({ type: 'removeClip', ...cell }))}>Remover este clip</button>}
+                {current?.kind === 'plasma' && <button onClick={pick(() => setGenEdit({ ...cell, gen: current.gen ?? null }))}>Ajustar fundo animado…</button>}
                 {menu.filled && <div className="menu-label">Trocar por</div>}
                 <button onClick={pick(() => send({ type: 'browseClip', ...cell }))}>Vídeo ou imagem…</button>
-                <button onClick={pick(() => send({ type: 'setGenerator', kind: 'plasma', ...cell }))}>Gerador: Plasma</button>
+                <button onClick={pick(() => { send({ type: 'setGenerator', kind: 'plasma', ...cell, gen: DEFAULT_GEN }); setGenEdit({ ...cell, gen: DEFAULT_GEN }) })}>Fundo animado (ajustável)…</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'testCard', ...cell }))}>Gerador: Test card</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'lyrics', ...cell }))}>Letras (aba Letras)</button>
                 {current?.kind === 'camera' && (
@@ -263,6 +266,11 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
         </div>
       )}
     </div>
+
+      {genEdit && (
+        <GeneratorPanel key={genEdit.layer + ':' + genEdit.column} layer={genEdit.layer} column={genEdit.column} initial={genEdit.gen}
+          playing={comp.layers[genEdit.layer]?.active === genEdit.column} onClose={() => setGenEdit(null)} />
+      )}
 
       {layerMenu && (() => {
         const l = layerMenu.layer

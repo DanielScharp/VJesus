@@ -79,6 +79,109 @@ float3 testCard(float2 uv, float2 res, float t)
     return col;
 }
 
+// ---------- fundos gerados (antigo "Plasma"): tipo, cores, velocidade, intensidade, escala ----------
+
+cbuffer GenParams : register(b5)
+{
+    float4 GenColor1;
+    float4 GenColor2;
+    float4 GenColor3;
+    float  GenType;       // 0 ondas, 1 nuvens, 2 aurora, 3 luzes (bokeh), 4 gradiente, 5 feixes de luz, 6 arco-íris
+    float  GenSpeed;      // multiplica o tempo
+    float  GenIntensity;  // brilho final
+    float  GenScale;      // tamanho das formas (maior = formas maiores)
+    float  GenDetail;     // complexidade / contraste
+    float  GenAngle;      // direção do movimento (radianos)
+    float2 _genPad;
+};
+
+float hash21(float2 p) { p = frac(p * float2(123.34, 456.21)); p += dot(p, p + 45.32); return frac(p.x * p.y); }
+
+float vnoise(float2 p)
+{
+    float2 i = floor(p), f = frac(p);
+    float2 u = f * f * (3 - 2 * f);
+    return lerp(lerp(hash21(i), hash21(i + float2(1, 0)), u.x), lerp(hash21(i + float2(0, 1)), hash21(i + float2(1, 1)), u.x), u.y);
+}
+
+float fbm(float2 p, int oct)
+{
+    float v = 0, a = 0.5;
+    [loop] for (int k = 0; k < oct; k++) { v += a * vnoise(p); p = p * 2.03 + 17.1; a *= 0.5; }
+    return v;
+}
+
+// 0..1 → as três cores, com transição suave entre elas
+float3 palette3(float v)
+{
+    v = saturate(v);
+    return v < 0.5 ? lerp(GenColor1.rgb, GenColor2.rgb, smoothstep(0, 1, v * 2)) : lerp(GenColor2.rgb, GenColor3.rgb, smoothstep(0, 1, v * 2 - 1));
+}
+
+float3 generator(float2 uv, float2 res, float t)
+{
+    float aspect = res.x / res.y;
+    float2 p = (uv - 0.5) * float2(aspect, 1) / max(GenScale, 0.05);
+    float2 dir = float2(cos(GenAngle), sin(GenAngle));
+    float detail = saturate(GenDetail);
+    float v;
+    int type = (int)(GenType + 0.5);
+    if (type == 1)            // nuvens: ruído fractal escorrendo devagar
+    {
+        float2 q = p * 1.5 + dir * t * 0.15;
+        float n = fbm(q + fbm(q * 0.7 + t * 0.05, 3), 3 + (int)(detail * 3));
+        v = smoothstep(0.2, 0.85, n);
+    }
+    else if (type == 2)       // aurora: faixas verticais que ondulam
+    {
+        float wave = sin(p.x * 2.2 + t * 0.6 + sin(p.x * 0.7 - t * 0.3) * 2) * 0.25;
+        float band = exp(-pow((p.y - wave) * (2.5 + detail * 4), 2));
+        float glow = fbm(float2(p.x * 1.5 + t * 0.2, p.y * 0.5), 3);
+        v = saturate(band * (0.6 + glow * 0.8) + (1 - uv.y) * 0.25);
+    }
+    else if (type == 3)       // luzes desfocadas (bokeh) subindo devagar
+    {
+        float acc = 0;
+        [loop] for (int k = 0; k < 14; k++)
+        {
+            float2 seed = float2(k * 1.37, k * 2.91);
+            float2 c = float2(hash21(seed) - 0.5, hash21(seed + 3.1) - 0.5) * float2(aspect, 1) * 1.6 / max(GenScale, 0.05);
+            c += dir * frac(t * 0.03 * (0.5 + hash21(seed + 7))) * 3 - dir * 1.5;
+            float r = (0.12 + hash21(seed + 11) * 0.25) * (0.6 + detail);
+            acc += smoothstep(r, r * 0.3, length(p - c)) * (0.35 + 0.65 * hash21(seed + 5));
+        }
+        float bg = 0.15 + 0.2 * uv.y;
+        v = saturate(bg + acc * 0.55);
+    }
+    else if (type == 4)       // gradiente que "respira" girando devagar
+    {
+        float a = t * 0.08 + GenAngle;
+        float g = dot(p * GenScale, float2(cos(a), sin(a))) * 0.6 + 0.5;
+        v = g + sin(t * 0.4) * 0.1 * (0.5 + detail);
+    }
+    else if (type == 5)       // feixes de luz vindo de cima
+    {
+        float2 o = float2(0, -0.7);
+        float2 d = p * max(GenScale, 0.05) - o;
+        float ang = atan2(d.x, d.y);
+        float rays = 0.5 + 0.5 * sin(ang * (6 + detail * 14) + t * 0.5) * sin(ang * 3.3 - t * 0.31);
+        float fall = saturate(1.1 - length(d) * 0.55);
+        v = saturate(rays * fall + fall * 0.35);
+    }
+    else if (type == 6)       // arco-íris (o plasma colorido de antes)
+    {
+        float2 q = p * 6 * GenScale * 0.5;
+        float s = sin(q.x + t) + sin(q.y * 1.3 + t * 1.1) + sin(length(q) * 1.5 - t * 1.7);
+        return hue(s * 0.15 + t * 0.05) * GenIntensity;
+    }
+    else                      // ondas suaves
+    {
+        float2 q = p * (1.5 + detail * 3);
+        float s = sin(q.x + t) + sin(q.y * 1.3 - t * 0.8) + sin(length(q + dir * sin(t * 0.3)) * 1.4 - t * 1.2);
+        v = 0.5 + s / 6;
+    }
+    return palette3(v) * GenIntensity;
+}
 float3 plasma(float2 uv, float2 res, float t)
 {
     float2 p = (uv - 0.5) * float2(res.x / res.y, 1) * 6;
@@ -130,7 +233,7 @@ float4 PSSource(VSOut i) : SV_Target
 {
     float t = Time * Speed;
     if (SourceKind < 0.5) return videoSource(i.uv);
-    if (SourceKind < 1.5) return float4(plasma(i.uv, Resolution, t), 1);
+    if (SourceKind < 1.5) return float4(generator(i.uv, Resolution, Time * Speed * GenSpeed), 1);
     return float4(testCard(i.uv, Resolution, t), 1);
 }
 

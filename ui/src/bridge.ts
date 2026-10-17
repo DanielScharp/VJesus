@@ -4,7 +4,8 @@ export type Display = { index: number; name: string; width: number; height: numb
 
 export type ClipKind = 'video' | 'plasma' | 'testCard' | 'camera' | 'spout' | 'lyrics' | 'ndi'
 export type LiveSources = { cameras: string[]; spout: string[]; ndi?: string[]; ndiAvailable?: boolean }
-export type Clip = { kind: ClipKind; path: string | null; name: string; captureSize?: string | null; captureFps?: number | null }
+export type GeneratorSettings = { type: string; speed: number; intensity: number; scale: number; detail: number; angle: number; colors: string[] }
+export type Clip = { kind: ClipKind; path: string | null; name: string; captureSize?: string | null; captureFps?: number | null; gen?: GeneratorSettings | null }
 
 export const BLEND_MODES = ['normal', 'add', 'multiply', 'screen', 'overlay', 'difference', 'lighten', 'darken'] as const
 export type BlendMode = (typeof BLEND_MODES)[number]
@@ -159,7 +160,7 @@ export type UiMessage =
   | { type: 'setStreaming'; spout: string | null; ndi: string | null }
   | ({ type: 'browseClip' } & Cell)
   | ({ type: 'dropFiles' } & Cell)
-  | ({ type: 'setGenerator'; kind: 'plasma' | 'testCard' | 'lyrics' } & Cell)
+  | ({ type: 'setGenerator'; kind: 'plasma' | 'testCard' | 'lyrics'; gen?: GeneratorSettings } & Cell)
   | { type: 'lyricsSave'; song: Song }
   | { type: 'lyricsDelete'; id: string }
   | { type: 'lyricsImport' | 'lyricsClear' }
@@ -190,6 +191,7 @@ export type UiMessage =
   | { type: 'columnAdd'; after?: number }
   | { type: 'layerAdd'; layer?: number }
   | { type: 'setCapture'; layer: number; column: number; size: string | null; fps: number | null }
+  | { type: 'setGeneratorParams'; layer: number; column: number; gen: GeneratorSettings }
   | { type: 'layerRemove' | 'layerDuplicate'; layer: number }
   | { type: 'layerMove'; layer: number; direction: -1 | 1 }
   | { type: 'columnRemove'; column: number }
