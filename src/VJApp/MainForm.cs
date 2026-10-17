@@ -351,7 +351,7 @@ sealed partial class MainForm : Form
             case var layerType when layerType is "layerAdd" or "layerRemove" or "layerMove" or "layerDuplicate":
                 OnLayerMessage(layerType, msg);
                 break;
-            case var gridType when gridType is "columnAdd" or "columnRemove" or "deckAdd" or "deckSelect" or "deckRename" or "deckRemove" or "deckMove":
+            case var gridType when gridType is "columnAdd" or "columnRemove" or "columnRename" or "deckAdd" or "deckSelect" or "deckRename" or "deckRemove" or "deckMove":
                 OnGridMessage(gridType, msg);
                 break;
 
@@ -611,6 +611,7 @@ sealed partial class MainForm : Form
         {
             type = "composition",
             columns = _comp.Columns,
+            columnNames = _comp.ColumnNames.Take(_comp.Columns),
             layers = _comp.Layers.Select(l => new
             {
                 name = l.Name,

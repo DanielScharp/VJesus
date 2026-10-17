@@ -20,6 +20,7 @@ sealed partial class MainForm
                     l.Clips = [.. l.Clips.Take(at), null, .. l.Clips.Skip(at)];
                     if (_comp.ActiveHere(l) >= at) l.Active++;
                 }
+                _comp.ColumnNames.Insert(Math.Min(at, _comp.ColumnNames.Count), null);
                 _comp.Columns++;
                 break;
             }
@@ -35,7 +36,17 @@ sealed partial class MainForm
                     else if (here > col) l.Active--;
                     l.Clips = [.. l.Clips.Take(col), .. l.Clips.Skip(col + 1)];
                 }
+                if (col < _comp.ColumnNames.Count) _comp.ColumnNames.RemoveAt(col);
                 _comp.Columns--;
+                break;
+            }
+            case "columnRename":
+            {
+                int col = Int("column", -1);
+                if (col < 0 || col >= _comp.Columns) return;
+                while (_comp.ColumnNames.Count < _comp.Columns) _comp.ColumnNames.Add(null);
+                var name = ((string?)msg["name"])?.Trim();
+                _comp.ColumnNames[col] = string.IsNullOrEmpty(name) ? null : name;
                 break;
             }
             case "deckAdd":

@@ -76,6 +76,8 @@ sealed class Deck
     public int Columns { get; set; } = Composition.DefaultColumns;
     /// <summary>Clips[layer][coluna].</summary>
     public List<Clip?[]> Clips { get; set; } = [];
+    /// <summary>Nome de cada coluna (null/vazio = só o número).</summary>
+    public List<string?> ColumnNames { get; set; } = [];
 }
 
 /// <summary>
@@ -95,6 +97,8 @@ sealed class Composition
     public float MasterVolume { get; set; } = 1f;
     /// <summary>Abas de clips. A aba aberta fica em Columns e Layers[].Clips (cópia de trabalho).</summary>
     public List<Deck> Decks { get; set; } = [];
+    /// <summary>Nomes das colunas da aba aberta (cópia de trabalho, como os clips).</summary>
+    [JsonIgnore] public List<string?> ColumnNames { get; set; } = [];
     public int CurrentDeck { get; set; }
 
     public Deck Current => Decks[CurrentDeck];
@@ -105,6 +109,7 @@ sealed class Composition
         if (Decks.Count == 0) return;
         Current.Columns = Columns;
         Current.Clips = [.. Layers.Select(l => l.Clips)];
+        Current.ColumnNames = [.. ColumnNames.Take(Columns)];
     }
 
     /// <summary>Abre a aba <paramref name="index"/> (os clips tocando continuam tocando).</summary>
@@ -113,6 +118,7 @@ sealed class Composition
         CurrentDeck = Math.Clamp(index, 0, Decks.Count - 1);
         var d = Current;
         Columns = Math.Max(1, d.Columns);
+        ColumnNames = [.. d.ColumnNames.Take(Columns), .. Enumerable.Repeat<string?>(null, Math.Max(0, Columns - d.ColumnNames.Count))];
         for (int i = 0; i < Layers.Count; i++)
         {
             var row = i < d.Clips.Count ? d.Clips[i] : [];

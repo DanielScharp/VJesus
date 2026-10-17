@@ -43,10 +43,11 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
   const [colMenu, setColMenu] = useState<{ column: number; x: number; y: number } | null>(null)
   const [layerMenu, setLayerMenu] = useState<{ layer: number; x: number; y: number } | null>(null)
   const [deckMenu, setDeckMenu] = useState<{ index: number; x: number; y: number } | null>(null)
-  const [renaming, setRenaming] = useState<{ kind: 'deck' | 'layer'; index: number } | null>(null)
+  const [renaming, setRenaming] = useState<{ kind: 'deck' | 'layer' | 'column'; index: number } | null>(null)
 
   const finishRename = (value: string) => {
     const name = value.trim()
+    if (renaming?.kind === 'column') { send({ type: 'columnRename', column: renaming.index, name }); setRenaming(null); return }
     if (renaming && name) {
       if (renaming.kind === 'deck') send({ type: 'deckRename', index: renaming.index, name })
       else send({ type: 'layerParams', layer: renaming.index, name })
@@ -102,11 +103,17 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
           <button className="small" onClick={() => send({ type: 'clearAll' })}>Limpar tudo</button>
         </div>
         {columns.map((c) => (
-          <button key={c} className="column-head" title="Disparar a coluna inteira · botão direito: inserir/remover coluna" data-address={`/composition/columns/${c + 1}/connect`}
-            onClick={() => send({ type: 'triggerColumn', column: c })}
-            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setColMenu({ column: c, x: e.clientX, y: e.clientY }) }}>
-            {c + 1}
-          </button>
+          renaming?.kind === 'column' && renaming.index === c ? (
+            <input key={c} className="rename column-rename" autoFocus defaultValue={comp.columnNames?.[c] ?? ''} placeholder={`Coluna ${c + 1}`}
+              onBlur={(e) => finishRename(e.target.value || ' ')} onKeyDown={renameKeys} />
+          ) : (
+            <button key={c} className="column-head" title={`Disparar a coluna inteira · botão direito: renomear, inserir ou remover`} data-address={`/composition/columns/${c + 1}/connect`}
+              onClick={() => send({ type: 'triggerColumn', column: c })}
+              onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setColMenu({ column: c, x: e.clientX, y: e.clientY }) }}>
+              <span className="col-num">{c + 1}</span>
+              {comp.columnNames?.[c] && <span className="col-name">{comp.columnNames[c]}</span>}
+            </button>
+          )
         ))}
         <button className="column-head column-add" title="Adicionar coluna" onClick={() => send({ type: 'columnAdd' })}>+</button>
       </div>
@@ -256,7 +263,8 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
 
       {colMenu && (
         <div className="menu" style={{ left: colMenu.x, top: colMenu.y }} onClick={(e) => e.stopPropagation()}>
-          <div className="menu-label">Coluna {colMenu.column + 1}</div>
+          <div className="menu-label">Coluna {colMenu.column + 1}{comp.columnNames?.[colMenu.column] ? ` · ${comp.columnNames[colMenu.column]}` : ''}</div>
+          <button onClick={() => { setRenaming({ kind: 'column', index: colMenu.column }); setColMenu(null) }}>Renomear coluna</button>
           <button onClick={() => { send({ type: 'columnAdd', after: colMenu.column - 1 }); setColMenu(null) }}>Inserir coluna antes</button>
           <button onClick={() => { send({ type: 'columnAdd', after: colMenu.column }); setColMenu(null) }}>Inserir coluna depois</button>
           <button className="danger" disabled={comp.columns <= 1} onClick={() => {

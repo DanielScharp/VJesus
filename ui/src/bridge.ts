@@ -33,7 +33,7 @@ export type Layer = {
 }
 
 export type Deck = { id: string; name: string }
-export type Composition = { columns: number; layers: Layer[]; masterEffects: EffectInstance[]; decks: Deck[]; currentDeck: number }
+export type Composition = { columns: number; columnNames?: (string | null)[]; layers: Layer[]; masterEffects: EffectInstance[]; decks: Deck[]; currentDeck: number }
 
 export type Pt = { x: number; y: number }
 export type Slice = {
@@ -193,6 +193,7 @@ export type UiMessage =
   | { type: 'layerRemove' | 'layerDuplicate'; layer: number }
   | { type: 'layerMove'; layer: number; direction: -1 | 1 }
   | { type: 'columnRemove'; column: number }
+  | { type: 'columnRename'; column: number; name: string }
   | { type: 'deckAdd'; name?: string }
   | { type: 'deckSelect' | 'deckRemove'; index: number }
   | { type: 'deckRename'; index: number; name: string }

@@ -605,3 +605,11 @@ button.link { background: transparent; border: 0; padding: 2px 4px; text-align: 
 
 .menu-inline { display: flex; gap: 4px; padding: 2px 6px 6px; }
 .menu-inline select { font-size: 12px; }
+
+/* cabeçalho das colunas com a mesma largura das células (bordas contadas dentro) */
+.grid .cell, .grid .column-head, .grid .column-rename { box-sizing: border-box; }
+.grid .column-head { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.grid .column-head .col-num { color: var(--muted); font-variant-numeric: tabular-nums; }
+.grid .column-head .col-name { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.grid .column-head:has(.col-name) .col-num { font-size: 10px; opacity: .8; }
+.grid .column-rename { flex: 0 0 var(--cell-w); width: var(--cell-w); }
