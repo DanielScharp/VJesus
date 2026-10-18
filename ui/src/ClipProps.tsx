@@ -33,11 +33,11 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose 
   )
 
   return (
-    <div className="modal-back" onMouseDown={onClose}>
-      <div className="modal clip-props" onMouseDown={(e) => e.stopPropagation()}>
+    <section className="clip-props" onClick={(e) => e.stopPropagation()}>
+      <div>
         <div className="bible-head">
-          <h2>Propriedades do clip</h2>
-          {!playing && <button className="small primary" onClick={() => send({ type: 'trigger', layer, column })}>Tocar para ver</button>}
+          <h2>Propriedades do clip: <span className="fx-target">{name}</span> <span className="meta">· layer {layer + 1}, coluna {column + 1}{playing ? ' · no ar' : ' · não está tocando'}</span></h2>
+          {!playing && <button className="small" onClick={() => send({ type: 'trigger', layer, column })} title="Toca este clip no telão">Tocar no telão</button>}
           <button className="small" onClick={() => { update({ ...DEFAULT_PROPS, effects: p.effects }) }} title="Volta velocidade, ajuste, posição, volume e fim ao padrão">Padrão</button>
           <button className="small" onClick={onClose}>Fechar</button>
         </div>
@@ -90,6 +90,6 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose 
           </div>
         </div>
       </div>
-    </div>
+    </section>
   )
 }

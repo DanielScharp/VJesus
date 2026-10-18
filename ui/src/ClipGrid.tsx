@@ -177,7 +177,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
               const active = layer.active === c
               return (
                 <div key={c} data-address={clip ? `/composition/layers/${li + 1}/clips/${c + 1}/connect` : undefined}
-                  className={`cell ${clip ? 'filled' : 'empty'} ${active ? 'active' : ''} ${dropTarget === key ? 'drop' : ''}`}
+                  className={`cell ${clip ? 'filled' : 'empty'} ${active ? 'active' : ''} ${dropTarget === key ? 'drop' : ''} ${propsEdit?.layer === li && propsEdit?.column === c ? 'editing' : ''}`}
                   draggable={!!clip}
                   onDragStart={(e) => e.dataTransfer.setData(CLIP_MIME, key)}
                   onDragOver={(e) => { e.preventDefault(); setDropTarget(key) }}
@@ -197,7 +197,8 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
                   {clip ? (
                     <>
                       <ClipThumb clip={clip} thumb={clip.path ? thumbs[clip.path] : undefined} />
-                      <span className="clip-name">{clip.name}</span>
+                      <span className={`clip-name ${propsEdit?.layer === li && propsEdit?.column === c ? 'editing' : ''}`} title="Clique no nome para ver e mudar as propriedades (sem tocar o clip)"
+                        onClick={(e) => { e.stopPropagation(); setMenu(null); setPropsEdit(propsEdit?.layer === li && propsEdit?.column === c ? null : { layer: li, column: c }) }}>{clip.name}</span>
                       {active && pb && pb.duration > 0 && (
                         <div className="progress"><div style={{ width: `${(pb.position / pb.duration) * 100}%` }} /></div>
                       )}
