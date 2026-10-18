@@ -644,3 +644,6 @@ button.link { background: transparent; border: 0; padding: 2px 4px; text-align: 
 .web-slide { white-space: pre-line; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 13px; line-height: 1.35; position: relative; }
 .web-slide .meta { position: absolute; right: 6px; top: 4px; font-size: 10px; }
 .web-search-btn { display: block; margin-top: 6px; }
+
+.slide-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 8px; font-size: 13px; }
+.slide-num .edit:disabled { opacity: .25; }

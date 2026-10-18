@@ -131,3 +131,47 @@ export function parseRich(text: string): RichRun[] {
   emit(text.slice(pos))
   return runs
 }
+
+// ---------- organizar slides ----------
+
+/** Linhas de texto de um slide, sem as vazias. */
+function slideLines(s: Slide) { return s.text.split('\n').map((l) => l.trimEnd()).filter((l) => l.trim().length > 0) }
+
+/** Pedaços de n linhas; o primeiro mantém o rótulo; todos mantêm a cena e os ajustes do slide. */
+function chunk(s: Slide, n: number): Slide[] {
+  const lines = slideLines(s)
+  if (n <= 0 || lines.length <= n) return [s]
+  const out: Slide[] = []
+  for (let i = 0; i < lines.length; i += n)
+    out.push({ label: i === 0 ? s.label : null, scene: s.scene, overrides: { ...s.overrides }, text: lines.slice(i, i + n).join('\n') })
+  return out
+}
+
+/** A letra inteira com no máximo n linhas por slide (as estrofes são respeitadas: nunca junta duas). */
+export function rechunkLyrics(text: string, n: number): string {
+  return splitSlides(text).flatMap((s) => chunk(s, n)).map(serializeSlide).join('\n\n')
+}
+
+/** Divide um slide ao meio (ou em pedaços de n linhas, se n for dado). */
+export function splitSlideAt(text: string, index: number, n?: number): string {
+  const slides = splitSlides(text)
+  const s = slides[index]
+  if (!s) return text
+  const size = n ?? Math.ceil(slideLines(s).length / 2)
+  slides.splice(index, 1, ...chunk(s, Math.max(1, size)))
+  return slides.map(serializeSlide).join('\n\n')
+}
+
+/** Junta um slide com o seguinte (o rótulo e os ajustes do primeiro ficam). */
+export function mergeSlideWithNext(text: string, index: number): string {
+  const slides = splitSlides(text)
+  const a = slides[index], b = slides[index + 1]
+  if (!a || !b) return text
+  slides.splice(index, 2, { ...a, text: `${a.text}\n${b.text}` })
+  return slides.map(serializeSlide).join('\n\n')
+}
+
+/** Quantas linhas tem o maior slide. */
+export function maxLinesPerSlide(text: string) {
+  return Math.max(0, ...splitSlides(text).map((s) => slideLines(s).length))
+}

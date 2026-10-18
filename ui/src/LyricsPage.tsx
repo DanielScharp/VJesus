@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { send, type Composition, type LyricScene, type LyricStyle, type LyricsState, type Song } from './bridge'
-import { normalize, replaceSlide, SLIDE_TRANSITIONS, splitSlides, stripTags, WORD_ANIMS, type Slide } from './lyrics'
+import { maxLinesPerSlide, mergeSlideWithNext, normalize, rechunkLyrics, replaceSlide, splitSlideAt, SLIDE_TRANSITIONS, splitSlides, stripTags, WORD_ANIMS, type Slide } from './lyrics'
 import { RichText } from './RichText'
 import { matches } from './shortcuts'
 import { FontsBox } from './FontsBox'
@@ -34,6 +34,8 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
   const [editingSlide, setEditingSlide] = useState<number | null>(null)
   const [quickText, setQuickText] = useState('')
   const [webOpen, setWebOpen] = useState(false)
+  // desfazer a última reorganização de slides (por música)
+  const [undo, setUndo] = useState<{ id: string; text: string } | null>(null)
   const [gridLayer, setGridLayer] = useState(3)
   const [gridColumn, setGridColumn] = useState(7)
   const [styleTarget, setStyleTarget] = useState<string>('') // '' = padrão, senão id da cena
@@ -149,6 +151,19 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
               </select>
               <span className="meta">vale para todos os slides; cada slide pode ter a sua (✎)</span>
             </div>
+            <div className="slide-tools">
+              <span>Organizar slides:</span>
+              {[1, 2, 3, 4].map((n) => (
+                <button key={n} className="small" title={`Cada slide com no máximo ${n} linha(s); as estrofes não se misturam`}
+                  onClick={() => { setUndo({ id: song.id, text: song.text }); saveSong({ ...song, text: rechunkLyrics(song.text, n) }) }}>
+                  {n} {n === 1 ? 'linha' : 'linhas'}
+                </button>
+              ))}
+              {undo?.id === song.id && undo.text !== song.text && (
+                <button className="small" onClick={() => { saveSong({ ...song, text: undo.text }); setUndo(null) }}>↶ Desfazer</button>
+              )}
+              <span className="meta">{slides.length} slides · até {maxLinesPerSlide(song.text)} linhas · nos slides: ✂ divide ao meio, ⤓ junta com o próximo</span>
+            </div>
             <div className="slides">
               {slides.map((sl, i) => {
                 const custom = Object.keys(sl.overrides).length > 0
@@ -159,6 +174,11 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
                       {i + 1}{sl.label && ` · ${sl.label}`}
                       {sl.scene && <em className="badge">{sl.scene}</em>}
                       {custom && <em className="badge">ajustado</em>}
+                      <button className="small edit" title="Dividir este slide ao meio"
+                        disabled={sl.text.split('\n').filter((l) => l.trim()).length < 2}
+                        onClick={(e) => { e.stopPropagation(); setUndo({ id: song.id, text: song.text }); saveSong({ ...song, text: splitSlideAt(song.text, i) }) }}>✂</button>
+                      <button className="small edit" title="Juntar com o próximo slide" disabled={i >= slides.length - 1}
+                        onClick={(e) => { e.stopPropagation(); setUndo({ id: song.id, text: song.text }); saveSong({ ...song, text: mergeSlideWithNext(song.text, i) }) }}>⤓</button>
                       <button className="small edit" title="Editar só este slide"
                         onClick={(e) => { e.stopPropagation(); setEditingSlide(i) }}>✎</button>
                     </span>
