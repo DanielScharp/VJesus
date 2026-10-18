@@ -138,6 +138,7 @@ export type EngineMessage =
   | { type: 'fonts'; list: string[]; imported?: string[]; faces?: { family: string; url: string; bold: boolean; italic: boolean }[] }
   | { type: 'fontsBusy'; family: string | null }
   | { type: 'shortcuts'; shortcuts: Record<string, string[]> | null }
+  | { type: 'lyricsWebResults'; query: string; results: { id: string; title: string; artist: string; album: string; duration: number; text: string }[]; error?: string }
   | ({ type: 'stage' } & StageState)
   | { type: 'attacks'; list: AttackPreset[] }
   | { type: 'bibleState'; installed: BibleVersion[]; downloading: string[]; settings: BibleSettings; live: BiblePassage | null; youVersionKey: boolean }
@@ -162,6 +163,7 @@ export type UiMessage =
   | ({ type: 'dropFiles' } & Cell)
   | ({ type: 'setGenerator'; kind: 'plasma' | 'testCard' | 'lyrics'; gen?: GeneratorSettings } & Cell)
   | { type: 'lyricsSave'; song: Song }
+  | { type: 'lyricsWebSearch'; query: string }
   | { type: 'lyricsDelete'; id: string }
   | { type: 'lyricsImport' | 'lyricsClear' }
   | { type: 'lyricsShow'; songId: string; slide: number }

@@ -628,3 +628,19 @@ button.link { background: transparent; border: 0; padding: 2px 4px; text-align: 
 .gen-color { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; margin: 0; }
 .gen-color input[type=color] { width: 56px; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; }
 .gen-sliders label { grid-template-columns: 110px 60px 1fr; }
+
+/* ---------- buscar letra na internet ---------- */
+.modal.web-lyrics { width: min(1000px, 95vw); height: min(760px, 90vh); }
+.web-lyrics .web-q { flex: 1; font-size: 15px; padding: 7px 10px; }
+.web-body { display: grid; grid-template-columns: 330px 1fr; gap: 12px; min-height: 0; flex: 1; margin-top: 10px; }
+.web-list { overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+.web-item { display: flex; flex-direction: column; gap: 2px; padding: 7px 10px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.web-item:hover { background: rgba(255,255,255,.04); }
+.web-item.active { background: rgba(255,176,32,.16); }
+.web-have { color: var(--accent); }
+.web-preview { display: flex; flex-direction: column; min-height: 0; }
+.web-preview-head { justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+.web-slides { overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; user-select: text; }
+.web-slide { white-space: pre-line; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 13px; line-height: 1.35; position: relative; }
+.web-slide .meta { position: absolute; right: 6px; top: 4px; font-size: 10px; }
+.web-search-btn { display: block; margin-top: 6px; }

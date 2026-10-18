@@ -43,6 +43,9 @@ sealed partial class MainForm
             case "lyricsImport":
                 ImportSongs();
                 break;
+            case "lyricsWebSearch":
+                _ = SearchLyricsOnlineAsync((string?)msg["query"] ?? "");
+                break;
             case "lyricsShow":
                 ShowSlide((string)msg["songId"]!, (int)msg["slide"]!);
                 break;

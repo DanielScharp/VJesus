@@ -4,6 +4,7 @@ import { normalize, replaceSlide, SLIDE_TRANSITIONS, splitSlides, stripTags, WOR
 import { RichText } from './RichText'
 import { matches } from './shortcuts'
 import { FontsBox } from './FontsBox'
+import { OnlineLyrics } from './OnlineLyrics'
 
 type Props = {
   songs: Song[]
@@ -32,6 +33,7 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
   const [editing, setEditing] = useState<Song | null>(null)
   const [editingSlide, setEditingSlide] = useState<number | null>(null)
   const [quickText, setQuickText] = useState('')
+  const [webOpen, setWebOpen] = useState(false)
   const [gridLayer, setGridLayer] = useState(3)
   const [gridColumn, setGridColumn] = useState(7)
   const [styleTarget, setStyleTarget] = useState<string>('') // '' = padrão, senão id da cena
@@ -83,12 +85,14 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
 
   return (
     <div className="lyrics">
+      {webOpen && <OnlineLyrics songs={songs} initialQuery={query} onImported={(id) => { setSelectedId(id); setQuery(''); setWebOpen(false) }} onClose={() => setWebOpen(false)} />}
       {/* ---------- biblioteca ---------- */}
       <section className="lyrics-library">
         <input className="name" placeholder="Buscar título, artista ou trecho…" value={query} onChange={(e) => setQuery(e.target.value)} />
         <div className="row">
           <button className="small" onClick={() => setEditing({ id: newId(), title: '', artist: '', text: '', sceneId: null })}>+ Nova música</button>
           <button className="small" onClick={() => send({ type: 'lyricsImport' })}>Importar .txt…</button>
+          <button className="small primary" onClick={() => setWebOpen(true)}>Buscar na internet…</button>
         </div>
         <div className="song-list">
           {filtered.map((s) => (
@@ -99,7 +103,12 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
               {s.artist && <span>{s.artist}</span>}
             </div>
           ))}
-          {filtered.length === 0 && <div className="meta">Nenhuma música encontrada.</div>}
+          {filtered.length === 0 && (
+          <div className="meta">
+            Nenhuma música encontrada.
+            {query.trim().length >= 2 && <button className="small primary web-search-btn" onClick={() => setWebOpen(true)}>Buscar “{query.trim()}” na internet</button>}
+          </div>
+        )}
         </div>
         <p className="meta">{songs.length} música(s). Duplo clique projeta o primeiro slide.</p>
       </section>
