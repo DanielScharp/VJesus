@@ -81,7 +81,20 @@ sealed partial class MainForm : Form
         StartAudio();
         ApplyStageWindow();
 
-        await _web.EnsureCoreWebView2Async(await AppInfo.WebViewEnvironment());
+        try { await _web.EnsureCoreWebView2Async(await AppInfo.WebViewEnvironment()); }
+        catch (Microsoft.Web.WebView2.Core.WebView2RuntimeNotFoundException)
+        {
+            // computador sem o WebView2 (Windows 10 antigo): explica e abre a página de download
+            var r = MessageBox.Show(this,
+                "Falta o componente \"Microsoft Edge WebView2\", que desenha as telas do VJesus.\n\n" +
+                "Clique em OK para abrir a página da Microsoft, baixe o \"Evergreen Bootstrapper\", instale e abra o VJesus de novo.",
+                AppInfo.Name, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+            if (r == DialogResult.OK)
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                    "https://developer.microsoft.com/microsoft-edge/webview2/#download") { UseShellExecute = true });
+            Close();
+            return;
+        }
         var core = _web.CoreWebView2;
         core.WebMessageReceived += OnWebMessage;
         // links externos (ex.: endereço do controle remoto) abrem no navegador padrão

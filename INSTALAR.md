@@ -16,21 +16,23 @@ Há dois caminhos. Para **usar** o programa, siga o **Caminho A** (não precisa 
 
 ## Caminho A — Usar o programa (recomendado)
 
-### 1. Instale o Microsoft Edge WebView2 Runtime
-Já vem no Windows 11 e na maioria dos Windows 10 atualizados. Se a janela do VJesus abrir em branco, instale:
-- https://developer.microsoft.com/microsoft-edge/webview2/ → **Evergreen Bootstrapper** → baixar e executar.
+### 1. Baixe o instalador
+**[⬇ Baixar o VJesus para Windows (VJesus-Instalador.exe)](https://github.com/DanielScharp/VJesus/releases/latest/download/VJesus-Instalador.exe)**
 
-### 2. Instale o VJesus (instalador)
-1. Entre em https://github.com/DanielScharp/VJesus/releases/latest e baixe **`VJesus-vX.Y.Z-instalador.msi`**.
-2. Dê dois cliques no `.msi`. Se o Windows mostrar *"O Windows protegeu o computador"* → **Mais informações** → **Executar assim mesmo** (o instalador ainda não é assinado digitalmente).
-3. Siga as telas (termos → pasta → Instalar). Não pede senha de administrador: instala só para o seu usuário, em `%LocalAppData%\Programs\VJesus`.
-4. No fim, deixe marcado **Abrir o VJesus agora**.
+Esse link sempre baixa a versão mais nova. Se preferir escolher uma versão, as versões ficam na página **Releases** do GitHub (não é uma pasta do código): abra https://github.com/DanielScharp/VJesus, clique em **Releases** na coluna da direita (ou entre direto em https://github.com/DanielScharp/VJesus/releases) e, na versão desejada, abra **Assets** e clique no arquivo.
 
-O instalador cria os atalhos no **menu Iniciar** e na **área de trabalho** e faz os arquivos `.vjproj` abrirem no VJesus.
+### 2. Instale
+1. Dê dois cliques em **`VJesus-Instalador.exe`** (fica na pasta **Downloads**).
+2. Se aparecer *"O Windows protegeu o computador"*, clique em **Mais informações** e depois em **Executar assim mesmo**. O aviso aparece porque o instalador ainda não tem assinatura digital paga; o arquivo é o mesmo publicado no GitHub.
+3. Marque **Aceito os termos** e clique em **Instalar**. Não pede senha de administrador: instala só para o seu usuário, em `%LocalAppData%\Programs\VJesus`.
+4. Clique em **Abrir** (ou use o atalho **VJesus** na área de trabalho / menu Iniciar).
 
-- **Atualizar:** baixe o `.msi` da versão nova e instale por cima (a versão antiga é substituída).
+O instalador já traz tudo (.NET, FFmpeg e o resto). Ele também confere o **Microsoft Edge WebView2**, que desenha as telas do programa: já vem no Windows 11 e quase todo Windows 10; se faltar, ele instala sozinho (nesse caso precisa de internet e pode pedir permissão do Windows). Os arquivos `.vjproj` passam a abrir no VJesus.
+
+- **Atualizar:** baixe de novo pelo mesmo link e instale por cima. A versão antiga é trocada e suas configurações continuam.
 - **Desinstalar:** *Configurações → Aplicativos → Aplicativos instalados → VJesus → Desinstalar*. Suas configurações em `%AppData%\VJesus` ficam guardadas (apague a pasta se quiser zerar tudo).
-- **Sem instalar (portátil):** também há o **`VJesus-vX.Y.Z-win-x64.zip`**: extraia numa pasta fixa (ex.: `C:\VJesus`; antes, botão direito no zip → Propriedades → **Desbloquear**) e execute `VJesus.exe`.
+- **Instalação em rede ou silenciosa (TI):** `VJesus-Instalador.exe /quiet` instala sem telas; `/uninstall /quiet` remove. Para quem prefere, cada versão também tem o `.msi` em Assets.
+- **Sem instalar (portátil):** **[VJesus-Portatil.zip](https://github.com/DanielScharp/VJesus/releases/latest/download/VJesus-Portatil.zip)**. Antes de extrair, botão direito no zip → Propriedades → **Desbloquear**; extraia numa pasta fixa (ex.: `C:\VJesus`) e execute `VJesus.exe`. No modo portátil o WebView2 não é instalado automaticamente: se o programa avisar que ele falta, clique em OK e instale pelo site da Microsoft (**Evergreen Bootstrapper**).
 
 ### 3. Primeira vez
 - O **Firewall do Windows** vai perguntar sobre acesso à rede: marque **Redes privadas** e permita. Isso é necessário para o **controle pelo celular** (porta 8080), **OSC** (porta 7000) e **NDI**.

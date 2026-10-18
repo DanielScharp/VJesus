@@ -6,7 +6,8 @@ Plano completo em `plano-recriacao.md`; análise do Resolume em `relatorio-resol
 
 ## Instalação
 
-**Para instalar em outro computador, veja [INSTALAR.md](INSTALAR.md)** (pacote pronto em [Releases](https://github.com/DanielScharp/VJesus/releases/latest), dependências e links).
+**[⬇ Baixar o VJesus para Windows](https://github.com/DanielScharp/VJesus/releases/latest/download/VJesus-Instalador.exe)**: dê dois cliques no `VJesus-Instalador.exe` e clique em Instalar.
+Passo a passo, versão portátil e programas opcionais em [INSTALAR.md](INSTALAR.md); todas as versões ficam na página [Releases](https://github.com/DanielScharp/VJesus/releases).
 
 ## Rodar (desenvolvimento)
 

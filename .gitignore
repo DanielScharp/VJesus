@@ -18,3 +18,6 @@ Thumbs.db
 
 # instalador: pasta de trabalho do WiX
 installer/obj/
+
+# extensões do WiX baixadas pelo "dotnet wix extension add" (o script baixa de novo)
+.wix/

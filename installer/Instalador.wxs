@@ -1,0 +1,33 @@
+<!--
+  Instalador .exe do VJesus (WiX 5 / Burn). Empacota o .msi numa tela de instalação com termos e
+  botão "Abrir". Gerado por scripts\gerar-pacote.ps1:
+    dotnet wix build installer\Instalador.wxs -ext WixToolset.Bal.wixext -ext WixToolset.Util.wixext -d Version=X.Y.Z -d Msi=caminho.msi -d WebView2=MicrosoftEdgeWebview2Setup.exe -o VJesus-Instalador.exe
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Bundle Name="VJesus" Manufacturer="VJesus" Version="$(Version)"
+          UpgradeCode="3C9A1E4B-7D2F-4B8A-9E61-0F5D2C7B8A43"
+          IconSourceFile="$(sys.SOURCEFILEDIR)..\src\VJApp\vjesus.ico"
+          AboutUrl="https://github.com/DanielScharp/VJesus"
+          HelpUrl="https://github.com/DanielScharp/VJesus/blob/main/INSTALAR.md">
+    <BootstrapperApplication>
+      <bal:WixStandardBootstrapperApplication Theme="rtfLicense"
+          LicenseFile="$(sys.SOURCEFILEDIR)licenca.rtf"
+          ShowVersion="yes" SuppressOptionsUI="yes"
+          LaunchTarget="[LocalAppDataFolder]Programs\VJesus\VJesus.exe" />
+    </BootstrapperApplication>
+    <!-- o WebView2 (que desenha as telas) já vem no Windows 11; se faltar, o instalador instala antes -->
+    <util:RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+                         Value="pv" Variable="WV2Maquina" Bitness="always32" />
+    <util:RegistrySearch Root="HKCU" Key="Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+                         Value="pv" Variable="WV2Usuario" />
+    <Chain>
+      <ExePackage Id="WebView2" SourceFile="$(WebView2)" DisplayName="Microsoft Edge WebView2"
+                  PerMachine="no" Permanent="yes" Vital="no" Cache="remove" InstallArguments="/silent /install"
+                  DetectCondition="(WV2Maquina AND WV2Maquina &lt;&gt; &quot;0.0.0.0&quot;) OR (WV2Usuario AND WV2Usuario &lt;&gt; &quot;0.0.0.0&quot;)" />
+      <!-- o .msi instala só para o usuário (não pede administrador) -->
+      <MsiPackage SourceFile="$(Msi)" Visible="no" />
+    </Chain>
+  </Bundle>
+</Wix>
