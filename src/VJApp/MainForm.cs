@@ -283,6 +283,10 @@ sealed partial class MainForm : Form
                 CompositionChanged();
                 break;
 
+            case "setClipProps":
+                SetClipProps(L(), C(), msg["props"]);
+                break;
+
             case "setGeneratorParams":
                 SetGeneratorParams(L(), C(), msg["gen"]);
                 break;
@@ -434,6 +438,7 @@ sealed partial class MainForm : Form
                 _comp.Layers[layer].Active = column;
                 _comp.Layers[layer].ActiveDeck = _comp.Current.Id;
                 _comp.Layers[layer].PlayingClip = clip;
+                ApplyClipProps(layer, clip);
                 Task.Run(async () =>
                 {
                     // tenta de novo a cada 2 s enquanto o clip estiver ativo
@@ -506,6 +511,7 @@ sealed partial class MainForm : Form
         _comp.Layers[layer].Active = column;
         _comp.Layers[layer].ActiveDeck = _comp.Current.Id;
         _comp.Layers[layer].PlayingClip = clip;
+        ApplyClipProps(layer, clip);
     }
 
     void ClearLayer(int layer)
@@ -537,7 +543,7 @@ sealed partial class MainForm : Form
     // ---------------- efeitos ----------------
 
     /// <summary>Cadeia de efeitos de uma layer, ou do master quando target &lt; 0.</summary>
-    List<EffectInstance> Chain(int target) => target < 0 ? _comp.MasterEffects : _comp.Layers[target].Effects;
+    List<EffectInstance> Chain(int target) => target >= ClipTargetBase ? ClipChain(target) : target < 0 ? _comp.MasterEffects : _comp.Layers[target].Effects;
 
     void LoadEffects()
     {
@@ -579,6 +585,8 @@ sealed partial class MainForm : Form
 
         for (int i = 0; i < _comp.Layers.Count; i++) _renderer.Layers[i].Effects = Build(_comp.Layers[i].Effects);
         _renderer.MasterEffects = Build(_comp.MasterEffects);
+        for (int i = 0; i < _comp.Layers.Count; i++)
+            _renderer.Layers[i].ClipEffects = _comp.Layers[i].PlayingClip?.Props is { } cp ? Build(cp.Effects) : [];
     }
 
     void EffectsChanged()

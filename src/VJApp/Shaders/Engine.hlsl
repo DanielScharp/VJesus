@@ -28,7 +28,11 @@ cbuffer LayerParams : register(b1)
     float2 UvScale;      // parte útil da textura (HAP arredonda para múltiplos de 4)
     float TransitionMix; // 0..1
     float TransitionKind;// 0 corte, 1 crossfade, 2 escuro, 3 cortina
-    float2 _layerPad;
+    float FitMode;       // ajuste do clip: 0 encaixar, 1 preencher, 2 esticar
+    float Zoom;          // 1 = normal
+    float OffsetX;       // deslocamento do clip (-1..1 = meia tela)
+    float OffsetY;
+    float3 _layerPad;
 };
 
 Texture2D Tex0 : register(t0);
@@ -220,6 +224,12 @@ float4 videoSource(float2 uv)
     float2 scale = dstAspect > VideoAspect
         ? float2(dstAspect / VideoAspect, 1)
         : float2(1, VideoAspect / dstAspect);
+    if (FitMode > 1.5) scale = float2(1, 1);                       // esticar
+    else if (FitMode > 0.5) scale = dstAspect > VideoAspect         // preencher (corta as sobras)
+        ? float2(1, VideoAspect / dstAspect)
+        : float2(dstAspect / VideoAspect, 1);
+    // zoom e posição do clip
+    uv = (uv - 0.5 - float2(OffsetX, -OffsetY) * 0.5) / max(Zoom, 0.01) + 0.5;
     float2 v = (uv - 0.5) * scale + 0.5;
     if (any(v < 0) || any(v > 1)) return float4(0, 0, 0, 0);
     float4 c = Tex0.SampleLevel(LinearClamp, v * UvScale, 0);

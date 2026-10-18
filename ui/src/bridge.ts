@@ -5,7 +5,8 @@ export type Display = { index: number; name: string; width: number; height: numb
 export type ClipKind = 'video' | 'plasma' | 'testCard' | 'camera' | 'spout' | 'lyrics' | 'ndi'
 export type LiveSources = { cameras: string[]; spout: string[]; ndi?: string[]; ndiAvailable?: boolean }
 export type GeneratorSettings = { type: string; speed: number; intensity: number; scale: number; detail: number; angle: number; colors: string[] }
-export type Clip = { kind: ClipKind; path: string | null; name: string; captureSize?: string | null; captureFps?: number | null; gen?: GeneratorSettings | null }
+export type ClipProps = { speed: number; fit: 'encaixar' | 'preencher' | 'esticar'; zoom: number; offsetX: number; offsetY: number; volume: number; end: 'repetir' | 'parar'; effects: EffectInstance[] }
+export type Clip = { kind: ClipKind; path: string | null; name: string; captureSize?: string | null; captureFps?: number | null; gen?: GeneratorSettings | null; props?: ClipProps | null }
 
 export const BLEND_MODES = ['normal', 'add', 'multiply', 'screen', 'overlay', 'difference', 'lighten', 'darken'] as const
 export type BlendMode = (typeof BLEND_MODES)[number]
@@ -194,6 +195,7 @@ export type UiMessage =
   | { type: 'layerAdd'; layer?: number }
   | { type: 'setCapture'; layer: number; column: number; size: string | null; fps: number | null }
   | { type: 'setGeneratorParams'; layer: number; column: number; gen: GeneratorSettings }
+  | { type: 'setClipProps'; layer: number; column: number; props: ClipProps & { name: string } }
   | { type: 'layerRemove' | 'layerDuplicate'; layer: number }
   | { type: 'layerMove'; layer: number; direction: -1 | 1 }
   | { type: 'columnRemove'; column: number }

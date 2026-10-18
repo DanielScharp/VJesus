@@ -34,6 +34,9 @@ struct LayerParams
     public float UvScaleX, UvScaleY; // parte útil da textura (HAP arredonda para múltiplos de 4)
     public float TransitionMix;   // 0..1
     public float TransitionKind;
+    public float FitMode;         // 0 encaixar, 1 preencher, 2 esticar
+    public float Zoom;            // 1 = tamanho normal
+    public float OffsetX, OffsetY; // deslocamento (-1..1 = meia tela)
     public float Pad0, Pad1, Pad2;
 }
 
@@ -357,6 +360,11 @@ sealed partial class Renderer : IDisposable
             ColorMode = source.Lyrics != null ? 3 : fromPlayer ? (float)p!.Color : 0,
             UvScaleX = fromPlayer ? (float)p!.Width / p.TextureWidth : 1,
             UvScaleY = fromPlayer ? (float)p!.Height / p.TextureHeight : 1,
+            // ajuste do clip (letras ficam sempre no padrão)
+            FitMode = source.Lyrics != null ? 0 : slot.ClipFit,
+            Zoom = source.Lyrics != null ? 1 : slot.ClipZoom,
+            OffsetX = source.Lyrics != null ? 0 : slot.ClipOffsetX,
+            OffsetY = source.Lyrics != null ? 0 : slot.ClipOffsetY,
         };
         _ctx!.UpdateSubresource(in lp, _layerCb!);
         if (source.Kind == SourceKind.Plasma)
@@ -442,14 +450,15 @@ sealed partial class Renderer : IDisposable
 
             // 1) fonte -> work[0] (com transição: o novo em work[0], o anterior em _outgoing, mistura em work[1])
             DrawSource(slot, slot.Current, _work[0]!);
-            int w = 0;
+            // efeitos só deste clip (antes da transição e dos efeitos da layer)
+            int w = slot.ClipEffects.Length > 0 && hasCurrent ? ApplyEffects(slot.ClipEffects, _work, 0, updateHistory: main) : 0;
             if (slot.Outgoing != null)
             {
                 DrawSource(slot, slot.Outgoing, _outgoing!);
                 var lp = new LayerParams { TransitionMix = slot.TransitionProgress, TransitionKind = slot.Transition };
                 ctx.UpdateSubresource(in lp, _layerCb!);
-                Pass(_psTransition!, _work[1]!.Rtv, _work[0]!.Srv, _outgoing!.Srv);
-                w = 1;
+                Pass(_psTransition!, _work[1 - w]!.Rtv, _work[w]!.Srv, _outgoing!.Srv);
+                w = 1 - w;
             }
 
             // 2) efeitos da layer   3) mistura na composição

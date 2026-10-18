@@ -93,6 +93,10 @@ sealed class LayerSlot
     public volatile bool ToStage;
     /// <summary>Parâmetros do fundo gerado desta layer (troca na hora, sem reiniciar o clip).</summary>
     public GenParams Gen = GenParams.Default;
+    /// <summary>Ajustes do clip tocando: encaixe, zoom, posição, efeitos e volume próprios.</summary>
+    public volatile int ClipFit;
+    public volatile float ClipZoom = 1, ClipOffsetX, ClipOffsetY, ClipVolume = 1;
+    public volatile EffectRun[] ClipEffects = [];
 
     // troca de fonte pedida pela UI, adotada pelo render thread
     public readonly object Lock = new();

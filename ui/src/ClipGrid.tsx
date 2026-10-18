@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { EffectChips, type ToggleEffect } from './EffectChips'
 import { DEFAULT_GEN, GeneratorPanel, genThumbStyle } from './GeneratorPanel'
+import { ClipPropsPanel } from './ClipProps'
 import { BLEND_MODES, send, sendFiles, type EffectDef, type BlendMode, type Clip, type Composition, type GeneratorSettings, type LayerPlayback, type LiveSources } from './bridge'
 
 type Props = {
@@ -67,6 +68,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
   const [colMenu, setColMenu] = useState<{ column: number; x: number; y: number } | null>(null)
   const [layerMenu, setLayerMenu] = useState<{ layer: number; x: number; y: number } | null>(null)
   const [genEdit, setGenEdit] = useState<{ layer: number; column: number; gen: GeneratorSettings | null } | null>(null)
+  const [propsEdit, setPropsEdit] = useState<{ layer: number; column: number } | null>(null)
   const [deckMenu, setDeckMenu] = useState<{ index: number; x: number; y: number } | null>(null)
   const [renaming, setRenaming] = useState<{ kind: 'deck' | 'layer' | 'column'; index: number } | null>(null)
 
@@ -224,6 +226,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
             return (
               <>
                 {menu.filled && <button className="danger" onClick={pick(() => send({ type: 'removeClip', ...cell }))}>Remover este clip</button>}
+                {menu.filled && <button onClick={pick(() => setPropsEdit(cell))}>Propriedades do clip… (velocidade, tamanho, efeitos)</button>}
                 {current?.kind === 'plasma' && <button onClick={pick(() => setGenEdit({ ...cell, gen: current.gen ?? null }))}>Ajustar fundo animado…</button>}
                 {menu.filled && <div className="menu-label">Trocar por</div>}
                 <button onClick={pick(() => send({ type: 'browseClip', ...cell }))}>Vídeo ou imagem…</button>
@@ -266,6 +269,12 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
         </div>
       )}
     </div>
+
+      {propsEdit && comp.layers[propsEdit.layer]?.clips[propsEdit.column] && (
+        <ClipPropsPanel key={propsEdit.layer + ':' + propsEdit.column} clip={comp.layers[propsEdit.layer].clips[propsEdit.column]!}
+          layer={propsEdit.layer} column={propsEdit.column} playing={comp.layers[propsEdit.layer].active === propsEdit.column}
+          library={library} onClose={() => setPropsEdit(null)} />
+      )}
 
       {genEdit && (
         <GeneratorPanel key={genEdit.layer + ':' + genEdit.column} layer={genEdit.layer} column={genEdit.column} initial={genEdit.gen}

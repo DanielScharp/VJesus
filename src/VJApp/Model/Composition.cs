@@ -21,6 +21,8 @@ sealed class Clip
     public ClipKind Kind { get; set; }
     public string? Path { get; set; }
     public string Name { get; set; } = "";
+    /// <summary>Propriedades só deste clip (null = padrão): velocidade, ajuste na tela, volume, fim e efeitos.</summary>
+    public ClipProps? Props { get; set; }
     /// <summary>Fundo gerado (Plasma): tipo, cores e movimento. null = arco-íris clássico.</summary>
     public GeneratorSettings? Gen { get; set; }
     /// <summary>Câmera/placa de captura: resolução pedida (ex.: "1920x1080"; null = a padrão do aparelho).</summary>
@@ -36,6 +38,22 @@ sealed class Clip
 
     public static Clip Generator(ClipKind kind) =>
         new() { Kind = kind, Name = kind == ClipKind.Plasma ? "Plasma" : "Test card" };
+}
+
+/// <summary>Ajustes individuais de um clip da grade.</summary>
+sealed class ClipProps
+{
+    /// <summary>Velocidade do vídeo (1 = normal; fora de 1 o som do clip fica mudo).</summary>
+    public float Speed { get; set; } = 1;
+    /// <summary>encaixar (inteiro, com bordas), preencher (sem bordas, corta) ou esticar.</summary>
+    public string Fit { get; set; } = "encaixar";
+    public float Zoom { get; set; } = 1;
+    public float OffsetX { get; set; }
+    public float OffsetY { get; set; }
+    public float Volume { get; set; } = 1;
+    /// <summary>repetir ou parar (segura o último quadro).</summary>
+    public string End { get; set; } = "repetir";
+    public List<EffectInstance> Effects { get; set; } = [];
 }
 
 /// <summary>Ajustes do fundo gerado (para fundos leves de culto).</summary>
@@ -63,6 +81,8 @@ sealed class EffectInstance
 sealed class Layer
 {
     public string Name { get; set; } = "";
+    /// <summary>Propriedades só deste clip (null = padrão): velocidade, ajuste na tela, volume, fim e efeitos.</summary>
+    public ClipProps? Props { get; set; }
     /// <summary>Fundo gerado (Plasma): tipo, cores e movimento. null = arco-íris clássico.</summary>
     public GeneratorSettings? Gen { get; set; }
     /// <summary>Câmera/placa de captura: resolução pedida (ex.: "1920x1080"; null = a padrão do aparelho).</summary>

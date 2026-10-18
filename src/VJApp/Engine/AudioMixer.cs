@@ -37,7 +37,7 @@ sealed class AudioMixer : ISampleProvider, IDisposable
         float master = MasterVolume;
         foreach (var slot in _renderer.Layers)
         {
-            float vol = slot.Volume * master;
+            float vol = slot.Volume * slot.ClipVolume * master;
             if (vol <= 0) continue;
             float p = slot.TransitionProgress;
             var outgoing = slot.Outgoing;

@@ -87,6 +87,29 @@ sealed unsafe class VideoPlayer : IDisposable
 
     public bool Playing => _clock.IsRunning;
 
+    double _speed = 1;
+    /// <summary>Tempo do clip agora (com a velocidade do clip). Chamar com _lock.</summary>
+    double ClockNow => _clockBase + _clock.Elapsed.TotalSeconds * _speed;
+
+    /// <summary>Velocidade de reprodução do clip (1 = normal). Fora de 1 o som do clip fica mudo.</summary>
+    public double Speed
+    {
+        get { lock (_lock) return _speed; }
+        set
+        {
+            lock (_lock)
+            {
+                double now = ClockNow;
+                _speed = Math.Clamp(value, 0.05, 8);
+                _clockBase = now;
+                if (_clock.IsRunning) _clock.Restart(); else _clock.Reset();
+            }
+        }
+    }
+
+    /// <summary>No fim do arquivo, para no último quadro em vez de repetir.</summary>
+    public volatile bool HoldAtEnd;
+
     static bool _devicesRegistered;
 
     static void RegisterDevices()
@@ -263,8 +286,8 @@ sealed unsafe class VideoPlayer : IDisposable
         {
             lock (_lock)
             {
-                double t = _clockBase + _clock.Elapsed.TotalSeconds;
-                return Duration > 0 ? t % Duration : t;
+                double t = ClockNow;
+                return Duration > 0 ? (HoldAtEnd ? Math.Min(t, Duration) : t % Duration) : t;
             }
         }
     }
@@ -293,7 +316,7 @@ sealed unsafe class VideoPlayer : IDisposable
     {
         lock (_lock)
         {
-            double now = _clockBase + _clock.Elapsed.TotalSeconds;
+            double now = ClockNow;
             VideoFrame? pick = null;
             while (_ready.Count > 0 && (_ready.Peek().Time <= now || pick == null && previous == null))
             {
@@ -316,7 +339,7 @@ sealed unsafe class VideoPlayer : IDisposable
             int n = Math.Min(dest.Length, _audioCount);
             for (int i = 0; i < n; i++)
             {
-                dest[i] += _audioRing[_audioRead] * gain;
+                dest[i] += _audioRing[_audioRead] * (_speed == 1 ? gain : 0);
                 _audioRead = (_audioRead + 1) % _audioRing.Length;
             }
             _audioCount -= n;
@@ -362,6 +385,12 @@ sealed unsafe class VideoPlayer : IDisposable
                     }
                     if (_audioCodec != null) avcodec_flush_buffers(_audioCodec);
                     if (IsStill) { _stillShown = true; continue; }
+                    if (HoldAtEnd)
+                    {
+                        // "parar no fim": segura o último quadro até alguém voltar o clip (seek) ou mudar para repetir
+                        while (_running && HoldAtEnd && Volatile.Read(ref _seekTarget) < 0) Thread.Sleep(20);
+                        if (Volatile.Read(ref _seekTarget) >= 0) continue;
+                    }
                     av_seek_frame(_fmt, _stream, 0, AVSEEK_FLAG_BACKWARD);
                     lock (_lock) _loops++;
                     continue;
@@ -404,7 +433,7 @@ sealed unsafe class VideoPlayer : IDisposable
             {
                 // ao vivo: nunca espera; se a fila encheu, reaproveita o quadro mais antigo (menos atraso)
                 var s = _free.Count > 0 ? _free.Pop() : _ready.Count > 0 ? _ready.Dequeue() : null;
-                if (s != null) s.Time = _clockBase + _clock.Elapsed.TotalSeconds;
+                if (s != null) s.Time = ClockNow;
                 return s;
             }
             while (_running && _free.Count == 0 && _seekTarget < 0) Monitor.Wait(_lock, 50);

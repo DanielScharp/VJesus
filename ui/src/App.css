@@ -1,4 +1,4 @@
-﻿.app {
+.app {
   padding: 12px 20px 24px;
 }
 
@@ -647,3 +647,13 @@ button.link { background: transparent; border: 0; padding: 2px 4px; text-align: 
 
 .slide-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 8px; font-size: 13px; }
 .slide-num .edit:disabled { opacity: .25; }
+
+/* ---------- propriedades do clip ---------- */
+.modal.clip-props { width: min(1100px, 96vw); max-height: 92vh; overflow: auto; }
+.clip-props h3 { margin: 12px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.clip-props .clip-props-name { grid-template-columns: 60px 1fr; margin-bottom: 4px; }
+.clip-props .clip-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0 0 6px; }
+.clip-props-body { display: grid; grid-template-columns: 380px 1fr; gap: 18px; align-items: start; }
+.clip-props-body label { grid-template-columns: 130px 60px 1fr; }
+.clip-props .chips { gap: 4px; flex-wrap: wrap; align-items: center; margin: 4px 0; }
+.clip-fx { min-width: 0; }
