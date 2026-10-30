@@ -87,6 +87,7 @@ partial class Renderer
 
     void DisposeLyrics()
     {
+        _overlayGpu.Dispose();
         _alphaBlend?.Dispose();
         _spriteCb?.Dispose();
         _psSprite?.Dispose();
@@ -110,10 +111,27 @@ partial class Renderer
     /// <summary>Monta a imagem da letra desta layer no quadro atual (chamado uma vez por quadro).</summary>
     void UpdateLyrics(LayerSource source, double now, float time)
     {
-        var feed = source.Lyrics!;
         var gpu = source.LyricsGpu ??= new LyricsGpu();
         gpu.Target ??= new RenderTexture(_device!, LyricsFeed.Width, LyricsFeed.Height);
+        _ctx!.ClearRenderTargetView(gpu.Target.Rtv, new Color4(0, 0, 0, 0));
+        DrawFeed(source.Lyrics!, gpu, gpu.Target.Rtv, now, time);
+        gpu.Drawn = true;
+    }
 
+    /// <summary>Contagem e avisos: por cima de tudo, direto na composição pronta (a letra e os vídeos ficam embaixo).</summary>
+    public volatile LyricsFeed? Overlay;
+    public volatile bool OverlayBackground;
+    readonly LyricsGpu _overlayGpu = new();
+
+    void DrawOverlay(RenderTexture target, double now, float time)
+    {
+        if (Overlay is not { } feed) return;
+        if (OverlayBackground) _ctx!.ClearRenderTargetView(target.Rtv, new Color4(0, 0, 0, 1));
+        DrawFeed(feed, _overlayGpu, target.Rtv, now, time);
+    }
+
+    void DrawFeed(LyricsFeed feed, LyricsGpu gpu, ID3D11RenderTargetView target, double now, float time)
+    {
         // slide novo: o atual começa a sair e o novo a entrar
         var (version, frame) = feed.Snapshot();
         if (version != gpu.Version)
@@ -132,9 +150,9 @@ partial class Renderer
         }
 
         var ctx = _ctx!;
-        ctx.ClearRenderTargetView(gpu.Target.Rtv, new Color4(0, 0, 0, 0));
+        if (gpu.Current is not { Frame.Empty: false } && gpu.Leaving.Count == 0) return; // nada para desenhar
         ctx.PSSetShaderResource(0, null!);
-        ctx.OMSetRenderTargets(gpu.Target.Rtv);
+        ctx.OMSetRenderTargets(target);
         ctx.RSSetViewport(new Viewport(LyricsFeed.Width, LyricsFeed.Height));
         ctx.OMSetBlendState(_alphaBlend);
         SetFrameParams(LyricsFeed.Width, LyricsFeed.Height, time);
@@ -169,7 +187,6 @@ partial class Renderer
 
         ctx.OMSetBlendState(null);
         ctx.PSSetShaderResource(0, null!);
-        gpu.Drawn = true;
     }
 
     static float Ease(float t) => t * t * (3 - 2 * t);

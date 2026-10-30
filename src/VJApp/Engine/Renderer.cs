@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Vortice.D3DCompiler;
@@ -513,6 +513,7 @@ sealed partial class Renderer : IDisposable
             UpdateSources(now);
             int result = Compose(time, _comp, _ => true, main: true);
             result = ApplyAttacks(_comp, result, time);
+            DrawOverlay(_comp[result]!, now, time);
 
             SendStreams(_comp[result]!);
             UpdatePreview(_comp[result]!, time);
