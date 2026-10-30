@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { send } from './bridge'
+import { send, type UpdateState } from './bridge'
 import { comboLabel, keysOf, matches, subscribe } from './shortcuts'
 
 const ITEMS = [
@@ -10,7 +10,7 @@ const ITEMS = [
 ] as const
 
 /** Menu "Projeto" no topo (Novo, Abrir, Salvar, Salvar como) com atalhos de teclado. */
-export function ProjectMenu({ project, onShortcuts }: { project: string | null; onShortcuts: () => void }) {
+export function ProjectMenu({ project, onShortcuts, update }: { project: string | null; onShortcuts: () => void; update: UpdateState | null }) {
   const [open, setOpen] = useState(false)
   const [, force] = useState(0)
   useEffect(() => subscribe(() => force((n) => n + 1)), [])
@@ -55,6 +55,17 @@ export function ProjectMenu({ project, onShortcuts }: { project: string | null; 
           ))}
           <div className="dropdown-sep" />
           <button onClick={() => { onShortcuts(); setOpen(false) }}><span>Atalhos de teclado…</span><kbd /></button>
+          <button disabled={update?.status === 'checking' || update?.status === 'downloading'} onClick={() => send({ type: 'updateCheck' })}>
+            <span>{update?.status === 'checking' ? 'Conferindo…' : 'Verificar atualizações'}</span><kbd />
+          </button>
+          {update && (
+            <div className="dropdown-note">
+              Versão {update.current}
+              {update.status === 'none' && ' · é a mais nova'}
+              {update.status === 'available' && ` · ${update.latest} disponível`}
+              {update.status === 'error' && update.error && <div className="warn-text">{update.error}</div>}
+            </div>
+          )}
           <div className="dropdown-note">Salvamento automático a cada minuto</div>
         </div>
       )}
