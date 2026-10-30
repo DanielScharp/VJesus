@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
@@ -163,6 +163,64 @@ sealed class LyricsFeed
         return new WordAnim(type, F(1, 1), F(2, 1));
     }
 
+    /// <summary>
+    /// Curva o contorno como se o texto estivesse sobre uma bola: as pontas das linhas de cima descem,
+    /// as de baixo sobem e o miolo fica maior. A largura e a altura do bloco continuam as mesmas.
+    /// </summary>
+    static GraphicsPath Spherize(GraphicsPath source, RectangleF block, float amount)
+    {
+        const float Step = 6; // retas longas viram vários pontos, senão as hastes não curvam
+        float cx = block.X + block.Width / 2, cy = block.Y + block.Height / 2;
+        float hw = Math.Max(1, block.Width / 2), hh = Math.Max(1, block.Height / 2);
+        float Shrink(float r)
+        {
+            float a = r * MathF.PI / 2;
+            return a < 0.001f ? 1 : 1 + (MathF.Sin(a) / a - 1) * amount;
+        }
+        float keep = 1 / Shrink(MathF.Sqrt(0.5f)); // o meio da borda continua onde estava
+        PointF Bend(PointF q)
+        {
+            float u = (q.X - cx) / hw, v = (q.Y - cy) / hh;
+            float s = Shrink(MathF.Sqrt((u * u + v * v) / 2)) * keep;
+            return new PointF(cx + u * s * hw, cy + v * s * hh);
+        }
+
+        using var flat = (GraphicsPath)source.Clone();
+        flat.Flatten(null, 0.25f);
+        if (flat.PointCount == 0) return flat.Clone() as GraphicsPath ?? new GraphicsPath();
+        var pts = flat.PathPoints;
+        var types = flat.PathTypes;
+        var outPts = new List<PointF>(pts.Length * 2);
+        var outTypes = new List<byte>(pts.Length * 2);
+        void Segment(PointF a, PointF b)
+        {
+            int n = (int)MathF.Ceiling(MathF.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Y - a.Y) * (b.Y - a.Y)) / Step);
+            for (int k = 1; k < n; k++)
+            {
+                outPts.Add(Bend(new PointF(a.X + (b.X - a.X) * k / n, a.Y + (b.Y - a.Y) * k / n)));
+                outTypes.Add(1);
+            }
+        }
+        var start = pts[0];
+        for (int i = 0; i < pts.Length; i++)
+        {
+            int kind = types[i] & 0x07;
+            bool close = (types[i] & 0x80) != 0;
+            if (kind == 0) start = pts[i];
+            else Segment(pts[i - 1], pts[i]);
+            outPts.Add(Bend(pts[i]));
+            if (close)
+            {
+                outTypes.Add((byte)kind);
+                Segment(pts[i], start); // a reta que fecha a letra também curva
+                outPts.Add(Bend(start));
+                outTypes.Add(1 | 0x80);
+            }
+            else outTypes.Add((byte)kind);
+        }
+        return new GraphicsPath([.. outPts], [.. outTypes], source.FillMode);
+    }
+
     /// <summary>Remove as marcações (para medir/mostrar o texto puro).</summary>
     public static string StripTags(string text) => Tag.Replace(text, "");
 
@@ -230,6 +288,14 @@ sealed class LyricsFeed
             using var format = (StringFormat)StringFormat.GenericTypographic.Clone();
             format.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces;
             float pad = style.OutlineWidth + (style.Shadow ? 8 : 2);
+            // a bola abraça o bloco de texto inteiro, então cada palavra é curvada pela posição dela no bloco
+            float blockWidth = lines.Count > 0 ? lines.Max(l => l.Width) : 0;
+            var block = new RectangleF(style.Align switch
+            {
+                "left" => area.Left,
+                "right" => area.Right - blockWidth,
+                _ => area.Left + (area.Width - blockWidth) / 2,
+            }, y, blockWidth, total);
             for (int li = 0; li < lines.Count; li++)
             {
                 var line = lines[li];
@@ -248,6 +314,7 @@ sealed class LyricsFeed
                         float ascent = p.Size * ff.GetCellAscent(fs) / ff.GetEmHeight(fs);
                         var path = new GraphicsPath();
                         path.AddString(p.Text, ff, (int)fs, p.Size, new PointF(x, baseline - ascent), format);
+                        if (style.Sphere > 0.001f) { var bent = Spherize(path, block, Math.Clamp(style.Sphere, 0, 1)); path.Dispose(); path = bent; }
                         bool isAnim = p.Run.Anim != null;
                         (isAnim ? animAll : staticAll).AddPath(path, false);
                         colored.Add((path, p.Run.Color, isAnim));

@@ -77,7 +77,7 @@ export type LyricStyle = {
   fontFamily: string; fontSize: number; bold: boolean; italic: boolean; uppercase: boolean; align: 'left' | 'center' | 'right'
   color: string; outlineColor: string; outlineWidth: number; shadow: boolean
   box: boolean; boxColor: string; boxOpacity: number
-  position: 'top' | 'center' | 'bottom'; margin: number; lineSpacing: number; fadeMs: number
+  position: 'top' | 'center' | 'bottom'; margin: number; lineSpacing: number; sphere?: number; fadeMs: number
   transition: string
 }
 export type LyricsState = { songId: string | null; slide: number; text: string | null; blank: boolean }

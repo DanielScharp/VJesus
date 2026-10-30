@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -57,6 +57,8 @@ sealed class LyricStyle
     /// <summary>Margem lateral/vertical em pixels da composição (1920×1080).</summary>
     public float Margin { get; set; } = 120;
     public float LineSpacing { get; set; } = 1.1f;
+    /// <summary>Quanto a frase contorna uma bola (0 = reta, 1 = bem curva).</summary>
+    public float Sphere { get; set; }
     /// <summary>Duração da transição entre slides (ms).</summary>
     public int FadeMs { get; set; } = 300;
     /// <summary>

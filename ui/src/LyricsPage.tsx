@@ -293,6 +293,9 @@ function StylePanel({ style, fonts, onChange }: { style: LyricStyle; fonts: stri
           <option value="right">Direita</option>
         </select>
       </label>
+      <label title="Curva a frase inteira como se ela contornasse uma bola. Aparece no telão; a lista de slides continua reta.">Contornar bola <output>{Math.round((style.sphere ?? 0) * 100)}%</output>
+        <input type="range" min={0} max={1} step={0.05} value={style.sphere ?? 0} onChange={(e) => onChange({ sphere: Number(e.target.value) })} />
+      </label>
       <label>Margem <output>{Math.round(style.margin)}</output>
         <input type="range" min={0} max={400} step={5} value={style.margin} onChange={(e) => onChange({ margin: Number(e.target.value) })} />
       </label>
