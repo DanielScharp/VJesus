@@ -5,6 +5,7 @@ import { RichText } from './RichText'
 import { matches } from './shortcuts'
 import { FontsBox } from './FontsBox'
 import { OnlineLyrics } from './OnlineLyrics'
+import { SlidePreview } from './SlidePreview'
 
 type Props = {
   songs: Song[]
@@ -39,6 +40,16 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
   const [gridLayer, setGridLayer] = useState(3)
   const [gridColumn, setGridColumn] = useState(7)
   const [styleTarget, setStyleTarget] = useState<string>('') // '' = padrão, senão id da cena
+  // "Prévia primeiro": clicar só escolhe o slide; ele vai ao ar com Enter ou com o botão
+  const [previewFirst, setPreviewFirst] = useState(() => {
+    try { return localStorage.getItem('lyrics-preview-first') === '1' } catch { return false }
+  })
+  const [armed, setArmed] = useState<number | null>(null)
+  const togglePreviewFirst = (on: boolean) => {
+    setPreviewFirst(on)
+    setArmed(null)
+    try { localStorage.setItem('lyrics-preview-first', on ? '1' : '0') } catch { /* sem armazenamento */ }
+  }
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim())
@@ -51,12 +62,26 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
   const liveHere = song != null && state.songId === song.id
   const songScene = scenes.find((s) => s.id === song?.sceneId)
   const lyricsInGrid = comp?.layers.some((l) => l.clips.some((c) => c?.kind === 'lyrics')) ?? false
+  const armedSlide = armed !== null && armed < slides.length ? armed : null
+  useEffect(() => setArmed(null), [selectedId])
+  const sendArmed = () => {
+    if (!song || armedSlide === null) return
+    send({ type: 'lyricsShow', songId: song.id, slide: armedSlide })
+    setArmed(armedSlide + 1 < slides.length ? armedSlide + 1 : null) // já deixa o seguinte na prévia
+  }
 
   // atalhos da aba (configuráveis em Menu → Atalhos de teclado): próximo, anterior, tela em branco
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName
       if (editing || editingSlide !== null || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (previewFirst && song) {
+        // com prévia: as setas só escolhem; o Enter manda ao ar
+        const base = armed ?? (liveHere ? state.slide : -1)
+        if (matches(e, 'letras.proximo')) { e.preventDefault(); setArmed(Math.min(base + 1, slides.length - 1)); return }
+        if (matches(e, 'letras.anterior')) { e.preventDefault(); setArmed(Math.max(base - 1, 0)); return }
+        if (matches(e, 'letras.enviar') && armedSlide !== null) { e.preventDefault(); sendArmed(); return }
+      }
       if (matches(e, 'letras.proximo')) {
         e.preventDefault()
         if (state.songId) send({ type: 'lyricsStep', direction: 1 })
@@ -70,7 +95,7 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [editing, editingSlide, state.songId, song])
+  }, [editing, editingSlide, state.songId, state.slide, song, previewFirst, armed, slides.length, liveHere])
 
   // estilo que o painel "Aparência" está editando: o padrão ou o de uma cena
   const target = scenes.find((s) => s.id === styleTarget)
@@ -168,8 +193,9 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
               {slides.map((sl, i) => {
                 const custom = Object.keys(sl.overrides).length > 0
                 return (
-                  <div key={i} className={`slide ${liveHere && state.slide === i ? (state.blank ? 'live blank' : 'live') : ''}`}
-                    onClick={() => send({ type: 'lyricsShow', songId: song.id, slide: i })}>
+                  <div key={i} className={`slide ${liveHere && state.slide === i ? (state.blank ? 'live blank' : 'live') : ''} ${armedSlide === i ? 'armed' : ''}`}
+                    onClick={() => { if (previewFirst) setArmed(i); else send({ type: 'lyricsShow', songId: song.id, slide: i }) }}
+                    onDoubleClick={() => { if (previewFirst) { send({ type: 'lyricsShow', songId: song.id, slide: i }); setArmed(i + 1 < slides.length ? i + 1 : null) } }}>
                     <span className="slide-num">
                       {i + 1}{sl.label && ` · ${sl.label}`}
                       {sl.scene && <em className="badge">{sl.scene}</em>}
@@ -199,6 +225,16 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
       <section className="lyrics-side">
         <h2>No telão</h2>
         {preview && <img className="preview" src={preview} alt="Preview da composição" />}
+        <label className="check preview-toggle" title="Clicar num slide só mostra a prévia; ele vai ao ar com Enter, duplo clique ou o botão">
+          <input type="checkbox" checked={previewFirst} onChange={(e) => togglePreviewFirst(e.target.checked)} /> Prévia primeiro (não vai direto ao ar)
+        </label>
+        {previewFirst && (
+          <>
+            <SlidePreview label={song && armedSlide !== null ? `${song.title}, slide ${armedSlide + 1}` : 'Escolha um slide'}
+              request={song && armedSlide !== null ? { kind: 'song', songId: song.id, slide: armedSlide } : null} empty="Clique num slide para ver aqui" />
+            <button className="primary preview-send" disabled={armedSlide === null} onClick={sendArmed}>Enviar ao telão (Enter)</button>
+          </>
+        )}
         <div className="live-text">{state.blank ? '(tela em branco)' : state.text ? <RichText text={state.text} /> : '(nada projetado)'}</div>
         <div className="row">
           <button className={state.blank ? 'active' : ''} onClick={() => send({ type: 'lyricsBlank' })}>
@@ -267,7 +303,7 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
   )
 }
 
-function StylePanel({ style, fonts, onChange }: { style: LyricStyle; fonts: string[]; onChange: (p: Partial<LyricStyle>) => void }) {
+export function StylePanel({ style, fonts, onChange }: { style: LyricStyle; fonts: string[]; onChange: (p: Partial<LyricStyle>) => void }) {
   return (
     <>
       <label>Fonte <output />

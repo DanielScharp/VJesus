@@ -1,3 +1,4 @@
+import { SlidePreview } from './SlidePreview'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   onMessage, send, type Composition, type BibleBookInfo, type BibleHit, type BiblePassage, type BibleSettings, type BibleVersion, type LyricScene,
@@ -277,6 +278,8 @@ export function BiblePage({ scenes, comp }: Props) {
         </section>
 
         <section className="bible-side">
+          <SlidePreview label={sel ? refLabel(bookInfo?.name ?? book, chapter, sel.verse, sel.verseEnd) : 'Escolha um versículo'}
+            request={sel ? { kind: 'bible', book, chapter, verse: sel.verse, verseEnd: sel.verseEnd } : null} empty="Clique num versículo para ver aqui" />
           <div className="row">
             <button className="primary" disabled={!sel} onClick={() => sel && project(book, chapter, sel.verse, sel.verseEnd)}>
               Projetar {sel ? refLabel(bookInfo?.name ?? book, chapter, sel.verse, sel.verseEnd) : ''}
