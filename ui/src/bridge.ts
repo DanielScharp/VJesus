@@ -115,6 +115,29 @@ export type BibleBookInfo = { id: string; name: string; chapters: number[] }
 export type BibleHit = { book: string; bookName: string; chapter: number; verse: number; text: string }
 export type LayerPlayback = { position: number; duration: number; playing: boolean } | null
 
+export type ServiceKind = 'song' | 'bible' | 'text' | 'clip' | 'column' | 'notice' | 'timer' | 'clear'
+export type ServiceItem = {
+  id: string; kind: ServiceKind; title: string; note?: string | null
+  songId?: string | null; book?: string | null; chapter?: number; verse?: number; verseEnd?: number
+  text?: string | null; deckId?: string | null; layer?: number; column?: number; seconds?: number
+}
+export type ServiceState = { name: string; items: ServiceItem[]; current: string | null; verse: number }
+export type NoticeItem = { id: string; text: string }
+export type OverlaySettings = {
+  notices: NoticeItem[]; noticeSeconds: number; noticeBackground: boolean; noticeStyle: LyricStyle
+  timerLabel: string; timerEndText: string; timerBackground: boolean; timerStyle: LyricStyle
+}
+export type OverlayState = { settings: OverlaySettings; mode: 'off' | 'timer' | 'notices' | 'notice'; noticeId: string | null }
+export type UpdateState = {
+  current: string; status: 'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'ready' | 'error'
+  latest: string | null; page: string | null; notes: string | null; error: string | null; progress: number; canInstall: boolean
+}
+export type PreviewRequest =
+  | { kind: 'song'; songId: string; slide: number }
+  | { kind: 'bible'; book: string; chapter: number; verse: number; verseEnd: number }
+  | { kind: 'text' | 'notice'; text: string }
+  | { kind: 'timer'; seconds: number }
+
 export type EngineMessage =
   | { type: 'displays'; list: Display[] }
   | { type: 'stats'; fps: number }
@@ -148,6 +171,10 @@ export type EngineMessage =
   | { type: 'bibleBooks'; version: string | null; books: BibleBookInfo[] }
   | { type: 'bibleChapter'; book: string; chapter: number; texts: Record<string, string[] | null> }
   | { type: 'bibleSearch'; query: string; total: number; hits: BibleHit[] }
+  | ({ type: 'overlay' } & OverlayState)
+  | ({ type: 'service' } & ServiceState)
+  | ({ type: 'update' } & UpdateState)
+  | { type: 'slidePreview'; id: string; data: string | null; error?: string }
 
 type Cell = { layer: number; column: number }
 
@@ -229,6 +256,15 @@ export type UiMessage =
   | { type: 'bibleChapter'; book: string; chapter: number; versions: string[] }
   | { type: 'bibleSearch'; version: string; query: string }
   | { type: 'bibleShow'; book: string; chapter: number; verse: number; verseEnd?: number }
+  | { type: 'overlaySave'; settings: OverlaySettings }
+  | { type: 'overlayTimer' | 'overlayNotices'; on: boolean }
+  | { type: 'overlayNotice'; id: string }
+  | { type: 'serviceSave'; plan: { name: string; items: ServiceItem[] } }
+  | { type: 'serviceGo'; id: string }
+  | { type: 'serviceStep'; direction: 1 | -1 }
+  | { type: 'serviceReset' }
+  | { type: 'updateCheck' | 'updateDownload' | 'updateInstall' }
+  | ({ type: 'previewRender'; id: string } & PreviewRequest)
 
 type WebView = {
   postMessage(msg: unknown): void

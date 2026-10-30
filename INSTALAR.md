@@ -43,8 +43,16 @@ O instalador já traz tudo (.NET, FFmpeg e o resto). Ele também confere o **Mic
 
 Pronto. O .NET, o FFmpeg (vídeo, HAP, DXV) e o restante já estão dentro da pasta do programa.
 
-### Bíblia
-Na aba **Bíblia**, clique em **Versões…** e baixe as que quiser (precisa de internet só nessa hora). As versões ficam em `%AppData%\VJesus\biblia` e funcionam sem internet. A lista vem da Free Use Bible API (bible.helloao.org) e tem só versões livres. ARC, ARA, NAA, NVI, NVT, NTLH e outras com direitos autorais entram por **Versões… → Importar de arquivo**, a partir de um arquivo que você já tenha licenciado (MySword .bbl.mybible, MyBible .SQLite3, Zefania XML, OSIS XML ou JSON).
+### Roteiro do culto, prévia, contagem e avisos
+Na aba **Culto**, em **Roteiro**, monte a lista em ordem com músicas, versículos, clips, textos, avisos e contagens. A tecla **→** (ou espaço) avança tudo: dentro da música passa o slide e, no fim dela, entra o próximo item. Clicar num item mostra a **prévia** sem mandar ao ar; duplo clique, **▶ Ir** ou **Enter** manda. O roteiro é salvo junto com o projeto.
+
+- **Letras:** ligue **Prévia primeiro** para clicar nos slides sem que eles vão ao ar; o slide entra com **Enter** ou **Enviar ao telão**. Na aba **Bíblia**, o versículo escolhido aparece na prévia.
+- **Contagem e avisos:** na aba **Culto**, em **Contagem e avisos**. Eles entram por cima de tudo, sem precisar de clip na grade, e a contagem é o mesmo temporizador da tela de retorno. Em telas com um slice que usa só uma layer ou um grupo, eles não aparecem naquele slice.
+
+### Atualizar pelo programa
+Quando há versão nova, aparece um aviso no topo. Clique em **Baixar** e depois em **Instalar agora**: o VJesus fecha, instala e abre de novo. Nada é instalado sem o seu clique. Também dá para conferir em **Menu → Verificar atualizações**. A versão portátil só abre a página de download.
+
+### BíbliaNa aba **Bíblia**, clique em **Versões…** e baixe as que quiser (precisa de internet só nessa hora). As versões ficam em `%AppData%\VJesus\biblia` e funcionam sem internet. A lista vem da Free Use Bible API (bible.helloao.org) e tem só versões livres. ARC, ARA, NAA, NVI, NVT, NTLH e outras com direitos autorais entram por **Versões… → Importar de arquivo**, a partir de um arquivo que você já tenha licenciado (MySword .bbl.mybible, MyBible .SQLite3, Zefania XML, OSIS XML ou JSON).
 
 ### Mapeamento e painéis de LED
 - **Ímã** (botão 🧲 na aba Mapeamento): ao arrastar, as pontas grudam nas bordas e cantos da tela e nos outros slices e máscaras. Segure **Alt** para inverter na hora.

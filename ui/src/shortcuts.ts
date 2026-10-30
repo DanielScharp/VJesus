@@ -8,12 +8,13 @@ import { send } from './bridge'
  * A mesma tecla não pode estar em duas ações que valem ao mesmo tempo (global + qualquer aba,
  * ou duas da mesma aba); em abas diferentes ela pode se repetir (ex.: → nas Letras e na Bíblia).
  */
-export type Scope = 'global' | 'letras' | 'biblia' | 'mapeamento'
+export type Scope = 'global' | 'culto' | 'letras' | 'biblia' | 'mapeamento'
 
 export type ActionDef = { id: string; label: string; hint?: string; scope: Scope; defaults: string[] }
 
 export const SCOPE_LABEL: Record<Scope, string> = {
   global: 'Em qualquer aba',
+  culto: 'Aba Culto',
   letras: 'Aba Letras',
   biblia: 'Aba Bíblia',
   mapeamento: 'Aba Mapeamento',
@@ -28,6 +29,12 @@ export const ACTIONS: ActionDef[] = [
   { id: 'telao.encerrar', label: 'Encerrar letra / versículo', hint: 'Tira a letra ou o versículo do telão e da tela de retorno (fim da música).', scope: 'global', defaults: ['Shift+Escape', 'Delete'] },
   { id: 'ataques.parar', label: 'Parar todos os ataques', hint: 'Interrompe na hora flash, strobe, tremor…', scope: 'global', defaults: [] },
 
+  { id: 'culto.proximo', label: 'Próximo do roteiro', hint: 'Passa o slide ou o versículo; no fim, entra o próximo item.', scope: 'culto', defaults: ['ArrowRight', 'ArrowDown', 'PageDown', 'Space'] },
+  { id: 'culto.anterior', label: 'Anterior do roteiro', hint: 'Volta o slide ou o versículo; no começo, volta ao item anterior.', scope: 'culto', defaults: ['ArrowLeft', 'ArrowUp', 'PageUp'] },
+  { id: 'culto.ir', label: 'Enviar o item escolhido ao telão', hint: 'Manda ao ar o item selecionado na lista.', scope: 'culto', defaults: ['Enter'] },
+  { id: 'culto.branco', label: 'Tela em branco (liga/desliga)', hint: 'Esconde a letra do telão sem perder a posição.', scope: 'culto', defaults: ['B', 'Escape'] },
+
+  { id: 'letras.enviar', label: 'Enviar a prévia ao telão', hint: 'Com “Prévia primeiro” ligada, manda ao ar o slide escolhido.', scope: 'letras', defaults: ['Enter'] },
   { id: 'letras.proximo', label: 'Próximo slide', hint: 'Passa a letra para o slide seguinte (ou projeta o primeiro).', scope: 'letras', defaults: ['ArrowRight', 'ArrowDown', 'PageDown', 'Space'] },
   { id: 'letras.anterior', label: 'Slide anterior', hint: 'Volta a letra um slide.', scope: 'letras', defaults: ['ArrowLeft', 'ArrowUp', 'PageUp'] },
   { id: 'letras.branco', label: 'Tela em branco (liga/desliga)', hint: 'Esconde a letra do telão sem perder a posição.', scope: 'letras', defaults: ['B', 'Escape'] },

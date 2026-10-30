@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -186,6 +186,8 @@ sealed partial class MainForm
             case "/lyrics/clear": if (press) ClearLyrics(); break;
             case "/lyrics/next": if (press) StepSlide(1); break;
             case "/lyrics/prev": if (press) StepSlide(-1); break;
+            case "/culto/next": if (press) ServiceStep(1); break;
+            case "/culto/prev": if (press) ServiceStep(-1); break;
             case "/lyrics/blank": _blank = press; UpdateLyricsOutput(); break;
             case "/composition/tempocontroller/tempotap": if (press) Tap(); break;
             case "/composition/tempocontroller/resync": if (press) _renderer.ResyncBeat(); break;

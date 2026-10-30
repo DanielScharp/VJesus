@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Web.WebView2.Core;
@@ -123,6 +123,8 @@ sealed partial class MainForm : Form
         EnsureDesktopShortcut();
         RegisterProjectFileType();
         StartControl();
+        StartOverlay();
+        StartUpdateCheck();
     }
 
     // ---------------- mensagens da UI ----------------
@@ -170,6 +172,9 @@ sealed partial class MainForm : Form
                 SendFonts();
                 SendStage();
                 SendAttacks();
+                SendOverlay();
+                SendService();
+                SendUpdate();
                 break;
 
             case "tap": Tap(); break;
@@ -177,6 +182,10 @@ sealed partial class MainForm : Form
             case var stageType when stageType?.StartsWith("stage") == true: OnStageMessage(stageType, msg); break;
             case var bibleType when bibleType?.StartsWith("bible") == true: OnBibleMessage(bibleType, msg); break;
             case var fontType when fontType?.StartsWith("fonts") == true: OnFontMessage(fontType, msg); break;
+            case var overlayType when overlayType?.StartsWith("overlay") == true: OnOverlayMessage(overlayType, msg); break;
+            case var serviceType when serviceType?.StartsWith("service") == true: OnServiceMessage(serviceType, msg); break;
+            case var updateType when updateType?.StartsWith("update") == true: OnUpdateMessage(updateType, msg); break;
+            case "previewRender": _ = RenderPreviewAsync(msg); break;
             case var scType when scType?.StartsWith("shortcuts") == true: OnShortcutsMessage(scType, msg); break;
             case var attackType when attackType?.StartsWith("attack") == true: OnAttackMessage(attackType, msg); break;
             case "setBpm": SetBpm((float)msg["bpm"]!); break;

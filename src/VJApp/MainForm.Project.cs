@@ -19,6 +19,7 @@ sealed class ProjectFile
     public LyricsLibrary? Lyrics { get; set; }
     public StageConfig? Stage { get; set; }
     public AttackLibrary? Attacks { get; set; }
+    public ServiceLibrary? Service { get; set; }
 }
 
 /// <summary>Projetos (novo/abrir/salvar/salvamento automático) e presets de mapeamento.</summary>
@@ -87,6 +88,11 @@ sealed partial class MainForm
                 _attackLib = proj.Attacks;
                 _attackLib.Save(AttackLibrary.DefaultPath);
             }
+            if (proj.Service != null)
+            {
+                _service = proj.Service;
+                SaveService();
+            }
             LoadState(proj.Composition.Normalize(), proj.Mapping.Screens.Count > 0 ? proj.Mapping : MappingSetup.CreateDefault());
             SetProjectPath(file);
             _lastSavedHash = Hash(BuildProjectJson(file));
@@ -95,6 +101,9 @@ sealed partial class MainForm
             ApplyStageWindow();
             SendStage();
             SendAttacks();
+            SendOverlay();
+            _serviceCurrent = null;
+            SendService();
             BroadcastRemoteState();
 
             var missing = AllClips(_comp)
@@ -177,7 +186,7 @@ sealed partial class MainForm
 
     string SerializeProject(Composition comp) => JsonSerializer.Serialize(new ProjectFile
     {
-        Composition = comp, Mapping = _mapping, Lyrics = _lyrics, Stage = _stage, Attacks = _attackLib,
+        Composition = comp, Mapping = _mapping, Lyrics = _lyrics, Stage = _stage, Attacks = _attackLib, Service = _service,
     }, ProjectJson);
 
     /// <summary>Caminhos relativos viram absolutos; um vídeo que sumiu do lugar é procurado na pasta de mídia do projeto.</summary>

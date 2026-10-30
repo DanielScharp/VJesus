@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   inApp, onMessage, send,
-  type Composition, type Display, type EffectDef, type EffectInstance, type Layer, type LayerPlayback, type MappingSetup, type ControlInfo, type StreamingInfo, type LiveSources, type Song, type LyricStyle, type LyricsState, type LyricScene, type StageState, type StageConfig, type AttackPreset,
+  type Composition, type Display, type EffectDef, type EffectInstance, type Layer, type LayerPlayback, type MappingSetup, type ControlInfo, type StreamingInfo, type LiveSources, type Song, type LyricStyle, type LyricsState, type LyricScene, type StageState, type StageConfig, type AttackPreset, type OverlayState, type ServiceState, type UpdateState,
 } from './bridge'
 import { ClipGrid } from './ClipGrid'
 import { EffectsPanel } from './EffectsPanel'
@@ -13,6 +13,8 @@ import { ShortcutsDialog } from './ShortcutsDialog'
 import { isTyping, matches, setCustom } from './shortcuts'
 import { injectFontFaces } from './fontFaces'
 import { BiblePage } from './BiblePage'
+import { CultoPage } from './CultoPage'
+import { UpdateBadge } from './UpdateBadge'
 import { StagePage } from './StagePage'
 import { MonitorsBar } from './MonitorsBar'
 import { AttacksBar } from './AttacksBar'
@@ -20,7 +22,7 @@ import { MappingEditor } from './MappingEditor'
 import { ControlPanel, StreamingPanel } from './ControlPanel'
 import './App.css'
 
-type Tab = 'clips' | 'mapping' | 'lyrics' | 'bible' | 'stage'
+type Tab = 'clips' | 'mapping' | 'culto' | 'lyrics' | 'bible' | 'stage'
 
 function App() {
   const [tab, setTab] = useState<Tab>('clips')
@@ -54,6 +56,9 @@ function App() {
   const [stagePreview, setStagePreview] = useState<string | null>(null)
   const [attacks, setAttacks] = useState<AttackPreset[]>([])
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [overlay, setOverlay] = useState<OverlayState | null>(null)
+  const [service, setService] = useState<ServiceState>({ name: 'Culto', items: [], current: null, verse: 0 })
+  const [update, setUpdate] = useState<UpdateState | null>(null)
 
   // atalhos que valem em qualquer aba: encerrar letra/versículo e parar ataques
   useEffect(() => {
@@ -98,6 +103,9 @@ function App() {
         case 'stage': setStage(msg); break
         case 'stagePreview': setStagePreview(msg.data); break
         case 'attacks': setAttacks(msg.list); break
+        case 'overlay': setOverlay(msg); break
+        case 'service': setService(msg); break
+        case 'update': setUpdate(msg); break
         case 'shortcuts': setCustom(msg.shortcuts); break
         case 'master': setBrightness(msg.brightness); setSpeed(msg.speed); setTestCard(msg.testCard); break
       }
@@ -145,15 +153,19 @@ function App() {
     <div className="app">
       <header className="topbar">
         <h1>VJesus</h1>
-        <ProjectMenu project={project} onShortcuts={() => setShortcutsOpen(true)} />
+        <ProjectMenu project={project} onShortcuts={() => setShortcutsOpen(true)} update={update} />
         <nav className="row tabs">
           <button className={tab === 'clips' ? 'active' : ''} onClick={() => setTab('clips')}>Clips e efeitos</button>
           <button className={tab === 'mapping' ? 'active' : ''} onClick={() => setTab('mapping')}>Mapeamento</button>
+          <button className={tab === 'culto' ? 'active' : ''} onClick={() => setTab('culto')}>Culto</button>
           <button className={tab === 'lyrics' ? 'active' : ''} onClick={() => setTab('lyrics')}>Letras</button>
           <button className={tab === 'bible' ? 'active' : ''} onClick={() => setTab('bible')}>Bíblia</button>
           <button className={tab === 'stage' ? 'active' : ''} onClick={() => setTab('stage')}>Retorno</button>
         </nav>
-        <TempoBar bpm={tempo.bpm} beat={tempo.beat} />
+        <div className="topbar-right">
+          <UpdateBadge update={update} />
+          <TempoBar bpm={tempo.bpm} beat={tempo.beat} />
+        </div>
         <span className="stats" title="Quadros por segundo da composição 1920×1080">
           {inApp ? <><b>{fps.toFixed(2)}</b> fps · 1920×1080</> : 'fora do app (só UI)'}
         </span>
@@ -172,6 +184,10 @@ function App() {
           setStage({ ...stage, config })
           send({ type: 'stageConfig', config })
         }} />
+      )}
+
+      {tab === 'culto' && (
+        <CultoPage service={service} songs={songs} comp={comp} state={lyricsState} preview={preview} thumbs={thumbs} overlay={overlay} timer={stage?.timer ?? null} fonts={fonts} />
       )}
 
       {tab === 'lyrics' && (
