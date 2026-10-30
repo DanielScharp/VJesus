@@ -434,6 +434,13 @@ kbd { font: 11px Consolas, monospace; background: #000; border: 1px solid var(--
 @keyframes aTremer { 0% { transform: translate(-1px, 1px); } 100% { transform: translate(1px, -1px); } }
 @keyframes aPiscar { 0%,60% { opacity: 1; } 61%,100% { opacity: .2; } }
 @keyframes aGirar { to { transform: rotate(360deg); } }
+.anim-ondular { filter: url(#anim-ondular); animation: none; padding: .1em .15em; }
+.anim-oculos3d { animation-name: aOculos3d; animation-duration: calc(var(--as, 1s) * .35); animation-timing-function: steps(1); }
+@keyframes aOculos3d {
+  0% { text-shadow: calc(-.05em * var(--ai, 1)) 0 #ff1a33, calc(.05em * var(--ai, 1)) 0 #00f2ff; transform: translate(-1px, 1px); }
+  33% { text-shadow: calc(-.08em * var(--ai, 1)) 0 #ff1a33, calc(.03em * var(--ai, 1)) 0 #00f2ff; transform: translate(1px, 0); }
+  66% { text-shadow: calc(-.03em * var(--ai, 1)) 0 #ff1a33, calc(.08em * var(--ai, 1)) 0 #00f2ff; transform: translate(0, -1px); }
+}
 .format-bar label.mini { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; margin: 0; }
 .format-bar label.mini input { width: 60px; }
 

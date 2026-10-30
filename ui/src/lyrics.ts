@@ -85,6 +85,7 @@ export const SLIDE_TRANSITIONS: [string, string][] = [
 export const WORD_ANIMS: [string, string][] = [
   ['balancar', 'Balançar'], ['flutuar', 'Flutuar'], ['pulsar', 'Pulsar'], ['onda', 'Onda'],
   ['brilhar', 'Brilhar'], ['tremer', 'Tremer'], ['piscar', 'Piscar'], ['girar', 'Girar'],
+  ['ondular', 'Ondular letras'], ['oculos3d', 'Óculos 3D (tremendo)'],
 ]
 
 export type RichAnim = { type: string; intensity: number; speed: number }

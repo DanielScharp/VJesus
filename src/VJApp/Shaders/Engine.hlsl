@@ -417,6 +417,11 @@ cbuffer SpriteParams : register(b4)
     float2 SPivot;      // centro do giro/escala (pixels)
     float  SOpacity;
     float  SBrightness;
+    float4 SClip;       // retângulo original da palavra (0..1): o efeito não pega nada de fora dele
+    float  SFx;         // 0 nenhum, 1 ondular, 2 óculos 3D
+    float  SFxForce;
+    float  SFxTime;
+    float  SAspect;     // largura / altura da imagem
 };
 
 struct SpriteOut
@@ -439,8 +444,55 @@ SpriteOut VSSprite(uint id : SV_VertexID)
     return o;
 }
 
+float SpriteHash(float x) { return frac(sin(x * 12.9898) * 43758.5453); }
+
+// lê a palavra sem pegar nada de fora do retângulo dela
+float4 SpriteTex(float2 uv)
+{
+    float2 d = uv - SClip.xy;
+    if (d.x < 0 || d.y < 0 || d.x > SClip.z || d.y > SClip.w) return 0;
+    return Tex0.SampleLevel(LinearClamp, uv, 0);
+}
+
+// ondas descendo pelas letras: as hastes retas ficam onduladas (o tamanho acompanha a altura do texto)
+float2 Ondular(float2 uv)
+{
+    const float TAU = 6.2831853;
+    float h = SClip.w;
+    float y = (uv.y - SClip.y) / h;                 // 0..1 na altura do texto
+    float x = (uv.x - SClip.x) * SAspect / h;       // em "alturas do texto"
+    float amp = 0.045 * SFxForce;
+    float dx = sin(TAU * (2.2 * y + 0.35 * x - SFxTime)) * amp * h / SAspect;
+    float dy = sin(TAU * (0.9 * x - SFxTime * 0.7)) * amp * 0.4 * h;
+    return uv - float2(dx, dy);
+}
+
+// óculos 3D: vermelho para um lado, ciano para o outro, tremendo, com faixas que escapam para o lado
+float4 Oculos3d(float2 uv)
+{
+    float k = floor(SFxTime * 14);
+    float h = SClip.w;
+    float baseX = 0.05 * SFxForce * h / SAspect;
+    float off = baseX * (0.6 + 0.8 * SpriteHash(k));
+    float band = floor((uv.y - SClip.y) / h * 9);
+    float slice = SpriteHash(band + k * 7.1) > 0.72 ? (SpriteHash(band + k * 3.3 + 5) - 0.5) * baseX * 3 : 0;
+    float2 u = uv + float2(slice, 0);
+    float4 r = SpriteTex(u + float2(off, 0));
+    float4 c = SpriteTex(u - float2(off, 0));
+    float4 m = SpriteTex(u);
+    float3 p = float3(1, 0.1, 0.2) * r.a;
+    float a = r.a;
+    p = p * (1 - c.a) + float3(0, 0.95, 1) * c.a;
+    a = a + c.a * (1 - a);
+    p = p * (1 - m.a) + m.rgb * m.a;
+    a = a + m.a * (1 - a);
+    return float4(saturate(p / max(a, 0.001) * SBrightness), a * SOpacity);
+}
+
 float4 PSSprite(SpriteOut i) : SV_Target
 {
-    float4 c = Tex0.SampleLevel(LinearClamp, i.uv, 0);
+    if (SFx > 1.5) return Oculos3d(i.uv);
+    float2 uv = SFx > 0.5 ? Ondular(i.uv) : i.uv;
+    float4 c = SFx > 0.5 ? SpriteTex(uv) : Tex0.SampleLevel(LinearClamp, uv, 0);
     return float4(saturate(c.rgb * SBrightness), c.a * SOpacity);
 }

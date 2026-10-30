@@ -18,6 +18,8 @@ struct SpriteParams
     public float PivotX, PivotY;
     public float Opacity;
     public float Brightness;
+    public float ClipX, ClipY, ClipW, ClipH;
+    public float Fx, FxForce, FxTime, Aspect;
 }
 
 /// <summary>Um slide já na GPU: as três imagens (paradas, animadas, caixa) e quando entrou/saiu.</summary>
@@ -56,7 +58,7 @@ sealed class LyricsGpu : IDisposable
 
 /// <summary>
 /// Letras animadas na GPU: a entrada/saída do slide (fade, subir, zoom, palavra por palavra…) e as
-/// palavras marcadas com &lt;anim&gt; (balançar, flutuar, pulsar…) são calculadas a cada quadro, sem
+/// palavras marcadas com &lt;anim&gt; (balançar, flutuar, ondular, óculos 3D…) são calculadas a cada quadro, sem
 /// redesenhar o texto.
 /// </summary>
 partial class Renderer
@@ -208,7 +210,10 @@ partial class Renderer
             var t = SlideTransform(type, pe, leaving, perPiece: type is "palavra" or "linha");
             float rot = 0, scale = t.Scale, dx = t.Dx, dy = t.Dy, opacity = t.Opacity, bright = 1;
             if (s.Anim is { } a) Animate(a, now, s.Index, ref dx, ref dy, ref rot, ref scale, ref opacity, ref bright);
-            DrawSprite(srv, s.Rect, dx, dy, rot, scale, opacity, bright);
+            // ondular e óculos 3D deformam a própria imagem da palavra, no shader
+            float fx = s.Anim?.Type switch { "ondular" => 1, "oculos3d" => 2, _ => 0 };
+            float fxTime = s.Anim is { } fa ? (float)((now * fa.Speed + s.Index * 0.37) % 3600) : 0;
+            DrawSprite(srv, s.Rect, dx, dy, rot, scale, opacity, bright, fx, s.Anim?.Intensity ?? 0, fxTime);
         }
     }
 
@@ -251,19 +256,32 @@ partial class Renderer
             case "brilhar": bright *= 1 + 0.6f * a.Intensity * (0.5f + 0.5f * w); break;
             case "piscar": opacity *= w > -0.3f ? 1 : Math.Max(0, 1 - a.Intensity); break;
             case "girar": rot += (float)(t * Math.PI * 2 * 0.25 * a.Intensity % (Math.PI * 2)); break;
+            case "oculos3d":
+            {
+                double k = Math.Floor(now * 14 * a.Speed);
+                dx += (float)((Hash(k, seed) - 0.5) * 5 * a.Intensity);
+                dy += (float)((Hash(k + 17, seed) - 0.5) * 3 * a.Intensity);
+                break;
+            }
             case "onda": dy += w * 10 * a.Intensity; rot += (float)Math.Cos(t * Math.PI * 2) * 0.05f * a.Intensity; break;
         }
     }
 
     static double Hash(double a, int b) { double v = Math.Sin(a * 12.9898 + b * 78.233) * 43758.5453; return v - Math.Floor(v); }
 
-    void DrawSprite(ID3D11ShaderResourceView srv, RectangleF r, float dx, float dy, float rot, float scale, float opacity, float bright)
+    void DrawSprite(ID3D11ShaderResourceView srv, RectangleF r, float dx, float dy, float rot, float scale, float opacity, float bright, float fx = 0, float fxForce = 0, float fxTime = 0)
     {
         if (opacity <= 0.001f) return;
+        float W = LyricsFeed.Width, H = LyricsFeed.Height;
+        var clip = r;
+        // o efeito empurra a palavra para fora do retângulo: desenha numa área maior
+        if (fx > 0) { float m = r.Height * 0.2f * fxForce; r = RectangleF.Inflate(r, m, m); }
         var p = new SpriteParams
         {
+            ClipX = clip.X / W, ClipY = clip.Y / H, ClipW = clip.Width / W, ClipH = clip.Height / H,
+            Fx = fx, FxForce = fxForce, FxTime = fxTime, Aspect = W / H,
             DestX = r.X, DestY = r.Y, DestW = r.Width, DestH = r.Height,
-            SrcX = r.X / LyricsFeed.Width, SrcY = r.Y / LyricsFeed.Height, SrcW = r.Width / LyricsFeed.Width, SrcH = r.Height / LyricsFeed.Height,
+            SrcX = r.X / W, SrcY = r.Y / H, SrcW = r.Width / W, SrcH = r.Height / H,
             TranslateX = dx, TranslateY = dy, Rotation = rot, Scale = scale,
             PivotX = r.X + r.Width / 2, PivotY = r.Y + r.Height / 2,
             Opacity = Math.Clamp(opacity, 0, 1), Brightness = bright,
