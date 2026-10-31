@@ -18,17 +18,40 @@ sealed partial class MainForm
         switch (type)
         {
             case "serviceSave":
-                if (msg["plan"].Deserialize<ServiceLibrary>(JsonRead) is { } plan)
+                if (msg["plan"].Deserialize<ServicePlan>(JsonRead) is { } plan)
                 {
-                    _service.Name = plan.Name;
-                    _service.Items = plan.Items;
-                    if (_service.Items.All(i => i.Id != _serviceCurrent)) _serviceCurrent = null;
+                    _service.Active.Name = plan.Name;
+                    _service.Active.Date = plan.Date;
+                    _service.Active.Items = plan.Items;
+                    if (_service.Active.Items.All(i => i.Id != _serviceCurrent)) _serviceCurrent = null;
                     SaveService();
                     SendService();
                 }
                 break;
+            case "servicePlanNew":
+            {
+                // novo culto vazio, ou uma cópia do aberto (com novos itens para não misturar quem está no ar)
+                var active = _service.Active;
+                var created = new ServicePlan { Name = (string?)msg["name"] ?? "Culto", Date = (string?)msg["date"] };
+                if ((bool?)msg["copy"] == true)
+                    created.Items = [.. active.Items.Select(i => { var c = JsonSerializer.Deserialize<ServiceItem>(JsonSerializer.Serialize(i))!; c.Id = Guid.NewGuid().ToString("N")[..10]; return c; })];
+                _service.Plans.Add(created);
+                OpenPlan(created.Id);
+                break;
+            }
+            case "servicePlanSelect":
+                if (_service.Plans.Any(p => p.Id == (string?)msg["id"])) OpenPlan((string)msg["id"]!);
+                break;
+            case "servicePlanDelete":
+            {
+                string? id = (string?)msg["id"];
+                _ = _service.Active;
+                if (_service.Plans.Count > 1) _service.Plans.RemoveAll(p => p.Id == id);
+                OpenPlan(_service.Active.Id);
+                break;
+            }
             case "serviceGo":
-                if (_service.Items.FirstOrDefault(i => i.Id == (string?)msg["id"]) is { } item) ServiceGo(item);
+                if (_service.Active.Items.FirstOrDefault(i => i.Id == (string?)msg["id"]) is { } item) ServiceGo(item);
                 break;
             case "serviceStep":
                 ServiceStep((int?)msg["direction"] ?? 1);
@@ -41,10 +64,19 @@ sealed partial class MainForm
         }
     }
 
+    /// <summary>Abre outro culto. O que está no telão continua lá até o próximo comando.</summary>
+    void OpenPlan(string id)
+    {
+        _service.ActivePlan = id;
+        _serviceCurrent = null;
+        SaveService();
+        SendService();
+    }
+
     /// <summary>Próximo/anterior: anda dentro do item (slide, versículo) e, no fim dele, muda de item.</summary>
     void ServiceStep(int direction)
     {
-        var items = _service.Items;
+        var items = _service.Active.Items;
         if (items.Count == 0) return;
         int cur = items.FindIndex(i => i.Id == _serviceCurrent);
         if (cur < 0)
@@ -79,7 +111,7 @@ sealed partial class MainForm
     /// <summary>Tira do telão o que o item anterior deixou (contagem e aviso) antes de entrar o próximo.</summary>
     void ServiceLeave(ServiceItem? next)
     {
-        var prev = _service.Items.FirstOrDefault(i => i.Id == _serviceCurrent);
+        var prev = _service.Active.Items.FirstOrDefault(i => i.Id == _serviceCurrent);
         if (prev?.Kind is "notice" or "timer" && next?.Kind is not ("notice" or "timer")) SetOverlay("off");
     }
 
@@ -184,8 +216,11 @@ sealed partial class MainForm
     void SendService() => Send(new
     {
         type = "service",
-        name = _service.Name,
-        items = _service.Items,
+        planId = _service.Active.Id,
+        name = _service.Active.Name,
+        date = _service.Active.Date,
+        items = _service.Active.Items,
+        plans = _service.Plans.Select(p => new { id = p.Id, name = p.Name, date = p.Date, count = p.Items.Count }),
         current = _serviceCurrent,
         verse = _serviceVerse,
     });

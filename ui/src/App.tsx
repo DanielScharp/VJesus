@@ -57,7 +57,7 @@ function App() {
   const [attacks, setAttacks] = useState<AttackPreset[]>([])
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [overlay, setOverlay] = useState<OverlayState | null>(null)
-  const [service, setService] = useState<ServiceState>({ name: 'Culto', items: [], current: null, verse: 0 })
+  const [service, setService] = useState<ServiceState>({ planId: '', name: 'Culto', date: null, plans: [], items: [], current: null, verse: 0 })
   const [update, setUpdate] = useState<UpdateState | null>(null)
 
   // atalhos que valem em qualquer aba: encerrar letra/versículo e parar ataques

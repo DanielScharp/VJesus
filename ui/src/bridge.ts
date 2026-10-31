@@ -34,7 +34,8 @@ export type Layer = {
   sendToStage: boolean
 }
 
-export type Deck = { id: string; name: string }
+export type DeckClip = { kind: ClipKind; name: string; path: string | null }
+export type Deck = { id: string; name: string; columns?: number; columnNames?: (string | null)[]; clips?: (DeckClip | null)[][] }
 export type Composition = { columns: number; columnNames?: (string | null)[]; layers: Layer[]; masterEffects: EffectInstance[]; decks: Deck[]; currentDeck: number }
 
 export type Pt = { x: number; y: number }
@@ -121,7 +122,8 @@ export type ServiceItem = {
   songId?: string | null; book?: string | null; chapter?: number; verse?: number; verseEnd?: number
   text?: string | null; deckId?: string | null; layer?: number; column?: number; seconds?: number
 }
-export type ServiceState = { name: string; items: ServiceItem[]; current: string | null; verse: number }
+export type ServicePlanInfo = { id: string; name: string; date: string | null; count: number }
+export type ServiceState = { planId: string; name: string; date: string | null; plans: ServicePlanInfo[]; items: ServiceItem[]; current: string | null; verse: number }
 export type NoticeItem = { id: string; text: string }
 export type OverlaySettings = {
   notices: NoticeItem[]; noticeSeconds: number; noticeBackground: boolean; noticeStyle: LyricStyle
@@ -259,7 +261,9 @@ export type UiMessage =
   | { type: 'overlaySave'; settings: OverlaySettings }
   | { type: 'overlayTimer' | 'overlayNotices'; on: boolean }
   | { type: 'overlayNotice'; id: string }
-  | { type: 'serviceSave'; plan: { name: string; items: ServiceItem[] } }
+  | { type: 'serviceSave'; plan: { name: string; date: string | null; items: ServiceItem[] } }
+  | { type: 'servicePlanNew'; name: string; date: string | null; copy?: boolean }
+  | { type: 'servicePlanSelect' | 'servicePlanDelete'; id: string }
   | { type: 'serviceGo'; id: string }
   | { type: 'serviceStep'; direction: 1 | -1 }
   | { type: 'serviceReset' }

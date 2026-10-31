@@ -642,6 +642,7 @@ sealed partial class MainForm : Form
 
     void SendComposition(bool withThumbs = true)
     {
+        _comp.StoreDeck(); // o roteiro lista os clips de todas as abas
         Send(new
         {
             type = "composition",
@@ -664,14 +665,18 @@ sealed partial class MainForm : Form
                 hasAudio = _players[_comp.Layers.IndexOf(l)]?.HasAudio ?? false,
             }),
             masterEffects = _comp.MasterEffects,
-            decks = _comp.Decks.Select(d => new { id = d.Id, name = d.Name }),
+            decks = _comp.Decks.Select(d => new
+            {
+                id = d.Id, name = d.Name, columns = d.Columns, columnNames = d.ColumnNames,
+                clips = d.Clips.Select(row => row.Select(c => c == null ? null : new { kind = c.Kind, name = c.Name, path = c.Path })),
+            }),
             currentDeck = _comp.CurrentDeck,
         });
         BroadcastRemoteState();
         SendStage(); // a imagem do retorno depende do que está tocando
 
         // miniaturas que ainda não foram geradas (em segundo plano)
-        foreach (var path in _comp.Layers.SelectMany(l => l.Clips).Where(c => c?.Kind == ClipKind.Video).Select(c => c!.Path!).Distinct())
+        foreach (var path in _comp.Decks.SelectMany(d => d.Clips).SelectMany(r => r).Where(c => c?.Kind == ClipKind.Video).Select(c => c!.Path!).Distinct())
         {
             if (_thumbs.TryGetValue(path, out var cached))
             {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { onMessage, send, type BibleBookInfo, type Composition, type LyricsState, type OverlayState, type PreviewRequest, type ServiceItem, type ServiceKind, type ServiceState, type Song, type StageTimer } from './bridge'
+import { onMessage, send, type BibleBookInfo, type Composition, type Deck, type LyricsState, type OverlayState, type PreviewRequest, type ServiceItem, type ServiceKind, type ServicePlanInfo, type ServiceState, type Song, type StageTimer } from './bridge'
 import { parseRef, refLabel } from './bible'
 import { normalize, splitSlides, stripTags } from './lyrics'
 import { formatTime, OverlayPanel } from './OverlayPanel'
@@ -22,6 +22,18 @@ type Props = {
   overlay: OverlayState | null
   timer: StageTimer | null
   fonts: string[]
+}
+
+/** "dom, 01/11/2026 · Culto de domingo" */
+function planLabel(p: ServicePlanInfo) {
+  if (!p.date) return p.name
+  const d = new Date(`${p.date}T12:00:00`)
+  return `${d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })} · ${p.name}`
+}
+
+const todayIso = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 /** O que o item mostra primeiro, para a prévia. */
@@ -53,8 +65,8 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
   const [minutes, setMinutes] = useState(5)
   const [books, setBooks] = useState<BibleBookInfo[]>([])
   const [mainVersion, setMainVersion] = useState<string | null | undefined>(undefined)
-
-  const save = (next: ServiceItem[], name = service.name) => send({ type: 'serviceSave', plan: { name, items: next } })
+  const [addDeck, setAddDeck] = useState<string | null>(null)
+  const save = (next: ServiceItem[], name = service.name, date = service.date) => send({ type: 'serviceSave', plan: { name, date, items: next } })
   const add = (item: Omit<ServiceItem, 'id'>) => {
     const created = { ...item, id: newId() }
     // entra depois do item selecionado, ou no fim
@@ -85,6 +97,14 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
   const parsed = useMemo(() => (refText.trim() ? parseRef(refText, books) : null), [refText, books])
   const parsedName = parsed ? books.find((b) => b.id === parsed.book)?.name ?? parsed.book : ''
 
+  // abas de clips: cada item guarda a sua
+  const deckOf = (id: string | null | undefined) => (id ? comp?.decks.find((d) => d.id === id) : comp?.decks[comp.currentDeck])
+  const deckColName = (d: Deck | undefined, c: number) => d?.columnNames?.[c] || `Coluna ${c + 1}`
+  const deckClips = (d: Deck | undefined) => (d?.clips ?? []).flatMap((row, layer) => row.flatMap((clip, column) => (clip && clip.kind !== 'lyrics' ? [{ clip, layer, column }] : [])))
+  const deckColumns = (d: Deck | undefined) => Array.from({ length: d?.columns ?? 0 }, (_, c) => c).filter((c) => columnHas(d, c))
+  const columnHas = (d: Deck | undefined, c: number) => !!d?.clips?.some((row) => row[c])
+  const deckClip = (i: ServiceItem) => deckOf(i.deckId)?.clips?.[i.layer ?? 0]?.[i.column ?? 0] ?? null
+
   const curIndex = items.findIndex((i) => i.id === current)
   const curItem = items[curIndex]
   const curSong = curItem?.kind === 'song' ? songs.find((s) => s.id === curItem.songId) : undefined
@@ -108,8 +128,7 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
   const previewItem = showSelected ? selItem : hasNextSlide || nextVerse ? undefined : nextItem
   const clipThumb = (() => {
     if (previewItem?.kind !== 'clip' || !comp) return undefined
-    if (previewItem.deckId && comp.decks[comp.currentDeck]?.id !== previewItem.deckId) return undefined
-    const path = comp.layers[previewItem.layer ?? 0]?.clips[previewItem.column ?? 0]?.path
+    const path = deckClip(previewItem)?.path
     return path ? thumbs[path] : undefined
   })()
 
@@ -131,9 +150,26 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
     return q ? songs.filter((s) => normalize(`${s.title} ${s.artist} ${stripTags(s.text)}`).includes(q)) : songs
   }, [songs, query])
 
-  const deckId = comp?.decks[comp.currentDeck]?.id ?? null
-  const columnName = (c: number) => comp?.columnNames?.[c] || `Coluna ${c + 1}`
-  const missing = (i: ServiceItem) => i.kind === 'song' && !songs.some((s) => s.id === i.songId)
+  const pickDeck = deckOf(addDeck) ?? deckOf(null)
+  const missing = (i: ServiceItem) => {
+    if (i.kind === 'song') return !songs.some((s) => s.id === i.songId)
+    if (i.kind === 'clip') return !deckClip(i)
+    if (i.kind === 'column') return !columnHas(deckOf(i.deckId), i.column ?? 0)
+    return false
+  }
+  // muda a aba de um item: mantém a posição se houver algo lá; senão, pega o primeiro da aba
+  const moveToDeck = (i: ServiceItem, id: string) => {
+    const d = deckOf(id)
+    if (i.kind === 'column') {
+      const cols = deckColumns(d)
+      const col = cols.includes(i.column ?? 0) ? i.column ?? 0 : cols[0] ?? 0
+      patch(i.id, { deckId: id, column: col, title: deckColName(d, col) })
+    } else {
+      const list = deckClips(d)
+      const c = list.find((x) => x.layer === i.layer && x.column === i.column) ?? list[0]
+      patch(i.id, c ? { deckId: id, layer: c.layer, column: c.column, title: c.clip.name } : { deckId: id })
+    }
+  }
   const detail = (i: ServiceItem) => {
     if (i.kind === 'song') {
       const s = songs.find((x) => x.id === i.songId)
@@ -142,6 +178,14 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
     if (i.kind === 'notice' || i.kind === 'text') return stripTags(i.text ?? '').split('\n')[0]
     if (i.kind === 'timer') return formatTime(i.seconds ?? 0)
     if (i.kind === 'clear') return 'Tira a letra, a contagem e o aviso do telão'
+    if (i.kind === 'clip' || i.kind === 'column') {
+      const d = deckOf(i.deckId)
+      if (!d) return 'A aba deste item não existe mais'
+      if (missing(i)) return `Aba ${d.name}: não há nada nessa posição`
+      return i.kind === 'clip'
+        ? `Aba ${d.name} · ${comp?.layers[i.layer ?? 0]?.name ?? `Layer ${(i.layer ?? 0) + 1}`} · ${deckColName(d, i.column ?? 0)}`
+        : `Aba ${d.name} · coluna inteira`
+    }
     return ''
   }
 
@@ -196,19 +240,26 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
                 )
             )}
             {addTab === 'clips' && comp && (
-              <div className="song-list culto-pick">
-                {Array.from({ length: comp.columns }, (_, c) => c).filter((c) => comp.layers.some((l) => l.clips[c])).map((c) => (
-                  <div key={`c${c}`} className="song" title="A coluna inteira entra junto" onClick={() => add({ kind: 'column', title: columnName(c), deckId, column: c })}>
-                    <strong>▦ {columnName(c)}</strong><span>coluna inteira</span>
-                  </div>
-                ))}
-                {comp.layers.flatMap((l, li) => l.clips.map((clip, c) => clip && clip.kind !== 'lyrics' && (
-                  <div key={`${li}-${c}`} className="song" onClick={() => add({ kind: 'clip', title: clip.name, deckId, layer: li, column: c })}>
-                    <strong>{clip.name}</strong><span>{l.name} · {columnName(c)}</span>
-                  </div>
-                )))}
-                <p className="meta">Clips da aba aberta na grade.</p>
-              </div>
+              <>
+                <label className="deck-pick">Aba
+                  <select value={pickDeck?.id ?? ''} onChange={(e) => setAddDeck(e.target.value)}>
+                    {comp.decks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </label>
+                <div className="song-list culto-pick">
+                  {deckColumns(pickDeck).map((c) => (
+                    <div key={`c${c}`} className="song" title="A coluna inteira entra junto" onClick={() => add({ kind: 'column', title: deckColName(pickDeck, c), deckId: pickDeck?.id, column: c })}>
+                      <strong>▦ {deckColName(pickDeck, c)}</strong><span>coluna inteira</span>
+                    </div>
+                  ))}
+                  {deckClips(pickDeck).map(({ clip, layer, column }) => (
+                    <div key={`${layer}-${column}`} className="song" onClick={() => add({ kind: 'clip', title: clip.name, deckId: pickDeck?.id, layer, column })}>
+                      <strong>{clip.name}</strong><span>{comp.layers[layer]?.name} · {deckColName(pickDeck, column)}</span>
+                    </div>
+                  ))}
+                  {deckClips(pickDeck).length === 0 && <p className="meta">Esta aba não tem clips.</p>}
+                </div>
+              </>
             )}
             {addTab === 'other' && (
               <>
@@ -228,11 +279,32 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
 
           <section className="culto-list">
             <div className="effects-head">
-              <input className="name culto-name" value={service.name} onChange={(e) => save(items, e.target.value)} title="Nome do roteiro" />
+              <select className="plan-select" value={service.planId} title="Culto aberto" onChange={(e) => { setSelected(null); send({ type: 'servicePlanSelect', id: e.target.value }) }}>
+                {[...service.plans].sort((x, y) => (x.date ?? '9999').localeCompare(y.date ?? '9999') || x.name.localeCompare(y.name)).map((p) => (
+                  <option key={p.id} value={p.id}>{planLabel(p)} ({p.count})</option>
+                ))}
+              </select>
+              <span className="row">
+                <button className="small" onClick={() => {
+                  const name = window.prompt('Nome do novo culto (ex.: Culto de domingo):')
+                  if (name?.trim()) { setSelected(null); send({ type: 'servicePlanNew', name: name.trim(), date: todayIso() }) }
+                }}>+ Novo culto</button>
+                <button className="small" title="Cria outro culto com os mesmos itens" onClick={() => {
+                  const name = window.prompt('Nome da cópia:', service.name)
+                  if (name?.trim()) { setSelected(null); send({ type: 'servicePlanNew', name: name.trim(), date: service.date, copy: true }) }
+                }}>Duplicar</button>
+                <button className="small danger-text" disabled={service.plans.length < 2} title="Excluir este culto" onClick={() => {
+                  if (window.confirm(`Excluir o culto "${service.name}"?`)) { setSelected(null); send({ type: 'servicePlanDelete', id: service.planId }) }
+                }}>Excluir</button>
+              </span>
+            </div>
+            <div className="plan-fields">
+              <input className="name culto-name" value={service.name} onChange={(e) => save(items, e.target.value)} title="Nome do culto" />
+              <input type="date" className="plan-date" value={service.date ?? ''} onChange={(e) => save(items, service.name, e.target.value || null)} title="Data do culto" />
               <span className="row">
                 <button className="small" disabled={!current} onClick={() => send({ type: 'serviceReset' })} title="Volta ao começo (não muda o que está no telão)">Voltar ao início</button>
                 <button className="small danger-text" disabled={items.length === 0} onClick={() => {
-                  if (window.confirm('Apagar todos os itens deste roteiro?')) save([])
+                  if (window.confirm('Apagar todos os itens deste culto?')) save([])
                 }}>Limpar</button>
               </span>
             </div>
@@ -255,6 +327,40 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
                   <div className="service-text">
                     <strong>{i.title}</strong>
                     <span className="meta">{detail(i)}</span>
+                    {i.id === selected && (i.kind === 'clip' || i.kind === 'column') && comp && (
+                      <div className="item-deck" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+                        <label>Aba
+                          <select value={i.deckId ?? deckOf(null)?.id ?? ''} onChange={(e) => moveToDeck(i, e.target.value)}>
+                            {!deckOf(i.deckId) && <option value={i.deckId ?? ''}>(aba removida)</option>}
+                            {comp.decks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                          </select>
+                        </label>
+                        {i.kind === 'clip' && (
+                          <label>Clip
+                            <select value={`${i.layer ?? 0}:${i.column ?? 0}`} onChange={(e) => {
+                              const [layer, column] = e.target.value.split(':').map(Number)
+                              patch(i.id, { layer, column, title: deckOf(i.deckId)?.clips?.[layer]?.[column]?.name ?? i.title })
+                            }}>
+                              {!deckClip(i) && <option value={`${i.layer ?? 0}:${i.column ?? 0}`}>(vazio)</option>}
+                              {deckClips(deckOf(i.deckId)).map(({ clip, layer, column }) => (
+                                <option key={`${layer}:${column}`} value={`${layer}:${column}`}>{clip.name} ({comp.layers[layer]?.name})</option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                        {i.kind === 'column' && (
+                          <label>Coluna
+                            <select value={i.column ?? 0} onChange={(e) => {
+                              const column = Number(e.target.value)
+                              patch(i.id, { column, title: deckColName(deckOf(i.deckId), column) })
+                            }}>
+                              {!missing(i) ? null : <option value={i.column ?? 0}>(vazia)</option>}
+                              {deckColumns(deckOf(i.deckId)).map((c) => <option key={c} value={c}>{deckColName(deckOf(i.deckId), c)}</option>)}
+                            </select>
+                          </label>
+                        )}
+                      </div>
+                    )}
                     {i.id === selected && (
                       <input className="name" placeholder="Anotação (só você vê)" value={i.note ?? ''} onClick={(e) => e.stopPropagation()} onChange={(e) => patch(i.id, { note: e.target.value })} />
                     )}

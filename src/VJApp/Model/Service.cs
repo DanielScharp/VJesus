@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace VJApp.Model;
 
@@ -49,12 +50,42 @@ sealed class OverlaySettings
     public LyricStyle TimerStyle { get; set; } = new() { FontSize = 200, OutlineWidth = 0, Transition = "corte", FadeMs = 0 };
 }
 
-/// <summary>Roteiro do culto (a lista em ordem) mais a contagem e os avisos. Salvo em culto.json e no projeto.</summary>
+/// <summary>Um culto salvo: nome, data e a lista em ordem.</summary>
+sealed class ServicePlan
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N")[..10];
+    public string Name { get; set; } = "Culto";
+    /// <summary>Data no formato aaaa-mm-dd (opcional).</summary>
+    public string? Date { get; set; }
+    public List<ServiceItem> Items { get; set; } = [];
+}
+
+/// <summary>Os cultos salvos mais a contagem e os avisos. Salvo em culto.json e no projeto.</summary>
 sealed class ServiceLibrary
 {
-    public string Name { get; set; } = "Culto";
-    public List<ServiceItem> Items { get; set; } = [];
+    public List<ServicePlan> Plans { get; set; } = [];
+    public string? ActivePlan { get; set; }
     public OverlaySettings Overlay { get; set; } = new();
+
+    // versão 1.17.0 tinha um roteiro só: vira o primeiro culto da lista
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Name { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public List<ServiceItem>? Items { get; set; }
+
+    /// <summary>O culto aberto (sempre existe um).</summary>
+    [JsonIgnore]
+    public ServicePlan Active
+    {
+        get
+        {
+            if (Items != null || Plans.Count == 0)
+            {
+                Plans.Insert(0, new ServicePlan { Name = string.IsNullOrWhiteSpace(Name) ? "Culto" : Name, Items = Items ?? [] });
+                Items = null;
+                Name = null;
+            }
+            return Plans.FirstOrDefault(p => p.Id == ActivePlan) ?? Plans[0];
+        }
+    }
 
     static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
 

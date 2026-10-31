@@ -741,4 +741,12 @@ button.onair-btn { background: #c93030; border-color: #c93030; color: #fff; font
   .culto-live { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; align-items: start; }
   .culto-go, .culto-live h3, .culto-slides, .culto-live > button.primary { grid-column: 1 / -1; }
   .service-item { flex-wrap: wrap; }
-}
+}.deck-pick { grid-template-columns: 40px 1fr; font-size: 12px; }
+.plan-select { flex: 1; min-width: 0; font-size: 14px; padding: 5px 6px; margin-right: 10px; font-weight: 600; }
+.plan-fields { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.plan-fields .row { margin: 0; flex-wrap: nowrap; }
+.plan-fields .culto-name { margin: 0; font-weight: 400; }
+.plan-date { background: var(--btn); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px; color-scheme: dark; }
+.item-deck { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; }
+.item-deck label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; }
+.item-deck select { max-width: 240px; }
