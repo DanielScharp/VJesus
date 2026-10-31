@@ -17,7 +17,7 @@ export const SCOPE_LABEL: Record<Scope, string> = {
   culto: 'Aba Culto',
   letras: 'Aba Letras',
   biblia: 'Aba Bíblia',
-  mapeamento: 'Aba Mapeamento',
+  mapeamento: 'Tela de Mapeamento',
 }
 
 export const ACTIONS: ActionDef[] = [

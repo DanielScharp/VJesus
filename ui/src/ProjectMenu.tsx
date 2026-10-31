@@ -10,7 +10,7 @@ const ITEMS = [
 ] as const
 
 /** Menu "Projeto" no topo (Novo, Abrir, Salvar, Salvar como) com atalhos de teclado. */
-export function ProjectMenu({ project, onShortcuts, update }: { project: string | null; onShortcuts: () => void; update: UpdateState | null }) {
+export function ProjectMenu({ project, onShortcuts, update, mappingOpen, onMapping }: { project: string | null; onShortcuts: () => void; update: UpdateState | null; mappingOpen: boolean; onMapping: () => void }) {
   const [open, setOpen] = useState(false)
   const [, force] = useState(0)
   useEffect(() => subscribe(() => force((n) => n + 1)), [])
@@ -41,7 +41,7 @@ export function ProjectMenu({ project, onShortcuts, update }: { project: string 
 
   return (
     <div className="project-menu" ref={ref}>
-      <button className={`project-btn ${open ? 'active' : ''}`} onClick={() => setOpen(!open)} title={project ?? 'Projeto sem título'}>
+      <button className={`project-btn ${open || mappingOpen ? 'active' : ''}`} onClick={() => setOpen(!open)} title={project ?? 'Projeto sem título'}>
         <span className="project-label">Menu</span>
         <span className="project-name">{project ?? 'Sem título'}</span>
         <span className="caret">▾</span>
@@ -54,6 +54,7 @@ export function ProjectMenu({ project, onShortcuts, update }: { project: string 
             </button>
           ))}
           <div className="dropdown-sep" />
+          <button onClick={() => { onMapping(); setOpen(false) }}><span>Mapeamento{mappingOpen ? ' ●' : ''}</span><kbd /></button>
           <button onClick={() => { onShortcuts(); setOpen(false) }}><span>Atalhos de teclado…</span><kbd /></button>
           <button disabled={update?.status === 'checking' || update?.status === 'downloading'} onClick={() => send({ type: 'updateCheck' })}>
             <span>{update?.status === 'checking' ? 'Conferindo…' : 'Verificar atualizações'}</span><kbd />

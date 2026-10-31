@@ -102,7 +102,7 @@ Barra **Ataques** em todas as abas: efeitos rápidos por cima de tudo (inclusive
 
 * **Novo / Abrir… / Salvar / Salvar como…** no topo: um projeto `.vjproj` guarda a grade de clips, efeitos e o mapeamento.
 * O estado atual também é salvo sozinho em `%AppData%\VJesus` (volta ao reabrir o app).
-* **Presets de mapeamento** (aba Mapeamento): salve o ajuste de cada palco com um nome e carregue quando voltar a ele.
+* **Presets de mapeamento** (tela Menu → Mapeamento): salve o ajuste de cada palco com um nome e carregue quando voltar a ele.
 
 ## Controle externo
 

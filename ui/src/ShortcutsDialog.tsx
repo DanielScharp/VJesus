@@ -13,7 +13,7 @@ const GROUPS: { scope: Scope; title: string }[] = [
   { scope: 'culto', title: 'Aba Culto' },
   { scope: 'letras', title: 'Aba Letras' },
   { scope: 'biblia', title: 'Aba Bíblia' },
-  { scope: 'mapeamento', title: 'Aba Mapeamento' },
+  { scope: 'mapeamento', title: 'Tela de Mapeamento' },
 ]
 
 /**

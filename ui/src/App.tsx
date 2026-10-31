@@ -153,10 +153,9 @@ function App() {
     <div className="app">
       <header className="topbar">
         <h1>VJesus</h1>
-        <ProjectMenu project={project} onShortcuts={() => setShortcutsOpen(true)} update={update} />
+        <ProjectMenu project={project} onShortcuts={() => setShortcutsOpen(true)} update={update} mappingOpen={tab === 'mapping'} onMapping={() => setTab('mapping')} />
         <nav className="row tabs">
           <button className={tab === 'clips' ? 'active' : ''} onClick={() => setTab('clips')}>Clips e efeitos</button>
-          <button className={tab === 'mapping' ? 'active' : ''} onClick={() => setTab('mapping')}>Mapeamento</button>
           <button className={tab === 'culto' ? 'active' : ''} onClick={() => setTab('culto')}>Culto</button>
           <button className={tab === 'lyrics' ? 'active' : ''} onClick={() => setTab('lyrics')}>Letras</button>
           <button className={tab === 'bible' ? 'active' : ''} onClick={() => setTab('bible')}>Bíblia</button>
@@ -261,7 +260,7 @@ function App() {
                   <input type="checkbox" checked={testCard} onChange={(e) => setTestCard(e.target.checked)} />
                   Test card nas saídas (para alinhar projetores)
                 </label>
-                <p className="meta">Telas de saída, monitores e tela cheia ficam na aba Mapeamento.</p>
+                <p className="meta">Telas de saída, monitores e tela cheia ficam em Menu → Mapeamento.</p>
               </section>
               <ControlPanel info={control} learn={learn} onLearn={setLearn} />
               {streaming && <StreamingPanel info={streaming} />}
