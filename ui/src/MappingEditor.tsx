@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { send, type Composition, type Display, type LayerGroup, type MappingSetup, type Mask, type OutputScreen, type Pt, type Slice } from './bridge'
+import { onMessage, send, type Composition, type Display, type LayerGroup, type MappingSetup, type Mask, type OutputScreen, type Pt, type Slice } from './bridge'
 import { applyLed } from './led'
 import { matches } from './shortcuts'
 import { LedMap, type SourceOption } from './LedMap'
@@ -68,6 +68,8 @@ function useDrag(onEnd: () => void) {
 }
 
 export function MappingEditor({ mapping, onChange, displays, preview, testCard, onTestCard, presets, comp }: Props) {
+  const [ledTest, setLedTest] = useState<'off' | 'regua' | 'partes'>('off')
+  useEffect(() => onMessage((msg) => { if (msg.type === 'ledTest') setLedTest(msg.mode) }), [])
   const [preset, setPreset] = useState('')
   const [screenId, setScreenId] = useState<string | undefined>(mapping.screens[0]?.id)
   const [sel, setSel] = useState<Sel>(null)
@@ -219,6 +221,28 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
           Test card nas saídas
         </label>
       </div>
+
+      <section className="led-test">
+        <span className="led-test-title">Teste de LED nas saídas:</span>
+        <button className={`small ${ledTest === 'regua' ? 'onair-btn' : ''}`} onClick={() => send({ type: 'ledTest', mode: ledTest === 'regua' ? 'off' : 'regua' })}
+          title="Mostra a coordenada de cada pedaço da saída, para descobrir onde cada painel começa e quanto mede">Régua de pixels</button>
+        <button className={`small ${ledTest === 'partes' ? 'onair-btn' : ''}`} onClick={() => send({ type: 'ledTest', mode: ledTest === 'partes' ? 'off' : 'partes' })}
+          title="Pinta cada parte configurada com número, nome, medidas e o topo da imagem">Identificar partes</button>
+        {ledTest !== 'off' && <button className="small" onClick={() => send({ type: 'ledTest', mode: 'off' })}>Voltar à imagem</button>}
+        {ledTest === 'regua' && (
+          <p className="meta">
+            Olhe para cada painel: o número no canto de cima à esquerda (x,y) é onde ele começa na saída. O número do quadrado no canto
+            de baixo à direita, mais 128, dá a largura e a altura (conte também as linhas finas, a cada 16 px). Anote e digite no mapa de painéis abaixo.
+            A borda vermelha é a saída inteira: se ela não aparece num lado, os painéis não chegam até ali.
+          </p>
+        )}
+        {ledTest === 'partes' && (
+          <p className="meta">
+            Cada parte do mapa aparece com uma cor e um número. Confira se cada painel mostra só a sua cor, inteira, sem pedaço de outra,
+            e se “▲ TOPO” está para cima. Se não estiver, ajuste posição, tamanho ou rotação da parte abaixo; o teste atualiza na hora.
+          </p>
+        )}
+      </section>
 
       <section className="screen-settings">
         <input className="name" value={screen.name} onChange={(e) => setScreen({ name: e.target.value })} />

@@ -1,4 +1,4 @@
-﻿using System.Drawing.Imaging;
+using System.Drawing.Imaging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using VJApp.Engine;
@@ -95,6 +95,7 @@ sealed partial class MainForm
         }
         _renderer.SetGroups([.. groupLayers]);
         _renderer.SetOutputs(specs);
+        LedTestMappingChanged();
     }
 
     void CloseOutputWindows()

@@ -19,6 +19,11 @@ sealed class OutputTarget(IntPtr hwnd) : IDisposable
     public readonly List<(int Source, ID3D11Buffer Vb, int Count)> SliceBatches = [];
     public ID3D11Buffer? MaskVb;
     public int MaskCount;
+    /// <summary>Teste de LED no lugar da imagem (null = imagem normal).</summary>
+    public ID3D11Texture2D? TestTex;
+    public ID3D11ShaderResourceView? TestSrv;
+
+    public void ClearTest() { TestSrv?.Dispose(); TestTex?.Dispose(); TestSrv = null; TestTex = null; }
 
     public void ClearBatches()
     {
@@ -28,7 +33,7 @@ sealed class OutputTarget(IntPtr hwnd) : IDisposable
 
     public void Dispose()
     {
-        ClearBatches(); MaskVb?.Dispose();
+        ClearBatches(); MaskVb?.Dispose(); ClearTest();
         Rtv?.Dispose(); SwapChain?.Dispose();
     }
 }
@@ -66,6 +71,36 @@ partial class Renderer
         public bool Pending;
         public long Last;
         public void Dispose() { Staging.Dispose(); Rt.Dispose(); }
+    }
+
+    readonly Dictionary<IntPtr, (byte[]? Pixels, int W, int H)> _pendingTests = [];
+
+    /// <summary>Mostra (ou tira, com null) uma imagem de teste numa tela de saída, no lugar dos slices.</summary>
+    public void SetOutputTest(IntPtr hwnd, byte[]? bgra, int width, int height)
+    {
+        lock (_pendingTests) _pendingTests[hwnd] = (bgra, width, height);
+    }
+
+    unsafe void ApplyPendingTests()
+    {
+        lock (_pendingTests)
+        {
+            foreach (var (hwnd, t) in _pendingTests)
+            {
+                var o = _outputs.FirstOrDefault(x => x.Hwnd == hwnd);
+                if (o == null) continue;
+                o.ClearTest();
+                if (t.Pixels == null) continue;
+                fixed (byte* p = t.Pixels)
+                {
+                    o.TestTex = _device!.CreateTexture2D(new Texture2DDescription(Format.B8G8R8A8_UNorm, (uint)t.W, (uint)t.H, 1, 1,
+                        BindFlags.ShaderResource, ResourceUsage.Immutable), new SubresourceData((IntPtr)p, (uint)(t.W * 4)));
+                }
+                o.TestSrv = _device.CreateShaderResourceView(o.TestTex);
+            }
+            // telas que ainda não existem guardam o pedido para depois
+            foreach (var hwnd in _pendingTests.Keys.Where(h => _outputs.Any(o => o.Hwnd == h)).ToList()) _pendingTests.Remove(hwnd);
+        }
     }
 
     /// <summary>Define as telas de saída e o mapeamento de cada uma (substitui o conjunto anterior).</summary>
@@ -146,6 +181,7 @@ partial class Renderer
             }
             _pendingResizes.Clear();
         }
+        ApplyPendingTests();
     }
 
     void CreateSwapChain(OutputTarget o, int width, int height)
@@ -191,6 +227,17 @@ partial class Renderer
             ctx.OMSetRenderTargets(o.Rtv);
             ctx.RSSetViewport(new Viewport(o.Width, o.Height));
             ctx.ClearRenderTargetView(o.Rtv, new Color4(0, 0, 0, 1));
+
+            if (o.TestSrv != null)
+            {
+                // teste de LED: a imagem de teste ocupa a saída inteira, pixel a pixel
+                ctx.IASetInputLayout(null);
+                Pass(_psBlit!, o.Rtv, o.TestSrv);
+                ctx.PSSetShaderResource(0, null!);
+                o.SwapChain!.Present(first ? 1u : 0u, PresentFlags.None);
+                first = false;
+                continue;
+            }
 
             ctx.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
             ctx.IASetInputLayout(_sliceLayout);

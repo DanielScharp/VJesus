@@ -764,3 +764,6 @@ button.onair-btn { background: #c93030; border-color: #c93030; color: #fff; font
 .layer-chip { border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; }
 .layer-chip.on { border-color: var(--accent); }.transition-when { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 12px; margin: 2px 0 8px; color: var(--muted); }
 .transition-when label.check { margin: 0; color: var(--text); }
+.led-test { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; }
+.led-test-title { font-size: 13px; color: var(--muted); }
+.led-test p.meta { flex-basis: 100%; margin: 4px 0 0; font-size: 12px; }

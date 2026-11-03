@@ -177,6 +177,7 @@ sealed partial class MainForm : Form
                 SendService();
                 SendUpdate();
                 SendCarousels();
+                Send(new { type = "ledTest", mode = _ledTest });
                 break;
 
             case "tap": Tap(); break;
@@ -186,7 +187,7 @@ sealed partial class MainForm : Form
             case var fontType when fontType?.StartsWith("fonts") == true: OnFontMessage(fontType, msg); break;
             case var overlayType when overlayType?.StartsWith("overlay") == true: OnOverlayMessage(overlayType, msg); break;
             case var carouselType when carouselType?.StartsWith("carousel") == true: OnCarouselMessage(carouselType, msg); break;
-            case var carouselType when carouselType?.StartsWith("carousel") == true: OnCarouselMessage(carouselType, msg); break;
+            case "ledTest": OnLedTestMessage(msg); break;
             case var serviceType when serviceType?.StartsWith("service") == true: OnServiceMessage(serviceType, msg); break;
             case var updateType when updateType?.StartsWith("update") == true: OnUpdateMessage(updateType, msg); break;
             case "previewRender": _ = RenderPreviewAsync(msg); break;
