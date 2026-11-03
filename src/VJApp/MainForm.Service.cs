@@ -161,11 +161,13 @@ sealed partial class MainForm
                 ClearLyrics();
                 if (ServiceDeck(item) && item.Column < _comp.Columns)
                 {
+                    BeginTriggerGroup();
                     for (int i = 0; i < _comp.Layers.Count; i++)
                     {
                         if (_comp.Layers[i].Clips[item.Column] != null) Trigger(i, item.Column);
                         else ClearLayer(i);
                     }
+                    EndTriggerGroup();
                     CompositionChanged();
                 }
                 else Send(new { type = "error", message = $"A coluna de \"{item.Title}\" não existe mais." });

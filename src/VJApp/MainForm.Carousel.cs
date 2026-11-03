@@ -92,11 +92,13 @@ sealed partial class MainForm
             if (k == columns - 1) return; // nenhuma coluna com clip nessas layers
         }
         run.Column = col;
+        BeginTriggerGroup();
         foreach (int l in layers)
         {
             if (At(l, col) is { } clip) Trigger(l, col, clip, deck.Id);
             else ClearLayer(l);
         }
+        EndTriggerGroup();
         SendComposition(withThumbs: false);
     }
 

@@ -364,11 +364,13 @@ sealed partial class MainForm : Form
                 break;
 
             case "triggerColumn":
+                BeginTriggerGroup();
                 for (int i = 0; i < _comp.Layers.Count; i++)
                 {
                     if (_comp.Layers[i].Clips[C()] != null) Trigger(i, C());
                     else ClearLayer(i);
                 }
+                EndTriggerGroup();
                 SendComposition();
                 break;
 
@@ -545,6 +547,12 @@ sealed partial class MainForm : Form
         _comp.Layers[layer].PlayingClip = clip;
         ApplyClipProps(layer, clip);
     }
+
+    int _triggerGroupSeq;
+
+    /// <summary>As trocas até EndTriggerGroup começam a transição juntas (quando todos os clips novos tiverem imagem).</summary>
+    void BeginTriggerGroup() { if (_renderer != null) _renderer.TriggerGroup = ++_triggerGroupSeq; }
+    void EndTriggerGroup() { if (_renderer != null) _renderer.TriggerGroup = 0; }
 
     void ClearLayer(int layer)
     {

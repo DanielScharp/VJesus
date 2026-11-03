@@ -61,8 +61,12 @@ export function TempoBar({ bpm, beat }: { bpm: number; beat: number }) {
 }
 
 const TRANSITION_LABELS: Record<Transition, string> = {
-  cut: 'Corte seco', crossfade: 'Crossfade', dip: 'Escurecer', wipe: 'Cortina',
+  cut: 'Corte seco', crossfade: 'Crossfade (suave)', dip: 'Passar pelo preto', wipe: 'Cortina',
+  push: 'Deslizar', zoom: 'Aproximar', blur: 'Desfocar',
 }
+
+/** Tempos mais usados: curto para música, médio para trocas calmas, longo para fundos. */
+const DURATIONS = [0.3, 0.5, 0.8, 1, 1.5, 2, 3]
 
 const IDENTITY: LayerTransform = { x: 0, y: 0, scale: 1, width: 1, height: 1, rotation: 0, radius: [0, 0, 0, 0] }
 
@@ -115,6 +119,13 @@ export function LayerSettings({ layer, index, onChange }: {
           <input type="range" min={0.1} max={5} step={0.1} value={layer.transitionSeconds}
             onChange={(e) => onChange({ transitionSeconds: Number(e.target.value) })} />
         </label>
+      )}
+      {layer.transition !== 'cut' && (
+        <div className="row chips duration-chips">
+          {DURATIONS.map((d) => (
+            <button key={d} className={`small ${Math.abs(layer.transitionSeconds - d) < 0.01 ? 'active' : ''}`} onClick={() => onChange({ transitionSeconds: d })}>{d.toString().replace('.', ',')} s</button>
+          ))}
+        </div>
       )}
       {layer.transition !== 'cut' && (
         <div className="transition-when">

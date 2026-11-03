@@ -17,7 +17,7 @@ export type EffectParam = { id: string; label: string; min: number; max: number;
 export type EffectDef = { id: string; name: string; feedback: boolean; params: EffectParam[] }
 export type EffectInstance = { effect: string; enabled: boolean; values: Record<string, number> }
 
-export const TRANSITIONS = ['cut', 'crossfade', 'dip', 'wipe'] as const
+export const TRANSITIONS = ['cut', 'crossfade', 'dip', 'wipe', 'push', 'zoom', 'blur'] as const
 export type Transition = (typeof TRANSITIONS)[number]
 
 export type Layer = {

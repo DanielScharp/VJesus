@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Sdcb.FFmpeg.Raw;
 using Vortice.DXGI;
 using static Sdcb.FFmpeg.Raw.ffmpeg;
@@ -217,8 +217,11 @@ sealed unsafe class VideoPlayer : IDisposable
 
         _thread = new Thread(DecodeLoop) { IsBackground = true, Name = "Decode " + Path.GetFileName(path) };
         _thread.Start();
-        _clock.Start();
+        // o relógio começa no primeiro quadro mostrado (TakeFrame): abrir o arquivo não "come" o começo do clip
     }
+
+    /// <summary>Ainda não mostrou nenhum quadro (e ninguém pausou nem deu play manualmente).</summary>
+    bool _autoStart = true;
 
     HapFrame.Info? ProbeHap()
     {
@@ -292,8 +295,8 @@ sealed unsafe class VideoPlayer : IDisposable
         }
     }
 
-    public void Play() { lock (_lock) _clock.Start(); }
-    public void Pause() { lock (_lock) _clock.Stop(); }
+    public void Play() { lock (_lock) { _autoStart = false; _clock.Start(); } }
+    public void Pause() { lock (_lock) { _autoStart = false; _clock.Stop(); } }
 
     public void Seek(double seconds)
     {
@@ -324,6 +327,7 @@ sealed unsafe class VideoPlayer : IDisposable
                 pick = _ready.Dequeue();
             }
             if (pick == null) return null;
+            if (_autoStart) { _autoStart = false; _clock.Start(); }
             if (previous != null) _free.Push(previous);
             Monitor.PulseAll(_lock);
             return pick;

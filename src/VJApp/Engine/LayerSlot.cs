@@ -7,7 +7,7 @@ namespace VJApp.Engine;
 enum SourceKind { Video = 0, Plasma = 1, TestCard = 2 }
 
 /// <summary>Tipo de transição ao trocar o clip de uma layer (a ordem bate com o shader).</summary>
-enum TransitionKind { Cut = 0, Crossfade = 1, Dip = 2, Wipe = 3 }
+enum TransitionKind { Cut = 0, Crossfade = 1, Dip = 2, Wipe = 3, Push = 4, Zoom = 5, Blur = 6 }
 
 /// <summary>Uma fonte tocando numa layer: vídeo/câmera (com textura), Spout, letra ou gerador. Só o render thread mexe.</summary>
 sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSender, LyricsFeed? lyrics = null, string? ndiSource = null)
@@ -71,8 +71,12 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
     }
 
     /// <summary>Libera a GPU agora e o player em segundo plano (fechar o decoder pode demorar).</summary>
+    bool _disposed;
+
     public void Dispose()
     {
+        if (_disposed) return; // a troca de clips pode pedir para liberar a mesma fonte por dois caminhos
+        _disposed = true;
         Spout?.Dispose();
         if (Ndi is { } ndi) Task.Run(ndi.Dispose); // desconectar da rede pode demorar
         LyricsGpu?.Dispose();
@@ -106,6 +110,10 @@ sealed class LayerSlot
     /// <summary>A transição só começa a contar quando o clip novo tem o primeiro quadro.</summary>
     public bool TransitionWaiting;
     public double TransitionWaitSince;
+    /// <summary>De onde a transição parte (0..1): ao trocar no meio de outra, continua do ponto em que a tela estava.</summary>
+    public float TransitionFrom;
+    /// <summary>Layers disparadas juntas (coluna, carrossel) esperam umas pelas outras para começar a transição.</summary>
+    public int TransitionGroup, PendingGroup;
     public volatile float Volume = 1f;
     /// <summary>Esta layer aparece no item "Telão" da tela de retorno (quando está tocando).</summary>
     public volatile bool ToStage;
@@ -131,6 +139,9 @@ sealed class LayerSlot
     // estado do render thread (o mixer de áudio só lê as referências)
     public volatile LayerSource? Current;
     public volatile LayerSource? Outgoing;   // clip anterior, saindo durante a transição
+    /// <summary>Troca no meio de outra transição: o clip que já estava saindo, misturado com Outgoing por OutgoingMix.</summary>
+    public volatile LayerSource? OutgoingUnder;
+    public volatile float OutgoingMix = 1;
     public double TransitionStart;
     public double TransitionLength;
     /// <summary>Progresso da transição 0..1 (1 = terminada). Lido pelo mixer de áudio.</summary>

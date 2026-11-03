@@ -289,20 +289,55 @@ float4 PSSource(VSOut i) : SV_Target
 
 // ---------- transição entre o clip que entra (Tex0) e o que sai (Tex1) ----------
 
+float4 sampleIn(Texture2D t, float2 uv)
+{
+    return any(uv < 0) || any(uv > 1) ? float4(0, 0, 0, 0) : t.SampleLevel(LinearClamp, uv, 0);
+}
+
+float4 blur9(Texture2D t, float2 uv, float r)
+{
+    float4 acc = 0;
+    [unroll] for (int y = -1; y <= 1; y++)
+        [unroll] for (int x = -1; x <= 1; x++)
+            acc += t.SampleLevel(LinearClamp, uv + float2(x, y) * float2(r * 9.0 / 16.0, r), 0);
+    return acc / 9;
+}
+
 float4 PSTransition(VSOut i) : SV_Target
 {
-    float4 inc = Tex0.SampleLevel(LinearClamp, i.uv, 0);
-    float4 outc = Tex1.SampleLevel(LinearClamp, i.uv, 0);
     float p = saturate(TransitionMix);
-    if (TransitionKind > 2.5)            // cortina: o novo entra da esquerda para a direita, com borda suave
+    float e = p * p * (3 - 2 * p);       // começa e termina devagar: mais confortável de ver
+    int kind = (int)(TransitionKind + 0.5);
+    float2 uv = i.uv;
+    if (kind == 4)                       // deslizar: o novo empurra o anterior para a esquerda
+        return uv.x < 1 - e ? sampleIn(Tex1, uv + float2(e, 0)) : sampleIn(Tex0, uv - float2(1 - e, 0));
+    if (kind == 5)                       // aproximar: o anterior cresce um pouco e some, o novo assenta no lugar
     {
-        float edge = p * 1.06 - 0.03;
-        return lerp(outc, inc, 1 - smoothstep(edge - 0.03, edge + 0.03, i.uv.x));
+        float4 o = sampleIn(Tex1, (uv - 0.5) / (1 + 0.08 * e) + 0.5);
+        float4 n = sampleIn(Tex0, (uv - 0.5) / (1.08 - 0.08 * e) + 0.5);
+        return lerp(o, n, e);
     }
-    if (TransitionKind > 1.5)            // escuro: apaga o anterior e acende o novo
-        return p < 0.5 ? float4(outc.rgb * (1 - 2 * p), outc.a)
-                       : float4(inc.rgb * (2 * p - 1), inc.a);
-    return lerp(outc, inc, p);           // crossfade
+    if (kind == 6)                       // desfocar: os dois desfocam no meio da troca
+    {
+        float r = sin(3.14159 * p) * 0.01;
+        return lerp(blur9(Tex1, uv, r), blur9(Tex0, uv, r), e);
+    }
+    float4 inc = Tex0.SampleLevel(LinearClamp, uv, 0);
+    float4 outc = Tex1.SampleLevel(LinearClamp, uv, 0);
+    if (kind == 7) return lerp(outc, inc, p); // mistura fixa (os dois clips de uma transição interrompida)
+    if (kind == 3)                       // cortina: o novo entra da esquerda para a direita, com borda suave
+    {
+        float edge = e * 1.12 - 0.06;
+        return lerp(outc, inc, 1 - smoothstep(edge - 0.06, edge + 0.06, uv.x));
+    }
+    if (kind == 2)                       // escurecer: apaga o anterior e acende o novo
+    {
+        float a = saturate(p * 2), b = saturate(p * 2 - 1);
+        a = a * a * (3 - 2 * a);
+        b = b * b * (3 - 2 * b);
+        return p < 0.5 ? float4(outc.rgb * (1 - a), outc.a) : float4(inc.rgb * b, inc.a);
+    }
+    return lerp(outc, inc, e);           // crossfade
 }
 // ---------- mistura na composição ----------
 

@@ -1,4 +1,4 @@
-﻿using NAudio.CoreAudioApi;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
 namespace VJApp.Engine;
@@ -41,8 +41,11 @@ sealed class AudioMixer : ISampleProvider, IDisposable
             if (vol <= 0) continue;
             float p = slot.TransitionProgress;
             var outgoing = slot.Outgoing;
-            slot.Current?.Player?.MixAudio(span, vol * (outgoing != null ? p : 1));
-            outgoing?.Player?.MixAudio(span, vol * (1 - p));
+            float e = p * p * (3 - 2 * p); // mesma curva suave da imagem
+            slot.Current?.Player?.MixAudio(span, vol * (slot.TransitionActive ? e : 1));
+            float m = slot.OutgoingMix;
+            outgoing?.Player?.MixAudio(span, vol * (1 - e) * m);
+            slot.OutgoingUnder?.Player?.MixAudio(span, vol * (1 - e) * (1 - m));
         }
         // limitador simples para não estourar quando várias layers somam
         for (int i = 0; i < span.Length; i++)

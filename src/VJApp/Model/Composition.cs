@@ -11,7 +11,7 @@ enum ClipKind { Video, Plasma, TestCard, Camera, Spout, Lyrics, Ndi }
 
 /// <summary>Transição ao trocar o clip de uma layer (a ordem bate com o shader).</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<TransitionType>))]
-enum TransitionType { Cut, Crossfade, Dip, Wipe }
+enum TransitionType { Cut, Crossfade, Dip, Wipe, Push, Zoom, Blur }
 
 /// <summary>Blend modes disponíveis por layer (a ordem bate com o shader Composite.hlsl).</summary>
 enum BlendMode
@@ -119,8 +119,9 @@ sealed class Layer
     public LayerTransform Transform { get; set; } = new();
     public Clip?[] Clips { get; set; } = [];
     public List<EffectInstance> Effects { get; set; } = [];
-    public TransitionType Transition { get; set; } = TransitionType.Cut;
-    public float TransitionSeconds { get; set; } = 1f;
+    /// <summary>Layers novas já trocam de clip com um crossfade curto (mais confortável para quem assiste).</summary>
+    public TransitionType Transition { get; set; } = TransitionType.Crossfade;
+    public float TransitionSeconds { get; set; } = 0.8f;
     /// <summary>Quando usar a transição: ao entrar (vazio → clip), ao trocar de clip e ao sair (clip → vazio).</summary>
     public bool TransitionIn { get; set; } = true;
     public bool TransitionBetween { get; set; } = true;

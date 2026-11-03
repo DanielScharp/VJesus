@@ -132,6 +132,7 @@ sealed partial class Renderer : IDisposable
                 s.PendingPlayer = null;
             }
             s.Outgoing?.Dispose(); s.Outgoing = null;
+            s.OutgoingUnder?.Dispose(); s.OutgoingUnder = null;
             s.Current?.Dispose(); s.Current = null;
         }
     }
@@ -145,6 +146,7 @@ sealed partial class Renderer : IDisposable
     readonly RenderTexture?[] _comp = new RenderTexture?[2];  // composição (ping-pong)
     readonly RenderTexture?[] _work = new RenderTexture?[2];  // layer sendo processada (ping-pong)
     RenderTexture? _outgoing;                                 // clip que está saindo numa transição
+    RenderTexture? _outgoingUnder, _outgoingMixed;            // troca no meio de outra: os dois que saem, misturados
 
     // efeitos: shaders compilados e histórico (feedback) por instância
     volatile List<EffectDef>? _pendingDefs;
@@ -163,6 +165,9 @@ sealed partial class Renderer : IDisposable
     /// <summary>Pede para (re)compilar a biblioteca de efeitos no render thread.</summary>
     public void ReloadEffects(List<EffectDef> defs) => _pendingDefs = defs;
 
+    /// <summary>Enquanto diferente de 0, as trocas pedidas entram no mesmo grupo (coluna inteira, carrossel).</summary>
+    public volatile int TriggerGroup;
+
     /// <summary>Troca a fonte de uma layer (null = limpar). O clip anterior sai com a transição da layer.</summary>
     public void SetLayerSource(int layer, SourceKind? kind, VideoPlayer? player = null, string? spoutSender = null, LyricsFeed? lyrics = null, string? ndiSource = null)
     {
@@ -175,6 +180,7 @@ sealed partial class Renderer : IDisposable
             slot.PendingSpout = spoutSender;
             slot.PendingNdi = ndiSource;
             slot.PendingLyrics = lyrics;
+            slot.PendingGroup = TriggerGroup;
             slot.HasPending = true;
         }
     }
@@ -240,6 +246,8 @@ sealed partial class Renderer : IDisposable
             _work[i] = new RenderTexture(_device, CompWidth, CompHeight);
         }
         _outgoing = new RenderTexture(_device, CompWidth, CompHeight);
+        _outgoingUnder = new RenderTexture(_device, CompWidth, CompHeight);
+        _outgoingMixed = new RenderTexture(_device, CompWidth, CompHeight);
         InitOutputs(Compiler.Compile(src, "VSSlice", path, "vs_5_0").ToArray(), src, path);
         InitAttacks(src, path);
         InitLyrics(src, path);
@@ -282,32 +290,68 @@ sealed partial class Renderer : IDisposable
                 slot.HasPending = false;
                 incoming = slot.PendingKind is { } kind ? new LayerSource(kind, slot.PendingPlayer, slot.PendingSpout, slot.PendingLyrics, slot.PendingNdi) : null;
                 slot.PendingPlayer = null;
+                slot.TransitionGroup = slot.PendingGroup;
             }
             incoming?.CreateGpu(_device!);
 
             var old = slot.Current;
-            bool hasOld = old is { Ready: true }, hasNew = incoming != null;
+            var previous = slot.Outgoing;
+            var under = slot.OutgoingUnder;
+            bool oldReady = old is { Ready: true };
+            // o que sai é exatamente o que está na tela: se outra transição estava no meio, os dois clips
+            // dela saem juntos, misturados na mesma proporção (nada some de repente)
+            LayerSource? leaving = null, leavingUnder = null;
+            float mix = 1;
+            if (slot.TransitionActive)
+            {
+                // o que está na tela agora: até três imagens (as duas que já saíam e a que estava entrando);
+                // as duas mais visíveis saem juntas, na mesma proporção, e a menos visível é liberada
+                float p = slot.TransitionProgress, e = p * p * (3 - 2 * p), m = slot.OutgoingMix;
+                var parts = new List<(LayerSource? Src, float W, int Age)>
+                {
+                    (under, (1 - e) * (1 - m), 0),
+                    (previous, (1 - e) * m, 1),
+                    (oldReady ? old : null, e, 2),
+                };
+                var keep = parts.OrderByDescending(x => x.W).Take(2).OrderBy(x => x.Age).ToList();
+                leavingUnder = keep[0].Src;
+                leaving = keep[1].Src;
+                float sum = keep[0].W + keep[1].W;
+                mix = sum > 0.0001f ? keep[1].W / sum : 1;
+                foreach (var x in parts)
+                    if (x.Src != null && x.Src != leaving && x.Src != leavingUnder) x.Src.Dispose();
+                if (!oldReady && old != leaving && old != leavingUnder) old?.Dispose();
+            }
+            else
+            {
+                if (oldReady) leaving = old; else old?.Dispose();
+            }            bool hasOld = leaving != null || leavingUnder != null, hasNew = incoming != null;
             // entrada (vazio → clip), troca (clip → clip) e saída (clip → vazio) podem ter ou não transição
             bool wanted = hasOld && hasNew ? slot.TransitionBetween : hasNew ? slot.TransitionIn : hasOld && slot.TransitionOut;
             bool animate = slot.Transition != (int)TransitionKind.Cut && slot.TransitionSeconds > 0.01f && wanted;
-            slot.Outgoing?.Dispose(); // uma transição em andamento é substituída pela nova
-            if (animate)
+            if (!animate)
             {
-                slot.Outgoing = hasOld ? old : null; // na entrada, o que "sai" é a layer vazia
-                if (!hasOld) old?.Dispose();
+                leaving?.Dispose();
+                leavingUnder?.Dispose();
+                if (previous != leaving && previous != leavingUnder) previous?.Dispose();
+                slot.Outgoing = null;
+                slot.OutgoingUnder = null;
+                slot.TransitionProgress = 1;
+                slot.TransitionActive = false;
+            }
+            else
+            {
+                if (previous != leaving && previous != leavingUnder) previous?.Dispose();
+                slot.Outgoing = leaving; // na entrada, o que "sai" é a layer vazia (null)
+                slot.OutgoingUnder = leavingUnder;
+                slot.OutgoingMix = mix;
+                slot.TransitionFrom = 0;
                 slot.TransitionStart = now;
                 slot.TransitionLength = slot.TransitionSeconds;
                 slot.TransitionProgress = 0;
                 slot.TransitionWaiting = hasNew; // só começa quando o clip novo aparecer
                 slot.TransitionWaitSince = now;
                 slot.TransitionActive = true;
-            }
-            else
-            {
-                old?.Dispose();
-                slot.Outgoing = null;
-                slot.TransitionProgress = 1;
-                slot.TransitionActive = false;
             }
             slot.Current = incoming;
         }
@@ -433,10 +477,18 @@ sealed partial class Renderer : IDisposable
     /// <summary>Sobe os quadros novos de cada layer e avança as transições (uma vez por quadro).</summary>
     void UpdateSources(double now)
     {
+        // grupos (coluna inteira, carrossel) em que alguma layer ainda espera o primeiro quadro do clip novo
+        var waitingGroups = new HashSet<int>();
+        foreach (var s in Layers)
+            if (s.TransitionWaiting && s.TransitionGroup != 0 && s.Current is { Ready: false } && now - s.TransitionWaitSince < 3)
+                waitingGroups.Add(s.TransitionGroup);
+
         foreach (var slot in Layers)
         {
             slot.Current?.Update(_device!, _ctx!);
             slot.Outgoing?.Update(_device!, _ctx!);
+            slot.OutgoingUnder?.Update(_device!, _ctx!);
+            if (slot.OutgoingUnder?.Lyrics != null) UpdateLyrics(slot.OutgoingUnder, now, (float)now);
             if (slot.Current?.Lyrics != null) UpdateLyrics(slot.Current, now, (float)now);
             if (slot.Outgoing?.Lyrics != null) UpdateLyrics(slot.Outgoing, now, (float)now);
 
@@ -446,16 +498,21 @@ sealed partial class Renderer : IDisposable
                 // (no máximo 3 s, para um arquivo com problema não prender a layer)
                 if (slot.TransitionWaiting)
                 {
-                    if (slot.Current is { Ready: false } && now - slot.TransitionWaitSince < 3) slot.TransitionStart = now;
+                    bool self = slot.Current is { Ready: false };
+                    bool group = slot.TransitionGroup != 0 && waitingGroups.Contains(slot.TransitionGroup);
+                    if ((self || group) && now - slot.TransitionWaitSince < 3) slot.TransitionStart = now;
                     else slot.TransitionWaiting = false;
                 }
-                float progress = (float)Math.Clamp((now - slot.TransitionStart) / Math.Max(0.001, slot.TransitionLength), 0, 1);
+                float progress = (float)Math.Clamp(slot.TransitionFrom + (now - slot.TransitionStart) / Math.Max(0.001, slot.TransitionLength), 0, 1);
                 slot.TransitionProgress = progress;
                 // fim da transição: o clip anterior é liberado
                 if (progress >= 1)
                 {
                     slot.Outgoing?.Dispose();
                     slot.Outgoing = null;
+                    slot.OutgoingUnder?.Dispose();
+                    slot.OutgoingUnder = null;
+                    slot.OutgoingMix = 1;
                     slot.TransitionActive = false;
                 }
             }
@@ -488,9 +545,19 @@ sealed partial class Renderer : IDisposable
             if (slot.TransitionActive)
             {
                 DrawSource(slot, slot.Outgoing, _outgoing!); // sem clip anterior: fica transparente
+                var leavingTex = _outgoing!;
+                if (slot.OutgoingUnder != null || slot.OutgoingMix < 0.999f)
+                {
+                    // o que saía de uma transição interrompida: os dois clips na proporção em que estavam
+                    DrawSource(slot, slot.OutgoingUnder, _outgoingUnder!);
+                    var mixLp = new LayerParams { TransitionMix = slot.OutgoingMix, TransitionKind = 7 };
+                    ctx.UpdateSubresource(in mixLp, _layerCb!);
+                    Pass(_psTransition!, _outgoingMixed!.Rtv, _outgoing!.Srv, _outgoingUnder!.Srv);
+                    leavingTex = _outgoingMixed!;
+                }
                 var lp = new LayerParams { TransitionMix = slot.TransitionProgress, TransitionKind = slot.Transition };
                 ctx.UpdateSubresource(in lp, _layerCb!);
-                Pass(_psTransition!, _work[1 - w]!.Rtv, _work[w]!.Srv, _outgoing!.Srv);
+                Pass(_psTransition!, _work[1 - w]!.Rtv, _work[w]!.Srv, leavingTex.Srv);
                 w = 1 - w;
             }
 
@@ -578,12 +645,15 @@ sealed partial class Renderer : IDisposable
         {
             slot.Current?.Dispose();
             slot.Outgoing?.Dispose();
+            slot.OutgoingUnder?.Dispose();
             lock (slot.Lock) slot.PendingPlayer?.Dispose();
         }
         foreach (var h in _history.Values) h.Dispose();
         foreach (var fx in _effects.Values) fx.Ps.Dispose();
         for (int i = 0; i < 2; i++) { _comp[i]?.Dispose(); _work[i]?.Dispose(); }
         _outgoing?.Dispose();
+        _outgoingUnder?.Dispose();
+        _outgoingMixed?.Dispose();
         _sampler?.Dispose();
         _frameCb?.Dispose();
         _layerCb?.Dispose();
