@@ -28,6 +28,8 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
     }
     /// <summary>Como o clip estava na tela no último quadro (para sair igual, mesmo que o próximo clip mude o ajuste).</summary>
     public ClipLook? Look;
+    /// <summary>Ajustes do fundo gerado no último quadro (o que sai numa transição continua com eles).</summary>
+    public GenParams? Gen;
     public VideoFrame? ShownFrame;
     public ID3D11Texture2D? Texture;
     public ID3D11ShaderResourceView? Srv;

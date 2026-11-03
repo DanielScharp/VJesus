@@ -434,7 +434,8 @@ sealed partial class Renderer : IDisposable
         _ctx!.UpdateSubresource(in lp, _layerCb!);
         if (source.Kind == SourceKind.Plasma)
         {
-            var g = slot.Gen;
+            // o fundo tocando usa os ajustes atuais (e guarda); o que está saindo continua com as cores dele
+            var g = source == slot.Current || source.Gen == null ? (source.Gen = slot.Gen).Value : source.Gen.Value;
             _ctx.UpdateSubresource(in g, _genCb!);
         }
         Pass(_psSource!, target.Rtv, source.InputSrv);
