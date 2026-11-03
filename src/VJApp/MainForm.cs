@@ -72,6 +72,7 @@ sealed partial class MainForm : Form
         _renderer.Stats += fps => Send(new { type = "stats", fps = Math.Round(fps, 1) });
         _renderer.Preview += OnPreview;
         _renderer.StagePreview += OnStagePreview;
+        _renderer.OutputPreview += OnOutputPreview;
         _renderer.Error += ex => Send(new { type = "error", message = "Motor de vídeo: " + ex.Message });
         _renderer.EffectError += msg => Send(new { type = "error", message = msg });
         for (int i = 0; i < _comp.Layers.Count; i++) ApplyLayerParams(i);
@@ -188,6 +189,7 @@ sealed partial class MainForm : Form
             case var overlayType when overlayType?.StartsWith("overlay") == true: OnOverlayMessage(overlayType, msg); break;
             case var carouselType when carouselType?.StartsWith("carousel") == true: OnCarouselMessage(carouselType, msg); break;
             case "ledTest": OnLedTestMessage(msg); break;
+            case "outputPreview": SetOutputPreview((string?)msg["screenId"]); break;
             case var serviceType when serviceType?.StartsWith("service") == true: OnServiceMessage(serviceType, msg); break;
             case var updateType when updateType?.StartsWith("update") == true: OnUpdateMessage(updateType, msg); break;
             case "previewRender": _ = RenderPreviewAsync(msg); break;

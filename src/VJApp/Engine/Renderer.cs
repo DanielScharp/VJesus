@@ -61,12 +61,16 @@ struct GenParams
 /// <summary>Textura que serve de alvo de render e de entrada de shader.</summary>
 sealed class RenderTexture : IDisposable
 {
+    public int Width { get; }
+    public int Height { get; }
     public readonly ID3D11Texture2D Texture;
     public readonly ID3D11RenderTargetView Rtv;
     public readonly ID3D11ShaderResourceView Srv;
 
     public RenderTexture(ID3D11Device device, int width, int height)
     {
+        Width = width;
+        Height = height;
         Texture = device.CreateTexture2D(new Texture2DDescription(
             Format.B8G8R8A8_UNorm, (uint)width, (uint)height, 1, 1, BindFlags.RenderTarget | BindFlags.ShaderResource));
         Rtv = device.CreateRenderTargetView(Texture);

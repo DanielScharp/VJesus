@@ -766,4 +766,8 @@ button.onair-btn { background: #c93030; border-color: #c93030; color: #fff; font
 .transition-when label.check { margin: 0; color: var(--text); }
 .led-test { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; }
 .led-test-title { font-size: 13px; color: var(--muted); }
-.led-test p.meta { flex-basis: 100%; margin: 4px 0 0; font-size: 12px; }
+.led-test p.meta { flex-basis: 100%; margin: 4px 0 0; font-size: 12px; }.led-phys-head { justify-content: space-between; align-items: center; margin: 0; }
+.led-phys-head h3 { margin: 0; }
+.led-outline { fill: none; stroke-width: 3; vector-effect: non-scaling-stroke; }
+.led-part.active .led-outline { stroke: #fff !important; }
+.led-tag { fill: #fff; paint-order: stroke; stroke: #000; stroke-width: 3px; font-weight: 600; }

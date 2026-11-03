@@ -186,6 +186,7 @@ export type EngineMessage =
   | ({ type: 'update' } & UpdateState)
   | { type: 'slidePreview'; id: string; data: string | null; error?: string }
   | { type: 'carousels'; running: CarouselRun[] }
+  | { type: 'outputPreview'; screenId: string | null; data: string }
   | { type: 'ledTest'; mode: 'off' | 'regua' | 'partes' }
 
 type Cell = { layer: number; column: number }
@@ -278,6 +279,7 @@ export type UiMessage =
   | { type: 'serviceStep'; direction: 1 | -1 }
   | { type: 'serviceReset' }
   | { type: 'carouselSet'; deckId: string; settings: CarouselSettings }
+  | { type: 'outputPreview'; screenId: string | null }
   | { type: 'ledTest'; mode: 'off' | 'regua' | 'partes' }
   | { type: 'carouselRun'; deckId: string; on: boolean }
   | { type: 'carouselStep'; deckId: string; direction: 1 | -1 }

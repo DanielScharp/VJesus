@@ -96,6 +96,32 @@ sealed partial class MainForm
         _renderer.SetGroups([.. groupLayers]);
         _renderer.SetOutputs(specs);
         LedTestMappingChanged();
+        if (_outputPreviewScreen != null) SetOutputPreview(_outputPreviewScreen); // a janela pode ter sido criada agora
+    }
+
+    string? _outputPreviewScreen;
+    readonly EncodeGate _outputGate = new();
+
+    /// <summary>A UI quer ver uma saída exatamente como ela sai (null = parar).</summary>
+    void SetOutputPreview(string? screenId)
+    {
+        _outputPreviewScreen = screenId;
+        if (_renderer == null) return;
+        var screen = _mapping.Screens.FirstOrDefault(s => s.Id == screenId);
+        if (screen != null)
+        {
+            var displays = Screen.AllScreens;
+            var b = screen.Display >= 0 && screen.Display < displays.Length ? displays[screen.Display].Bounds : new Rectangle(0, 0, 1920, 1080);
+            _renderer.OutputPreviewWidth = b.Width;
+            _renderer.OutputPreviewHeight = b.Height;
+        }
+        _renderer.OutputPreviewHwnd = screenId != null && _windows.TryGetValue(screenId, out var w) ? w.Handle : IntPtr.Zero;
+    }
+
+    void OnOutputPreview(byte[] bgra, int width, int height, int pitch)
+    {
+        string? id = _outputPreviewScreen;
+        EncodePreview(_outputGate, bgra, width, height, pitch, data => Send(new { type = "outputPreview", screenId = id, data }));
     }
 
     void CloseOutputWindows()

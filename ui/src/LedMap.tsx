@@ -12,6 +12,8 @@ type Props = {
   sources: SourceOption[]
   magnet: boolean
   onScreen: (s: OutputScreen) => void
+  /** Imagem exata da saída (o que a processadora recebe), para mostrar dentro de cada painel. */
+  image?: string | null
 }
 
 const COLORS = ['#ffb020', '#4fc3f7', '#81c784', '#e57373', '#ba68c8', '#fff176', '#4db6ac', '#ff8a65']
@@ -20,7 +22,8 @@ const COLORS = ['#ffb020', '#4fc3f7', '#81c784', '#e57373', '#ba68c8', '#fff176'
  * Mapa de painéis de LED: cada parte tem onde fica no mapa de pixels da processadora (X, Y, largura,
  * altura e giro) e onde está montada no palco (mapa físico, arrastável). Gera os slices sozinho.
  */
-export function LedMap({ screen, outW, outH, sources, magnet, onScreen }: Props) {
+export function LedMap({ screen, outW, outH, sources, magnet, onScreen, image }: Props) {
+  const [showImage, setShowImage] = useState(true)
   const led = screen.led
   const svg = useRef<SVGSVGElement>(null)
   const drag = useRef<{ id: string; x0: number; y0: number; mx: number; my: number; scale: number } | null>(null)
@@ -81,6 +84,7 @@ export function LedMap({ screen, outW, outH, sources, magnet, onScreen }: Props)
   }
 
   const sel = led.parts.find((p) => p.id === selected)
+  const withImage = showImage && !!image
   const srcLabel = (v: string | null) => sources.find((s) => s.value === (v ?? ''))?.label ?? 'Composição inteira'
 
   return (
@@ -100,7 +104,12 @@ export function LedMap({ screen, outW, outH, sources, magnet, onScreen }: Props)
 
       <div className="led-body">
         <div>
-          <h3>Como está montado no palco (arraste as partes)</h3>
+          <div className="row led-phys-head">
+            <h3>Como está montado no palco (arraste as partes)</h3>
+            <label className="check" title="Mostra dentro de cada painel exatamente o que vai aparecer nele">
+              <input type="checkbox" checked={showImage} onChange={(e) => setShowImage(e.target.checked)} /> Mostrar a imagem
+            </label>
+          </div>
           <svg ref={svg} className="editor led-phys" viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
             onPointerMove={onMove} onPointerUp={() => { drag.current = null }} onPointerDown={() => setSelected(null)}>
             <rect x={vb.x} y={vb.y} width={vb.w} height={vb.h} className="bg" />
@@ -108,12 +117,25 @@ export function LedMap({ screen, outW, outH, sources, magnet, onScreen }: Props)
               const s = physSize(p)
               const fs = Math.max(vb.w, vb.h) * 0.028
               return (
-                <g key={p.id} className={`led-part ${selected === p.id ? 'active' : ''}`} onPointerDown={(e) => onDown(e, p)}>
-                  <rect x={p.mapX} y={p.mapY} width={s.w} height={s.h} style={{ fill: COLORS[i % COLORS.length] + '33', stroke: COLORS[i % COLORS.length] }} />
-                  <text x={p.mapX + s.w / 2} y={p.mapY + s.h / 2} style={{ fontSize: fs }} textAnchor="middle">{p.name}</text>
-                  <text x={p.mapX + s.w / 2} y={p.mapY + s.h / 2 + fs * 1.3} style={{ fontSize: fs * 0.75 }} textAnchor="middle" className="sub">
-                    {led.layout === 'unido' ? `${Math.round(p.w)}×${Math.round(p.h)}` : srcLabel(p.source)}
-                  </text>
+                <g key={p.id} className={`led-part ${selected === p.id ? 'active' : ''} ${withImage ? 'with-image' : ''}`} onPointerDown={(e) => onDown(e, p)}>
+                  <rect x={p.mapX} y={p.mapY} width={s.w} height={s.h} style={{ fill: withImage ? '#000' : COLORS[i % COLORS.length] + '33', stroke: COLORS[i % COLORS.length] }} />
+                  {withImage && (
+                    // o pedaço da saída que vai para esta parte, desvirado como aparece no palco
+                    <g transform={`translate(${p.mapX + s.w / 2} ${p.mapY + s.h / 2}) rotate(${-p.rotation}) translate(${-(p.x + p.w / 2)} ${-(p.y + p.h / 2)})`}>
+                      <clipPath id={`ledclip-${p.id}`}><rect x={p.x} y={p.y} width={p.w} height={p.h} /></clipPath>
+                      <image href={image!} x={0} y={0} width={outW} height={outH} preserveAspectRatio="none" clipPath={`url(#ledclip-${p.id})`} />
+                    </g>
+                  )}
+                  <rect x={p.mapX} y={p.mapY} width={s.w} height={s.h} className="led-outline" style={{ stroke: COLORS[i % COLORS.length] }} />
+                  {!withImage && (
+                    <>
+                      <text x={p.mapX + s.w / 2} y={p.mapY + s.h / 2} style={{ fontSize: fs }} textAnchor="middle">{p.name}</text>
+                      <text x={p.mapX + s.w / 2} y={p.mapY + s.h / 2 + fs * 1.3} style={{ fontSize: fs * 0.75 }} textAnchor="middle" className="sub">
+                        {led.layout === 'unido' ? `${Math.round(p.w)}×${Math.round(p.h)}` : srcLabel(p.source)}
+                      </text>
+                    </>
+                  )}
+                  {withImage && <text x={p.mapX + 6} y={p.mapY + fs * 0.9} style={{ fontSize: fs * 0.7 }} className="led-tag">{p.name}</text>}
                 </g>
               )
             })}

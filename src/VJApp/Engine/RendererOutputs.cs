@@ -24,6 +24,8 @@ sealed class OutputTarget(IntPtr hwnd) : IDisposable
     public ID3D11ShaderResourceView? TestSrv;
 
     public void ClearTest() { TestSrv?.Dispose(); TestTex?.Dispose(); TestSrv = null; TestTex = null; }
+    /// <summary>Cópia exata desta saída (para a prévia do mapa de painéis na UI), só quando pedida.</summary>
+    public RenderTexture? Capture;
 
     public void ClearBatches()
     {
@@ -33,7 +35,7 @@ sealed class OutputTarget(IntPtr hwnd) : IDisposable
 
     public void Dispose()
     {
-        ClearBatches(); MaskVb?.Dispose(); ClearTest();
+        ClearBatches(); MaskVb?.Dispose(); ClearTest(); Capture?.Dispose();
         Rtv?.Dispose(); SwapChain?.Dispose();
     }
 }
@@ -54,6 +56,14 @@ partial class Renderer
     ID3D11InputLayout? _sliceLayout;
     PreviewChannel? _mainPreview, _stagePreview;
     readonly RenderTexture?[] _stageComp = new RenderTexture?[2];
+
+    /// <summary>Saída que a UI quer ver exatamente como sai (mapa de painéis); IntPtr.Zero = nenhuma.</summary>
+    public IntPtr OutputPreviewHwnd;
+    /// <summary>Tamanho real da tela de saída (a janela pode estar minimizada ou menor que o monitor).</summary>
+    public volatile int OutputPreviewWidth = 1920, OutputPreviewHeight = 1080;
+    /// <summary>Imagem reduzida dessa saída (BGRA, largura, altura, bytes por linha).</summary>
+    public event Action<byte[], int, int, int>? OutputPreview;
+    PreviewChannel? _outputPreview;
 
     /// <summary>Imagem que vai para o item "Telão" da tela de retorno (só quando há algo para mostrar).</summary>
     public event Action<byte[], int, int, int>? StagePreview;
@@ -132,6 +142,7 @@ partial class Renderer
 
         _mainPreview = new PreviewChannel(_device);
         _stagePreview = new PreviewChannel(_device);
+        _outputPreview = new PreviewChannel(_device);
     }
 
     /// <summary>Cria/remove swap chains conforme as telas pedidas e atualiza os vértices.</summary>
@@ -222,18 +233,31 @@ partial class Renderer
         foreach (var o in _outputs)
         {
             if (o.Rtv == null) continue;
-            SetFrameParams(o.Width, o.Height, time);
+            // saída vista no mapa de painéis: desenha numa textura, mostra na janela e manda uma cópia para a UI
+            bool capture = o.Hwnd == OutputPreviewHwnd && OutputPreview != null;
+            // a cópia usa o tamanho do monitor (os slices são proporcionais), não o da janela
+            int cw = Math.Clamp(OutputPreviewWidth, 64, 8192), ch = Math.Clamp(OutputPreviewHeight, 64, 8192);
+            if (capture && (o.Capture == null || o.Capture.Width != cw || o.Capture.Height != ch))
+            {
+                o.Capture?.Dispose();
+                o.Capture = new RenderTexture(_device!, cw, ch);
+            }
+            else if (!capture && o.Capture != null) { o.Capture.Dispose(); o.Capture = null; }
+            var rtv = capture ? o.Capture!.Rtv : o.Rtv;
+            int tw = capture ? cw : o.Width, th = capture ? ch : o.Height;
+            SetFrameParams(tw, th, time);
             ctx.PSSetShaderResource(0, null!);
-            ctx.OMSetRenderTargets(o.Rtv);
-            ctx.RSSetViewport(new Viewport(o.Width, o.Height));
-            ctx.ClearRenderTargetView(o.Rtv, new Color4(0, 0, 0, 1));
+            ctx.OMSetRenderTargets(rtv);
+            ctx.RSSetViewport(new Viewport(tw, th));
+            ctx.ClearRenderTargetView(rtv, new Color4(0, 0, 0, 1));
 
             if (o.TestSrv != null)
             {
                 // teste de LED: a imagem de teste ocupa a saída inteira, pixel a pixel
                 ctx.IASetInputLayout(null);
-                Pass(_psBlit!, o.Rtv, o.TestSrv);
+                Pass(_psBlit!, rtv, o.TestSrv);
                 ctx.PSSetShaderResource(0, null!);
+                if (capture) PresentCapture(o, time);
                 o.SwapChain!.Present(first ? 1u : 0u, PresentFlags.None);
                 first = false;
                 continue;
@@ -263,12 +287,25 @@ partial class Renderer
             }
             ctx.IASetInputLayout(null);
             ctx.PSSetShaderResource(0, null!);
+            if (capture) PresentCapture(o, time);
 
             // só a primeira tela espera o vsync; as outras apresentam na hora
             o.SwapChain!.Present(first ? 1u : 0u, PresentFlags.None);
             first = false;
         }
         if (_outputs.Count == 0) Thread.Sleep(16);
+    }
+
+    /// <summary>Copia a textura da saída para a janela e manda a versão reduzida para a UI (~15 por segundo).</summary>
+    void PresentCapture(OutputTarget o, float time)
+    {
+        var ctx = _ctx!;
+        ctx.IASetInputLayout(null);
+        SetFrameParams(o.Width, o.Height, time);
+        ctx.RSSetViewport(new Viewport(o.Width, o.Height));
+        Pass(_psBlit!, o.Rtv!, o.Capture!.Srv);
+        ctx.PSSetShaderResource(0, null!);
+        RunPreview(_outputPreview!, o.Capture, time, OutputPreview);
     }
 
     void UpdatePreview(RenderTexture comp, float time) => RunPreview(_mainPreview!, comp, time, Preview);
@@ -323,6 +360,7 @@ partial class Renderer
         _outputs.Clear();
         _mainPreview?.Dispose();
         _stagePreview?.Dispose();
+        _outputPreview?.Dispose();
         foreach (var t in _stageComp) t?.Dispose();
         _sliceLayout?.Dispose();
         _psBlit?.Dispose();

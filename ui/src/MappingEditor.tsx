@@ -88,6 +88,15 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
   const magnetOn = (e: Mods) => magnet !== e.altKey
 
   const screen = mapping.screens.find((s) => s.id === screenId) ?? mapping.screens[0]
+  // imagem exata da saída aberta (para o mapa de painéis mostrar o que vai em cada painel)
+  const [outImage, setOutImage] = useState<string | null>(null)
+  const currentScreenId = screen?.id ?? null
+  useEffect(() => {
+    setOutImage(null)
+    send({ type: 'outputPreview', screenId: currentScreenId })
+    const off = onMessage((msg) => { if (msg.type === 'outputPreview' && msg.screenId === currentScreenId) setOutImage(msg.data) })
+    return () => { off(); send({ type: 'outputPreview', screenId: null }) }
+  }, [currentScreenId])
   const display = displays[screen.display]
   const pxW = display?.width ?? 1920, pxH = display?.height ?? 1080
   const outAspect = pxW / pxH
@@ -271,7 +280,7 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
         )}
       </section>
 
-      <LedMap screen={screen} outW={pxW} outH={pxH} sources={sources} magnet={magnet} onScreen={replaceScreen} />
+      <LedMap screen={screen} outW={pxW} outH={pxH} sources={sources} magnet={magnet} onScreen={replaceScreen} image={outImage} />
 
       <div className="mapping-body">
         {/* ---------- lista de slices e máscaras ---------- */}
