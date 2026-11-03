@@ -125,6 +125,7 @@ sealed partial class MainForm : Form
         StartControl();
         StartOverlay();
         StartUpdateCheck();
+        StartCarousels();
     }
 
     // ---------------- mensagens da UI ----------------
@@ -175,6 +176,7 @@ sealed partial class MainForm : Form
                 SendOverlay();
                 SendService();
                 SendUpdate();
+                SendCarousels();
                 break;
 
             case "tap": Tap(); break;
@@ -183,6 +185,8 @@ sealed partial class MainForm : Form
             case var bibleType when bibleType?.StartsWith("bible") == true: OnBibleMessage(bibleType, msg); break;
             case var fontType when fontType?.StartsWith("fonts") == true: OnFontMessage(fontType, msg); break;
             case var overlayType when overlayType?.StartsWith("overlay") == true: OnOverlayMessage(overlayType, msg); break;
+            case var carouselType when carouselType?.StartsWith("carousel") == true: OnCarouselMessage(carouselType, msg); break;
+            case var carouselType when carouselType?.StartsWith("carousel") == true: OnCarouselMessage(carouselType, msg); break;
             case var serviceType when serviceType?.StartsWith("service") == true: OnServiceMessage(serviceType, msg); break;
             case var updateType when updateType?.StartsWith("update") == true: OnUpdateMessage(updateType, msg); break;
             case "previewRender": _ = RenderPreviewAsync(msg); break;
@@ -434,10 +438,12 @@ sealed partial class MainForm : Form
         CompositionChanged();
     }
 
-    void Trigger(int layer, int column)
+    /// <summary>Toca um clip numa layer. Sem <paramref name="clip"/>, toca o da aba aberta; com ele, o de outra aba (carrossel).</summary>
+    void Trigger(int layer, int column, Clip? clip = null, string? deckId = null)
     {
-        var clip = _comp.Layers[layer].Clips[column];
+        clip ??= _comp.Layers[layer].Clips[column];
         if (clip == null) return;
+        deckId ??= _comp.Current.Id;
 
         switch (clip.Kind)
         {
@@ -459,7 +465,7 @@ sealed partial class MainForm : Form
                 // abrir a câmera pode levar um segundo: abre fora da thread da UI
                 string device = clip.Path!;
                 _comp.Layers[layer].Active = column;
-                _comp.Layers[layer].ActiveDeck = _comp.Current.Id;
+                _comp.Layers[layer].ActiveDeck = deckId;
                 _comp.Layers[layer].PlayingClip = clip;
                 ApplyClipProps(layer, clip);
                 Task.Run(async () =>
@@ -532,7 +538,7 @@ sealed partial class MainForm : Form
                 break;
         }
         _comp.Layers[layer].Active = column;
-        _comp.Layers[layer].ActiveDeck = _comp.Current.Id;
+        _comp.Layers[layer].ActiveDeck = deckId;
         _comp.Layers[layer].PlayingClip = clip;
         ApplyClipProps(layer, clip);
     }
@@ -673,7 +679,7 @@ sealed partial class MainForm : Form
             masterEffects = _comp.MasterEffects,
             decks = _comp.Decks.Select(d => new
             {
-                id = d.Id, name = d.Name, columns = d.Columns, columnNames = d.ColumnNames,
+                id = d.Id, name = d.Name, columns = d.Columns, columnNames = d.ColumnNames, carousel = d.Carousel,
                 clips = d.Clips.Select(row => row.Select(c => c == null ? null : new { kind = c.Kind, name = c.Name, path = c.Path })),
             }),
             currentDeck = _comp.CurrentDeck,

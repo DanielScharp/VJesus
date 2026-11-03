@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { EffectChips, type ToggleEffect } from './EffectChips'
 import { DEFAULT_GEN, GeneratorPanel, genThumbStyle } from './GeneratorPanel'
 import { ClipPropsPanel } from './ClipProps'
-import { BLEND_MODES, send, sendFiles, type EffectDef, type BlendMode, type Clip, type Composition, type GeneratorSettings, type LayerPlayback, type LiveSources } from './bridge'
+import { CarouselPanel } from './CarouselPanel'
+import { BLEND_MODES, send, sendFiles, type CarouselRun, type EffectDef, type BlendMode, type Clip, type Composition, type GeneratorSettings, type LayerPlayback, type LiveSources } from './bridge'
 
 type Props = {
+  carousels: CarouselRun[]
   comp: Composition
   thumbs: Record<string, string>
   playback: LayerPlayback[]
@@ -65,7 +67,8 @@ function ClipThumb({ clip, thumb }: { clip: Clip; thumb?: string }) {
   return <div className={clip.kind === 'plasma' ? 'thumb-plasma' : 'thumb-testcard'} style={clip.kind === 'plasma' ? genThumbStyle(clip.gen) : undefined} />
 }
 
-export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSelect, live, library, onToggleEffect }: Props) {
+export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSelect, live, library, onToggleEffect, carousels }: Props) {
+  const [carouselOpen, setCarouselOpen] = useState(false)
   const [menu, setMenu] = useState<Menu | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [colMenu, setColMenu] = useState<{ column: number; x: number; y: number } | null>(null)
@@ -121,11 +124,17 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
               onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setDeckMenu({ index: i, x: e.clientX, y: e.clientY }) }}>
               {d.name}
               {i !== comp.currentDeck && comp.layers.some((l) => l.playingDeck === d.id) && <span className="deck-live" title="Há clips desta aba tocando">●</span>}
+              {carousels.some((r) => r.deckId === d.id) && <span className="deck-carousel" title="Carrossel rodando nesta aba">⟳</span>}
             </button>
           )
         ))}
         <button className="small" title="Nova aba de clips" onClick={() => send({ type: 'deckAdd' })}>+ Aba</button>
+        <button className={`small carousel-btn ${carouselOpen ? 'active' : ''}`} title="Passa de coluna em coluna sozinho, no tempo escolhido"
+          onClick={(e) => { e.stopPropagation(); setCarouselOpen(!carouselOpen) }}>
+          ⟳ Carrossel{carousels.some((r) => r.deckId === comp.decks[comp.currentDeck]?.id) ? ' ●' : ''}
+        </button>
       </div>
+      {carouselOpen && <CarouselPanel comp={comp} running={carousels} />}
 
     <div className="grid">
       <div className="grid-row grid-head">

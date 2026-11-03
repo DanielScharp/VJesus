@@ -38,7 +38,9 @@ export type Layer = {
 }
 
 export type DeckClip = { kind: ClipKind; name: string; path: string | null }
-export type Deck = { id: string; name: string; columns?: number; columnNames?: (string | null)[]; clips?: (DeckClip | null)[][] }
+export type CarouselSettings = { seconds: number; allLayers: boolean; layers: number[]; skipEmpty: boolean }
+export type CarouselRun = { deckId: string; column: number; nextAt: number }
+export type Deck = { id: string; name: string; carousel?: CarouselSettings | null; columns?: number; columnNames?: (string | null)[]; clips?: (DeckClip | null)[][] }
 export type Composition = { columns: number; columnNames?: (string | null)[]; layers: Layer[]; masterEffects: EffectInstance[]; decks: Deck[]; currentDeck: number }
 
 export type Pt = { x: number; y: number }
@@ -180,6 +182,7 @@ export type EngineMessage =
   | ({ type: 'service' } & ServiceState)
   | ({ type: 'update' } & UpdateState)
   | { type: 'slidePreview'; id: string; data: string | null; error?: string }
+  | { type: 'carousels'; running: CarouselRun[] }
 
 type Cell = { layer: number; column: number }
 
@@ -270,6 +273,9 @@ export type UiMessage =
   | { type: 'serviceGo'; id: string }
   | { type: 'serviceStep'; direction: 1 | -1 }
   | { type: 'serviceReset' }
+  | { type: 'carouselSet'; deckId: string; settings: CarouselSettings }
+  | { type: 'carouselRun'; deckId: string; on: boolean }
+  | { type: 'carouselStep'; deckId: string; direction: 1 | -1 }
   | { type: 'updateCheck' | 'updateDownload' | 'updateInstall' }
   | ({ type: 'previewRender'; id: string } & PreviewRequest)
 

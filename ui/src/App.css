@@ -753,4 +753,13 @@ button.onair-btn { background: #c93030; border-color: #c93030; color: #fff; font
 .corner-head { justify-content: space-between; align-items: center; margin: 4px 0; font-size: 12px; color: var(--muted); }
 .corner-head label.check { margin: 0; font-size: 12px; }
 .layer-shape { margin: 8px 0; border-top: 1px solid var(--line); padding-top: 6px; }
-.layer-shape summary { cursor: pointer; font-size: 13px; margin-bottom: 6px; }
+.layer-shape summary { cursor: pointer; font-size: 13px; margin-bottom: 6px; }.carousel-btn { margin-left: auto; }
+.deck-carousel { color: var(--accent); margin-left: 4px; }
+.carousel-panel { margin: 0 0 10px; }
+.carousel-panel label { grid-template-columns: 170px 50px 1fr; }
+.carousel-status { margin: 0 0 6px; color: #ff8a8a; }
+.carousel-seconds { align-items: center; }
+.carousel-layers .row { margin: 6px 0; }
+.carousel-layers label.check { display: inline-flex; gap: 6px; margin: 4px 0; }
+.layer-chip { border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; }
+.layer-chip.on { border-color: var(--accent); }

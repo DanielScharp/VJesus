@@ -142,6 +142,20 @@ sealed class Deck
     public List<Clip?[]> Clips { get; set; } = [];
     /// <summary>Nome de cada coluna (null/vazio = só o número).</summary>
     public List<string?> ColumnNames { get; set; } = [];
+    /// <summary>Carrossel desta aba (null = nunca configurado).</summary>
+    public CarouselSettings? Carousel { get; set; }
+}
+
+/// <summary>Carrossel de uma aba: passa de coluna em coluna sozinho.</summary>
+sealed class CarouselSettings
+{
+    /// <summary>Tempo em cada coluna (segundos).</summary>
+    public float Seconds { get; set; } = 8;
+    /// <summary>Todas as layers da aba, ou só as da lista (índices).</summary>
+    public bool AllLayers { get; set; } = true;
+    public List<int> Layers { get; set; } = [];
+    /// <summary>Pula as colunas sem nenhum clip nas layers do carrossel.</summary>
+    public bool SkipEmpty { get; set; } = true;
 }
 
 /// <summary>

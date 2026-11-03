@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   inApp, onMessage, send,
-  type Composition, type Display, type EffectDef, type EffectInstance, type Layer, type LayerPlayback, type MappingSetup, type ControlInfo, type StreamingInfo, type LiveSources, type Song, type LyricStyle, type LyricsState, type LyricScene, type StageState, type StageConfig, type AttackPreset, type OverlayState, type ServiceState, type UpdateState,
+  type Composition, type Display, type EffectDef, type EffectInstance, type Layer, type LayerPlayback, type MappingSetup, type ControlInfo, type StreamingInfo, type LiveSources, type Song, type LyricStyle, type LyricsState, type LyricScene, type StageState, type StageConfig, type AttackPreset, type OverlayState, type ServiceState, type UpdateState, type CarouselRun,
 } from './bridge'
 import { ClipGrid } from './ClipGrid'
 import { EffectsPanel } from './EffectsPanel'
@@ -59,6 +59,7 @@ function App() {
   const [overlay, setOverlay] = useState<OverlayState | null>(null)
   const [service, setService] = useState<ServiceState>({ planId: '', name: 'Culto', date: null, plans: [], items: [], current: null, verse: 0 })
   const [update, setUpdate] = useState<UpdateState | null>(null)
+  const [carousels, setCarousels] = useState<CarouselRun[]>([])
 
   // atalhos que valem em qualquer aba: encerrar letra/versículo e parar ataques
   useEffect(() => {
@@ -106,6 +107,7 @@ function App() {
         case 'overlay': setOverlay(msg); break
         case 'service': setService(msg); break
         case 'update': setUpdate(msg); break
+        case 'carousels': setCarousels(msg.running); break
         case 'shortcuts': setCustom(msg.shortcuts); break
         case 'master': setBrightness(msg.brightness); setSpeed(msg.speed); setTestCard(msg.testCard); break
       }
@@ -206,7 +208,7 @@ function App() {
           {comp ? (
             <ClipGrid comp={comp} thumbs={thumbs} playback={playback} onLayerChange={changeLayer}
               selected={target} onSelect={setTarget} live={live}
-              library={library} onToggleEffect={toggleEffect} />
+              library={library} onToggleEffect={toggleEffect} carousels={carousels} />
           ) : (
             <div className="meta">Conectando ao motor…</div>
           )}
