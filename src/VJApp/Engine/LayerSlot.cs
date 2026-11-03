@@ -26,6 +26,8 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
         if (name == null) return null;
         try { return new NdiReceiver(name); } catch { return null; }
     }
+    /// <summary>Como o clip estava na tela no último quadro (para sair igual, mesmo que o próximo clip mude o ajuste).</summary>
+    public ClipLook? Look;
     public VideoFrame? ShownFrame;
     public ID3D11Texture2D? Texture;
     public ID3D11ShaderResourceView? Srv;
@@ -86,6 +88,9 @@ sealed record Shape(float X, float Y, float ScaleX, float ScaleY, float Rotation
     public static readonly Shape Identity = new(0, 0, 1, 1, 0, 0, 0, 0, 0);
 }
 
+/// <summary>Ajuste de tela de um clip (encaixe, zoom, posição e forma) num instante.</summary>
+sealed record ClipLook(int Fit, float Zoom, float OffsetX, float OffsetY, Shape Shape);
+
 /// <summary>Estado de uma layer do lado do motor.</summary>
 sealed class LayerSlot
 {
@@ -94,6 +99,13 @@ sealed class LayerSlot
     public volatile EffectRun[] Effects = [];
     public volatile int Transition;          // TransitionKind
     public volatile float TransitionSeconds;
+    /// <summary>Quando a transição acontece: de vazio para clip, entre dois clips, de clip para vazio.</summary>
+    public volatile bool TransitionIn = true, TransitionBetween = true, TransitionOut = true;
+    /// <summary>Há uma transição em andamento (o que sai pode ser "nada", na entrada).</summary>
+    public volatile bool TransitionActive;
+    /// <summary>A transição só começa a contar quando o clip novo tem o primeiro quadro.</summary>
+    public bool TransitionWaiting;
+    public double TransitionWaitSince;
     public volatile float Volume = 1f;
     /// <summary>Esta layer aparece no item "Telão" da tela de retorno (quando está tocando).</summary>
     public volatile bool ToStage;

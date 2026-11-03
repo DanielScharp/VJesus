@@ -70,7 +70,7 @@ const IDENTITY: LayerTransform = { x: 0, y: 0, scale: 1, width: 1, height: 1, ro
 export function LayerSettings({ layer, index, onChange }: {
   layer: Layer
   index: number
-  onChange: (patch: Partial<Pick<Layer, 'blend' | 'opacity' | 'transition' | 'transitionSeconds' | 'volume' | 'sendToStage' | 'transform'>>) => void
+  onChange: (patch: Partial<Pick<Layer, 'blend' | 'opacity' | 'transition' | 'transitionSeconds' | 'transitionIn' | 'transitionBetween' | 'transitionOut' | 'volume' | 'sendToStage' | 'transform'>>) => void
 }) {
   const t = { ...IDENTITY, ...(layer.transform ?? {}) }
   const setT = (patch: Partial<LayerTransform>) => onChange({ transform: { ...t, ...patch } })
@@ -115,6 +115,20 @@ export function LayerSettings({ layer, index, onChange }: {
           <input type="range" min={0.1} max={5} step={0.1} value={layer.transitionSeconds}
             onChange={(e) => onChange({ transitionSeconds: Number(e.target.value) })} />
         </label>
+      )}
+      {layer.transition !== 'cut' && (
+        <div className="transition-when">
+          <span>Usar a transição:</span>
+          <label className="check" title="De uma coluna sem clip nesta layer para uma com clip">
+            <input type="checkbox" checked={layer.transitionIn ?? true} onChange={(e) => onChange({ transitionIn: e.target.checked })} /> na entrada
+          </label>
+          <label className="check" title="De um clip para outro clip">
+            <input type="checkbox" checked={layer.transitionBetween ?? true} onChange={(e) => onChange({ transitionBetween: e.target.checked })} /> ao trocar de clip
+          </label>
+          <label className="check" title="De um clip para uma coluna sem clip nesta layer (ou ao limpar a layer)">
+            <input type="checkbox" checked={layer.transitionOut ?? true} onChange={(e) => onChange({ transitionOut: e.target.checked })} /> na saída
+          </label>
+        </div>
       )}
       <label className="check stage-flag" title="Para avisos: quando um clip desta layer estiver tocando, ele aparece também na tela de retorno">
         <input type="checkbox" checked={!!layer.sendToStage} onChange={(e) => onChange({ sendToStage: e.target.checked })} />

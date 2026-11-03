@@ -121,6 +121,10 @@ sealed class Layer
     public List<EffectInstance> Effects { get; set; } = [];
     public TransitionType Transition { get; set; } = TransitionType.Cut;
     public float TransitionSeconds { get; set; } = 1f;
+    /// <summary>Quando usar a transição: ao entrar (vazio → clip), ao trocar de clip e ao sair (clip → vazio).</summary>
+    public bool TransitionIn { get; set; } = true;
+    public bool TransitionBetween { get; set; } = true;
+    public bool TransitionOut { get; set; } = true;
     public float Volume { get; set; } = 1f;
     /// <summary>Quando esta layer está tocando, ela aparece no item "Telão" da tela de retorno.</summary>
     public bool SendToStage { get; set; }

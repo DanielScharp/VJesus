@@ -762,4 +762,5 @@ button.onair-btn { background: #c93030; border-color: #c93030; color: #fff; font
 .carousel-layers .row { margin: 6px 0; }
 .carousel-layers label.check { display: inline-flex; gap: 6px; margin: 4px 0; }
 .layer-chip { border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; }
-.layer-chip.on { border-color: var(--accent); }
+.layer-chip.on { border-color: var(--accent); }.transition-when { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 12px; margin: 2px 0 8px; color: var(--muted); }
+.transition-when label.check { margin: 0; color: var(--text); }

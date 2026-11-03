@@ -31,6 +31,9 @@ export type Layer = {
   effects: EffectInstance[]
   transition: Transition
   transitionSeconds: number
+  transitionIn?: boolean
+  transitionBetween?: boolean
+  transitionOut?: boolean
   volume: number
   hasAudio: boolean
   sendToStage: boolean
@@ -239,7 +242,7 @@ export type UiMessage =
   | { type: 'deckSelect' | 'deckRemove'; index: number }
   | { type: 'deckRename'; index: number; name: string }
   | { type: 'deckMove'; index: number; direction: -1 | 1 }
-  | { type: 'layerParams'; layer: number; name?: string; opacity?: number; blend?: BlendMode; transition?: Transition; transitionSeconds?: number; volume?: number; sendToStage?: boolean; transform?: LayerTransform }
+  | { type: 'layerParams'; layer: number; name?: string; opacity?: number; blend?: BlendMode; transition?: Transition; transitionSeconds?: number; transitionIn?: boolean; transitionBetween?: boolean; transitionOut?: boolean; volume?: number; sendToStage?: boolean; transform?: LayerTransform }
   | { type: 'tap' | 'beatResync' }
   | { type: 'setBpm'; bpm: number }
   | { type: 'setMasterVolume'; volume: number }

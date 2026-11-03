@@ -286,20 +286,28 @@ sealed partial class Renderer : IDisposable
             incoming?.CreateGpu(_device!);
 
             var old = slot.Current;
-            bool animate = slot.Transition != (int)TransitionKind.Cut && slot.TransitionSeconds > 0.01f && old != null && old.Ready;
+            bool hasOld = old is { Ready: true }, hasNew = incoming != null;
+            // entrada (vazio → clip), troca (clip → clip) e saída (clip → vazio) podem ter ou não transição
+            bool wanted = hasOld && hasNew ? slot.TransitionBetween : hasNew ? slot.TransitionIn : hasOld && slot.TransitionOut;
+            bool animate = slot.Transition != (int)TransitionKind.Cut && slot.TransitionSeconds > 0.01f && wanted;
             slot.Outgoing?.Dispose(); // uma transição em andamento é substituída pela nova
             if (animate)
             {
-                slot.Outgoing = old;
+                slot.Outgoing = hasOld ? old : null; // na entrada, o que "sai" é a layer vazia
+                if (!hasOld) old?.Dispose();
                 slot.TransitionStart = now;
                 slot.TransitionLength = slot.TransitionSeconds;
                 slot.TransitionProgress = 0;
+                slot.TransitionWaiting = hasNew; // só começa quando o clip novo aparecer
+                slot.TransitionWaitSince = now;
+                slot.TransitionActive = true;
             }
             else
             {
                 old?.Dispose();
                 slot.Outgoing = null;
                 slot.TransitionProgress = 1;
+                slot.TransitionActive = false;
             }
             slot.Current = incoming;
         }
@@ -355,6 +363,10 @@ sealed partial class Renderer : IDisposable
         }
         var p = source.Player;
         bool fromPlayer = p != null && source.Spout == null && source.Ndi == null;
+        // o clip tocando usa o ajuste atual da layer (e guarda); o que está saindo usa o último dele
+        var look = source == slot.Current || source.Look == null
+            ? source.Look = new ClipLook(slot.ClipFit, slot.ClipZoom, slot.ClipOffsetX, slot.ClipOffsetY, slot.ClipShape)
+            : source.Look;
         var lp = new LayerParams
         {
             Opacity = slot.Opacity,
@@ -365,12 +377,12 @@ sealed partial class Renderer : IDisposable
             UvScaleX = fromPlayer ? (float)p!.Width / p.TextureWidth : 1,
             UvScaleY = fromPlayer ? (float)p!.Height / p.TextureHeight : 1,
             // ajuste do clip (letras ficam sempre no padrão)
-            FitMode = source.Lyrics != null ? 0 : slot.ClipFit,
-            Zoom = source.Lyrics != null ? 1 : slot.ClipZoom,
-            OffsetX = source.Lyrics != null ? 0 : slot.ClipOffsetX,
-            OffsetY = source.Lyrics != null ? 0 : slot.ClipOffsetY,
+            FitMode = source.Lyrics != null ? 0 : look.Fit,
+            Zoom = source.Lyrics != null ? 1 : look.Zoom,
+            OffsetX = source.Lyrics != null ? 0 : look.OffsetX,
+            OffsetY = source.Lyrics != null ? 0 : look.OffsetY,
         };
-        var cs = source.Lyrics != null ? Shape.Identity : slot.ClipShape;
+        var cs = source.Lyrics != null ? Shape.Identity : look.Shape;
         lp.ClipRotation = cs.Rotation * MathF.PI / 180;
         lp.ClipScaleX = cs.ScaleX;
         lp.ClipScaleY = cs.ScaleY;
@@ -428,12 +440,24 @@ sealed partial class Renderer : IDisposable
             if (slot.Current?.Lyrics != null) UpdateLyrics(slot.Current, now, (float)now);
             if (slot.Outgoing?.Lyrics != null) UpdateLyrics(slot.Outgoing, now, (float)now);
 
-            // fim da transição: o clip anterior é liberado
-            if (slot.Outgoing != null)
+            if (slot.TransitionActive)
             {
+                // abrir um vídeo leva alguns quadros: enquanto o novo não aparece, o anterior fica inteiro
+                // (no máximo 3 s, para um arquivo com problema não prender a layer)
+                if (slot.TransitionWaiting)
+                {
+                    if (slot.Current is { Ready: false } && now - slot.TransitionWaitSince < 3) slot.TransitionStart = now;
+                    else slot.TransitionWaiting = false;
+                }
                 float progress = (float)Math.Clamp((now - slot.TransitionStart) / Math.Max(0.001, slot.TransitionLength), 0, 1);
                 slot.TransitionProgress = progress;
-                if (progress >= 1) { slot.Outgoing.Dispose(); slot.Outgoing = null; }
+                // fim da transição: o clip anterior é liberado
+                if (progress >= 1)
+                {
+                    slot.Outgoing?.Dispose();
+                    slot.Outgoing = null;
+                    slot.TransitionActive = false;
+                }
             }
         }
     }
@@ -455,15 +479,15 @@ sealed partial class Renderer : IDisposable
         {
             if (!include(slot)) continue;
             bool hasCurrent = slot.Current is { Ready: true };
-            if ((!hasCurrent && slot.Outgoing == null) || slot.Opacity <= 0) continue;
+            if ((!hasCurrent && !slot.TransitionActive) || slot.Opacity <= 0) continue;
 
             // 1) fonte -> work[0] (com transição: o novo em work[0], o anterior em _outgoing, mistura em work[1])
             DrawSource(slot, slot.Current, _work[0]!);
             // efeitos só deste clip (antes da transição e dos efeitos da layer)
             int w = slot.ClipEffects.Length > 0 && hasCurrent ? ApplyEffects(slot.ClipEffects, _work, 0, updateHistory: main) : 0;
-            if (slot.Outgoing != null)
+            if (slot.TransitionActive)
             {
-                DrawSource(slot, slot.Outgoing, _outgoing!);
+                DrawSource(slot, slot.Outgoing, _outgoing!); // sem clip anterior: fica transparente
                 var lp = new LayerParams { TransitionMix = slot.TransitionProgress, TransitionKind = slot.Transition };
                 ctx.UpdateSubresource(in lp, _layerCb!);
                 Pass(_psTransition!, _work[1 - w]!.Rtv, _work[w]!.Srv, _outgoing!.Srv);

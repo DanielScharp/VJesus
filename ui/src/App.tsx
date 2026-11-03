@@ -123,7 +123,7 @@ function App() {
   useEffect(() => send({ type: 'setMaster', brightness, speed, testCard }), [brightness, speed, testCard])
 
   // opacidade/blend: atualiza a tela na hora e avisa o motor
-  const changeLayer = (layer: number, patch: Partial<Pick<Layer, 'opacity' | 'blend' | 'transition' | 'transitionSeconds' | 'volume' | 'sendToStage' | 'transform'>>) => {
+  const changeLayer = (layer: number, patch: Partial<Pick<Layer, 'opacity' | 'blend' | 'transition' | 'transitionSeconds' | 'transitionIn' | 'transitionBetween' | 'transitionOut' | 'volume' | 'sendToStage' | 'transform'>>) => {
     setComp((c) => c && { ...c, layers: c.layers.map((l, i) => (i === layer ? { ...l, ...patch } : l)) })
     send({ type: 'layerParams', layer, ...patch })
   }

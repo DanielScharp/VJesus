@@ -1,4 +1,4 @@
-﻿using Vortice.Direct3D;
+using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Vortice.Mathematics;
@@ -238,7 +238,7 @@ partial class Renderer
             RunPreview(_stagePreview!, mainComp, time, StagePreview);
             return;
         }
-        if (!Layers.Any(s => s.ToStage && s.Opacity > 0 && (s.Current is { Ready: true } || s.Outgoing != null))) return;
+        if (!Layers.Any(s => s.ToStage && s.Opacity > 0 && (s.Current is { Ready: true } || s.TransitionActive))) return;
         if (Environment.TickCount64 - _stagePreview!.Last < 66 && !_stagePreview.Pending) return; // só compõe quando vai usar
         for (int i = 0; i < 2; i++) _stageComp[i] ??= new RenderTexture(_device!, CompWidth, CompHeight);
         int r = Compose(time, _stageComp, s => s.ToStage, main: false);

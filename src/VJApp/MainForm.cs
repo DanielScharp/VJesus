@@ -397,6 +397,9 @@ sealed partial class MainForm : Form
                 if (msg["blend"] is JsonNode bl && Enum.TryParse<BlendMode>((string?)bl, true, out var mode)) layer.Blend = mode;
                 if (msg["transition"] is JsonNode tr && Enum.TryParse<TransitionType>((string?)tr, true, out var tt)) layer.Transition = tt;
                 if (msg["transitionSeconds"] is JsonNode ts) layer.TransitionSeconds = Math.Clamp((float)ts, 0, 10);
+                if (msg["transitionIn"] is JsonNode ti) layer.TransitionIn = (bool)ti;
+                if (msg["transitionBetween"] is JsonNode tb) layer.TransitionBetween = (bool)tb;
+                if (msg["transitionOut"] is JsonNode to) layer.TransitionOut = (bool)to;
                 if (msg["volume"] is JsonNode vo) layer.Volume = Math.Clamp((float)vo, 0, 1.5f);
                 if (msg["sendToStage"] is JsonNode st) { layer.SendToStage = (bool)st; SendStage(); }
                 if (msg["transform"] is JsonNode tf && tf.Deserialize<LayerTransform>(JsonRead) is { } transform) layer.Transform = transform;
@@ -559,6 +562,9 @@ sealed partial class MainForm : Form
         slot.Blend = (int)_comp.Layers[layer].Blend;
         slot.Transition = (int)_comp.Layers[layer].Transition;
         slot.TransitionSeconds = _comp.Layers[layer].TransitionSeconds;
+        slot.TransitionIn = _comp.Layers[layer].TransitionIn;
+        slot.TransitionBetween = _comp.Layers[layer].TransitionBetween;
+        slot.TransitionOut = _comp.Layers[layer].TransitionOut;
         slot.Volume = _comp.Layers[layer].Volume;
         slot.ToStage = _comp.Layers[layer].SendToStage;
         var t = _comp.Layers[layer].Transform ??= new LayerTransform();
@@ -671,6 +677,9 @@ sealed partial class MainForm : Form
                 effects = l.Effects,
                 transition = l.Transition,
                 transitionSeconds = l.TransitionSeconds,
+                transitionIn = l.TransitionIn,
+                transitionBetween = l.TransitionBetween,
+                transitionOut = l.TransitionOut,
                 volume = l.Volume,
                 sendToStage = l.SendToStage,
                 transform = l.Transform,
