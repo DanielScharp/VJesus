@@ -52,7 +52,11 @@ Na aba **Culto**, em **Roteiro**, monte a lista em ordem com músicas, versícul
 ### Atualizar pelo programa
 Quando há versão nova, aparece um aviso no topo. Clique em **Baixar** e depois em **Instalar agora**: o VJesus fecha, instala e abre de novo. Nada é instalado sem o seu clique. Também dá para conferir em **Menu → Verificar atualizações**. A versão portátil só abre a página de download.
 
-### BíbliaNa aba **Bíblia**, clique em **Versões…** e baixe as que quiser (precisa de internet só nessa hora). As versões ficam em `%AppData%\VJesus\biblia` e funcionam sem internet. A lista vem da Free Use Bible API (bible.helloao.org) e tem só versões livres. ARC, ARA, NAA, NVI, NVT, NTLH e outras com direitos autorais entram por **Versões… → Importar de arquivo**, a partir de um arquivo que você já tenha licenciado (MySword .bbl.mybible, MyBible .SQLite3, Zefania XML, OSIS XML ou JSON).
+### Carrossel de colunas
+Na aba **Clips e efeitos**, o botão **⟳ Carrossel** (acima da grade, à direita) faz a aba aberta passar sozinha de coluna em coluna. Escolha o tempo em cada coluna e se vale para **todas as layers** da aba ou só para as marcadas. Cada aba tem o seu carrossel, e ele continua rodando quando você abre outra aba.
+
+### Bíblia
+Na aba **Bíblia**, clique em **Versões…** e baixe as que quiser (precisa de internet só nessa hora). As versões ficam em `%AppData%\VJesus\biblia` e funcionam sem internet. A lista vem da Free Use Bible API (bible.helloao.org) e tem só versões livres. ARC, ARA, NAA, NVI, NVT, NTLH e outras com direitos autorais entram por **Versões… → Importar de arquivo**, a partir de um arquivo que você já tenha licenciado (MySword .bbl.mybible, MyBible .SQLite3, Zefania XML, OSIS XML ou JSON).
 
 ### Mapeamento e painéis de LED
 - **Ímã** (botão 🧲 em Menu → Mapeamento): ao arrastar, as pontas grudam nas bordas e cantos da tela e nos outros slices e máscaras. Segure **Alt** para inverter na hora.
