@@ -5,10 +5,12 @@ export type Display = { index: number; name: string; width: number; height: numb
 export type ClipKind = 'video' | 'plasma' | 'testCard' | 'camera' | 'spout' | 'lyrics' | 'ndi'
 export type LiveSources = { cameras: string[]; spout: string[]; ndi?: string[]; ndiAvailable?: boolean }
 export type GeneratorSettings = { type: string; speed: number; intensity: number; scale: number; detail: number; angle: number; colors: string[] }
-export type ClipProps = { speed: number; fit: 'encaixar' | 'preencher' | 'esticar'; zoom: number; offsetX: number; offsetY: number; volume: number; end: 'repetir' | 'parar'; effects: EffectInstance[] }
+export type ClipProps = { speed: number; fit: 'encaixar' | 'preencher' | 'esticar'; zoom: number; offsetX: number; offsetY: number; volume: number; end: 'repetir' | 'parar'; rotation?: number; width?: number; height?: number; radius?: number[]; effects: EffectInstance[] }
+/** Posição, tamanho, giro e cantos (px: ↖ ↗ ↘ ↙) da layer inteira. */
+export type LayerTransform = { x: number; y: number; scale: number; width: number; height: number; rotation: number; radius: number[] }
 export type Clip = { kind: ClipKind; path: string | null; name: string; captureSize?: string | null; captureFps?: number | null; gen?: GeneratorSettings | null; props?: ClipProps | null }
 
-export const BLEND_MODES = ['normal', 'add', 'multiply', 'screen', 'overlay', 'difference', 'lighten', 'darken'] as const
+export const BLEND_MODES = ['normal', 'add', 'multiply', 'screen', 'overlay', 'difference', 'lighten', 'darken', 'subtract', 'exclusion', 'hardLight', 'softLight', 'colorDodge', 'colorBurn', 'linearLight', 'divide', 'hue', 'saturation', 'color', 'luminosity'] as const
 export type BlendMode = (typeof BLEND_MODES)[number]
 
 export type EffectParam = { id: string; label: string; min: number; max: number; default: number; step: number }
@@ -32,6 +34,7 @@ export type Layer = {
   volume: number
   hasAudio: boolean
   sendToStage: boolean
+  transform?: LayerTransform
 }
 
 export type DeckClip = { kind: ClipKind; name: string; path: string | null }
@@ -233,7 +236,7 @@ export type UiMessage =
   | { type: 'deckSelect' | 'deckRemove'; index: number }
   | { type: 'deckRename'; index: number; name: string }
   | { type: 'deckMove'; index: number; direction: -1 | 1 }
-  | { type: 'layerParams'; layer: number; name?: string; opacity?: number; blend?: BlendMode; transition?: Transition; transitionSeconds?: number; volume?: number; sendToStage?: boolean }
+  | { type: 'layerParams'; layer: number; name?: string; opacity?: number; blend?: BlendMode; transition?: Transition; transitionSeconds?: number; volume?: number; sendToStage?: boolean; transform?: LayerTransform }
   | { type: 'tap' | 'beatResync' }
   | { type: 'setBpm'; bpm: number }
   | { type: 'setMasterVolume'; volume: number }

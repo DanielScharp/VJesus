@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using VJApp;
@@ -14,7 +14,27 @@ enum ClipKind { Video, Plasma, TestCard, Camera, Spout, Lyrics, Ndi }
 enum TransitionType { Cut, Crossfade, Dip, Wipe }
 
 /// <summary>Blend modes disponíveis por layer (a ordem bate com o shader Composite.hlsl).</summary>
-enum BlendMode { Normal, Add, Multiply, Screen, Overlay, Difference, Lighten, Darken }
+enum BlendMode
+{
+    Normal, Add, Multiply, Screen, Overlay, Difference, Lighten, Darken,
+    Subtract, Exclusion, HardLight, SoftLight, ColorDodge, ColorBurn, LinearLight, Divide, Hue, Saturation, Color, Luminosity,
+}
+
+/// <summary>Posição, tamanho, giro e cantos arredondados de uma layer inteira.</summary>
+sealed class LayerTransform
+{
+    /// <summary>Deslocamento (-1..1 = meia tela).</summary>
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float Scale { get; set; } = 1;
+    /// <summary>Largura e altura (1 = 100%), multiplicadas pela escala.</summary>
+    public float Width { get; set; } = 1;
+    public float Height { get; set; } = 1;
+    /// <summary>Graus, sentido horário.</summary>
+    public float Rotation { get; set; }
+    /// <summary>Raio de cada canto em pixels: superior esquerdo, superior direito, inferior direito, inferior esquerdo.</summary>
+    public float[] Radius { get; set; } = [0, 0, 0, 0];
+}
 
 sealed class Clip
 {
@@ -53,6 +73,11 @@ sealed class ClipProps
     public float Volume { get; set; } = 1;
     /// <summary>repetir ou parar (segura o último quadro).</summary>
     public string End { get; set; } = "repetir";
+    /// <summary>Giro (graus), largura e altura (1 = 100%) e raio de cada canto em pixels (↖ ↗ ↘ ↙).</summary>
+    public float Rotation { get; set; }
+    public float Width { get; set; } = 1;
+    public float Height { get; set; } = 1;
+    public float[] Radius { get; set; } = [0, 0, 0, 0];
     public List<EffectInstance> Effects { get; set; } = [];
 }
 
@@ -91,6 +116,7 @@ sealed class Layer
     public int? CaptureFps { get; set; }
     public float Opacity { get; set; } = 1f;
     public BlendMode Blend { get; set; }
+    public LayerTransform Transform { get; set; } = new();
     public Clip?[] Clips { get; set; } = [];
     public List<EffectInstance> Effects { get; set; } = [];
     public TransitionType Transition { get; set; } = TransitionType.Cut;

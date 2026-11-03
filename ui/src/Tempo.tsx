@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { send, TRANSITIONS, type Layer, type Transition } from './bridge'
+import { BLEND_MODES, send, TRANSITIONS, type BlendMode, type Layer, type LayerTransform, type Transition } from './bridge'
+import { BLEND_LABELS } from './ClipGrid'
+import { CornerControls, RotationControl } from './ShapeControls'
 import { matches } from './shortcuts'
 
 /** BPM no topo: número editável, TAP, ressincronizar e 4 luzes que acompanham a batida. */
@@ -62,14 +64,45 @@ const TRANSITION_LABELS: Record<Transition, string> = {
   cut: 'Corte seco', crossfade: 'Crossfade', dip: 'Escurecer', wipe: 'Cortina',
 }
 
-/** Ajustes da layer selecionada: transição ao trocar de clip e volume do áudio. */
+const IDENTITY: LayerTransform = { x: 0, y: 0, scale: 1, width: 1, height: 1, rotation: 0, radius: [0, 0, 0, 0] }
+
+/** Ajustes da layer selecionada: mistura, posição/tamanho/giro/cantos, transição ao trocar de clip e volume. */
 export function LayerSettings({ layer, index, onChange }: {
   layer: Layer
   index: number
-  onChange: (patch: Partial<Pick<Layer, 'transition' | 'transitionSeconds' | 'volume' | 'sendToStage'>>) => void
+  onChange: (patch: Partial<Pick<Layer, 'blend' | 'opacity' | 'transition' | 'transitionSeconds' | 'volume' | 'sendToStage' | 'transform'>>) => void
 }) {
+  const t = { ...IDENTITY, ...(layer.transform ?? {}) }
+  const setT = (patch: Partial<LayerTransform>) => onChange({ transform: { ...t, ...patch } })
+  const slide = (label: string, key: 'x' | 'y' | 'scale' | 'width' | 'height', min: number, max: number, step: number, fmt: (v: number) => string) => (
+    <label>{label} <output>{fmt(t[key])}</output>
+      <input type="range" min={min} max={max} step={step} value={t[key]} onChange={(e) => setT({ [key]: Number(e.target.value) })} />
+    </label>
+  )
+  const changed = JSON.stringify(t) !== JSON.stringify(IDENTITY)
   return (
     <div className="layer-settings">
+      <label>
+        Mistura (blend) <output />
+        <select value={layer.blend} onChange={(e) => onChange({ blend: e.target.value as BlendMode })}>
+          {BLEND_MODES.map((b) => <option key={b} value={b}>{BLEND_LABELS[b] ?? b}</option>)}
+        </select>
+      </label>
+      <label>
+        Opacidade <output>{Math.round(layer.opacity * 100)}%</output>
+        <input type="range" min={0} max={1} step={0.01} value={layer.opacity} onChange={(e) => onChange({ opacity: Number(e.target.value) })} />
+      </label>
+      <details className="layer-shape" open={changed || undefined}>
+        <summary>Posição, tamanho, rotação e cantos{changed ? ' ●' : ''}</summary>
+        {slide('Escala', 'scale', 0.05, 3, 0.01, (v) => Math.round(v * 100) + '%')}
+        {slide('Largura', 'width', 0.05, 3, 0.01, (v) => Math.round(v * 100) + '%')}
+        {slide('Altura', 'height', 0.05, 3, 0.01, (v) => Math.round(v * 100) + '%')}
+        {slide('Posição horizontal', 'x', -1, 1, 0.005, (v) => (v * 50).toFixed(0) + '%')}
+        {slide('Posição vertical', 'y', -1, 1, 0.005, (v) => (v * 50).toFixed(0) + '%')}
+        <RotationControl value={t.rotation} onChange={(v) => setT({ rotation: v })} />
+        <CornerControls radius={t.radius} onChange={(r) => setT({ radius: r })} />
+        <button className="small" disabled={!changed} onClick={() => onChange({ transform: { ...IDENTITY } })}>Voltar ao normal</button>
+      </details>
       <label>
         Transição <output />
         <select value={layer.transition} onChange={(e) => onChange({ transition: e.target.value as Transition })}>

@@ -47,9 +47,12 @@ function fitMenu(el: HTMLDivElement | null) {
 const CAPTURE_SIZES: [string, string][] = [['', 'Resolução padrão'], ['1280x720', '1280×720 (HD)'], ['1920x1080', '1920×1080 (Full HD)'], ['2560x1440', '2560×1440'], ['3840x2160', '3840×2160 (4K)'], ['720x480', '720×480 (SD)']]
 const CAPTURE_FPS: [number, string][] = [[0, 'FPS padrão'], [25, '25 fps'], [30, '30 fps'], [50, '50 fps'], [60, '60 fps']]
 
-const BLEND_LABELS: Record<string, string> = {
-  normal: 'Normal', add: 'Add', multiply: 'Multiply', screen: 'Screen',
-  overlay: 'Overlay', difference: 'Difference', lighten: 'Lighten', darken: 'Darken',
+export const BLEND_LABELS: Record<string, string> = {
+  normal: 'Normal', add: 'Somar (Add)', multiply: 'Multiplicar', screen: 'Clarear (Screen)',
+  overlay: 'Sobrepor (Overlay)', difference: 'Diferença', lighten: 'Mais claro', darken: 'Mais escuro',
+  subtract: 'Subtrair', exclusion: 'Exclusão', hardLight: 'Luz forte', softLight: 'Luz suave',
+  colorDodge: 'Subexpor cor', colorBurn: 'Superexpor cor', linearLight: 'Luz linear', divide: 'Dividir',
+  hue: 'Matiz', saturation: 'Saturação', color: 'Cor', luminosity: 'Luminosidade',
 }
 
 function ClipThumb({ clip, thumb }: { clip: Clip; thumb?: string }) {

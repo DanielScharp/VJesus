@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using VJApp.Engine;
 using VJApp.Model;
@@ -36,6 +36,8 @@ sealed partial class MainForm
         slot.ClipOffsetX = Math.Clamp(p.OffsetX, -2, 2);
         slot.ClipOffsetY = Math.Clamp(p.OffsetY, -2, 2);
         slot.ClipVolume = Math.Clamp(p.Volume, 0, 2);
+        slot.ClipShape = new Engine.Shape(0, 0, Math.Clamp(p.Width, 0.01f, 10), Math.Clamp(p.Height, 0.01f, 10), p.Rotation,
+            Corner(p.Radius, 0), Corner(p.Radius, 1), Corner(p.Radius, 2), Corner(p.Radius, 3));
         slot.ClipEffects = [.. p.Effects.Select(GetRun)];
         if (_players[layer] is { } player)
         {
@@ -43,6 +45,8 @@ sealed partial class MainForm
             player.HoldAtEnd = p.End == "parar";
         }
     }
+
+    static float Corner(float[]? r, int i) => r != null && i < r.Length ? Math.Clamp(r[i], 0, 4000) : 0;
 
     void SetClipProps(int layer, int column, JsonNode? node)
     {

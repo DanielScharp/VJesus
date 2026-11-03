@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { send, type Clip, type ClipProps, type EffectDef, type EffectInstance } from './bridge'
 import { EffectsPanel } from './EffectsPanel'
+import { CornerControls, RotationControl } from './ShapeControls'
 
-export const DEFAULT_PROPS: ClipProps = { speed: 1, fit: 'encaixar', zoom: 1, offsetX: 0, offsetY: 0, volume: 1, end: 'repetir', effects: [] }
+export const DEFAULT_PROPS: ClipProps = { speed: 1, fit: 'encaixar', zoom: 1, offsetX: 0, offsetY: 0, volume: 1, end: 'repetir', rotation: 0, width: 1, height: 1, radius: [0, 0, 0, 0], effects: [] }
 
 /** Efeitos de clip usam este número de "alvo" nas mensagens de efeito (o motor sabe que é um clip). */
 export const clipTarget = (layer: number, column: number) => 10000 + layer * 1000 + column
@@ -26,9 +27,9 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose 
     setP(next)
     send({ type: 'setClipProps', layer, column, props: { ...next, name: newName } })
   }
-  const slider = (label: string, key: 'speed' | 'zoom' | 'offsetX' | 'offsetY' | 'volume', min: number, max: number, step: number, fmt: (v: number) => string) => (
-    <label>{label} <output>{fmt(p[key])}</output>
-      <input type="range" min={min} max={max} step={step} value={p[key]} onChange={(e) => update({ [key]: Number(e.target.value) })} />
+  const slider = (label: string, key: 'speed' | 'zoom' | 'offsetX' | 'offsetY' | 'volume' | 'width' | 'height', min: number, max: number, step: number, fmt: (v: number) => string) => (
+    <label>{label} <output>{fmt(p[key] ?? 1)}</output>
+      <input type="range" min={min} max={max} step={step} value={p[key] ?? 1} onChange={(e) => update({ [key]: Number(e.target.value) })} />
     </label>
   )
 
@@ -75,11 +76,15 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose 
                     <button key={v} className={`small ${p.fit === v ? 'active' : ''}`} onClick={() => update({ fit: v })}>{l}</button>
                   ))}
                 </div>
-                {slider('Tamanho (zoom)', 'zoom', 0.1, 4, 0.01, (v) => Math.round(v * 100) + '%')}
+                {slider('Escala', 'zoom', 0.1, 4, 0.01, (v) => Math.round(v * 100) + '%')}
+                {slider('Largura', 'width', 0.05, 3, 0.01, (v) => Math.round(v * 100) + '%')}
+                {slider('Altura', 'height', 0.05, 3, 0.01, (v) => Math.round(v * 100) + '%')}
                 {slider('Posição horizontal', 'offsetX', -1, 1, 0.005, (v) => (v * 50).toFixed(0) + '%')}
                 {slider('Posição vertical', 'offsetY', -1, 1, 0.005, (v) => (v * 50).toFixed(0) + '%')}
+                <RotationControl value={p.rotation ?? 0} onChange={(v) => update({ rotation: v })} />
+                <CornerControls radius={p.radius ?? [0, 0, 0, 0]} onChange={(r) => update({ radius: r })} />
                 <div className="row chips">
-                  <button className="small" onClick={() => update({ zoom: 1, offsetX: 0, offsetY: 0 })}>Centralizar e tamanho normal</button>
+                  <button className="small" onClick={() => update({ zoom: 1, offsetX: 0, offsetY: 0, width: 1, height: 1, rotation: 0, radius: [0, 0, 0, 0] })}>Voltar ao normal</button>
                 </div>
               </>
             )}

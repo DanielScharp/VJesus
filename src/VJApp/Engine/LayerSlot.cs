@@ -1,4 +1,4 @@
-﻿using Vortice.Direct3D11;
+using Vortice.Direct3D11;
 using Vortice.DXGI;
 
 namespace VJApp.Engine;
@@ -80,6 +80,12 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
     }
 }
 
+/// <summary>Posição, tamanho, giro e cantos de um clip ou de uma layer, pronto para o shader.</summary>
+sealed record Shape(float X, float Y, float ScaleX, float ScaleY, float Rotation, float TopLeft, float TopRight, float BottomRight, float BottomLeft)
+{
+    public static readonly Shape Identity = new(0, 0, 1, 1, 0, 0, 0, 0, 0);
+}
+
 /// <summary>Estado de uma layer do lado do motor.</summary>
 sealed class LayerSlot
 {
@@ -97,6 +103,9 @@ sealed class LayerSlot
     public volatile int ClipFit;
     public volatile float ClipZoom = 1, ClipOffsetX, ClipOffsetY, ClipVolume = 1;
     public volatile EffectRun[] ClipEffects = [];
+    /// <summary>Giro, largura/altura e cantos do clip tocando; e a forma da layer inteira.</summary>
+    public volatile Shape ClipShape = Shape.Identity;
+    public volatile Shape LayerShape = Shape.Identity;
 
     // troca de fonte pedida pela UI, adotada pelo render thread
     public readonly object Lock = new();

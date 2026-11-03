@@ -395,6 +395,7 @@ sealed partial class MainForm : Form
                 if (msg["transitionSeconds"] is JsonNode ts) layer.TransitionSeconds = Math.Clamp((float)ts, 0, 10);
                 if (msg["volume"] is JsonNode vo) layer.Volume = Math.Clamp((float)vo, 0, 1.5f);
                 if (msg["sendToStage"] is JsonNode st) { layer.SendToStage = (bool)st; SendStage(); }
+                if (msg["transform"] is JsonNode tf && tf.Deserialize<LayerTransform>(JsonRead) is { } transform) layer.Transform = transform;
                 ApplyLayerParams(L());
                 ScheduleSave();
                 BroadcastRemoteState();
@@ -554,6 +555,10 @@ sealed partial class MainForm : Form
         slot.TransitionSeconds = _comp.Layers[layer].TransitionSeconds;
         slot.Volume = _comp.Layers[layer].Volume;
         slot.ToStage = _comp.Layers[layer].SendToStage;
+        var t = _comp.Layers[layer].Transform ??= new LayerTransform();
+        slot.LayerShape = new Engine.Shape(Math.Clamp(t.X, -4, 4), Math.Clamp(t.Y, -4, 4),
+            Math.Clamp(t.Scale * t.Width, 0.01f, 10), Math.Clamp(t.Scale * t.Height, 0.01f, 10), t.Rotation,
+            Corner(t.Radius, 0), Corner(t.Radius, 1), Corner(t.Radius, 2), Corner(t.Radius, 3));
     }
 
     void CompositionChanged()
@@ -662,6 +667,7 @@ sealed partial class MainForm : Form
                 transitionSeconds = l.TransitionSeconds,
                 volume = l.Volume,
                 sendToStage = l.SendToStage,
+                transform = l.Transform,
                 hasAudio = _players[_comp.Layers.IndexOf(l)]?.HasAudio ?? false,
             }),
             masterEffects = _comp.MasterEffects,

@@ -37,7 +37,11 @@ struct LayerParams
     public float FitMode;         // 0 encaixar, 1 preencher, 2 esticar
     public float Zoom;            // 1 = tamanho normal
     public float OffsetX, OffsetY; // deslocamento (-1..1 = meia tela)
-    public float Pad0, Pad1, Pad2;
+    public float ClipRotation, ClipScaleX, ClipScaleY; // giro (rad), largura e altura do clip
+    public float ClipRadiusTL, ClipRadiusTR, ClipRadiusBR, ClipRadiusBL; // cantos (px)
+    public float LayerX, LayerY, LayerScaleX, LayerScaleY;
+    public float LayerRotation, Pad0, Pad1, Pad2;
+    public float LayerRadiusTL, LayerRadiusTR, LayerRadiusBR, LayerRadiusBL;
 }
 
 /// <summary>Fundo gerado (antigo Plasma): tipo, cores, velocidade, intensidade, escala. Igual ao cbuffer GenParams.</summary>
@@ -366,6 +370,11 @@ sealed partial class Renderer : IDisposable
             OffsetX = source.Lyrics != null ? 0 : slot.ClipOffsetX,
             OffsetY = source.Lyrics != null ? 0 : slot.ClipOffsetY,
         };
+        var cs = source.Lyrics != null ? Shape.Identity : slot.ClipShape;
+        lp.ClipRotation = cs.Rotation * MathF.PI / 180;
+        lp.ClipScaleX = cs.ScaleX;
+        lp.ClipScaleY = cs.ScaleY;
+        (lp.ClipRadiusTL, lp.ClipRadiusTR, lp.ClipRadiusBR, lp.ClipRadiusBL) = (cs.TopLeft, cs.TopRight, cs.BottomRight, cs.BottomLeft);
         _ctx!.UpdateSubresource(in lp, _layerCb!);
         if (source.Kind == SourceKind.Plasma)
         {
@@ -463,7 +472,14 @@ sealed partial class Renderer : IDisposable
 
             // 2) efeitos da layer   3) mistura na composição
             w = ApplyEffects(slot.Effects, _work, w, updateHistory: main);
-            var blend = new LayerParams { Opacity = slot.Opacity, Blend = slot.Blend };
+            var ls = slot.LayerShape;
+            var blend = new LayerParams
+            {
+                Opacity = slot.Opacity, Blend = slot.Blend,
+                LayerX = ls.X, LayerY = ls.Y, LayerScaleX = ls.ScaleX, LayerScaleY = ls.ScaleY,
+                LayerRotation = ls.Rotation * MathF.PI / 180,
+                LayerRadiusTL = ls.TopLeft, LayerRadiusTR = ls.TopRight, LayerRadiusBR = ls.BottomRight, LayerRadiusBL = ls.BottomLeft,
+            };
             ctx.UpdateSubresource(in blend, _layerCb!);
             int next = 1 - cur;
             Pass(_psBlend!, pair[next]!.Rtv, pair[cur]!.Srv, _work[w]!.Srv);

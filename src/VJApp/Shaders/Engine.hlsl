@@ -32,8 +32,45 @@ cbuffer LayerParams : register(b1)
     float Zoom;          // 1 = normal
     float OffsetX;       // deslocamento do clip (-1..1 = meia tela)
     float OffsetY;
+    float ClipRotation;  // giro do clip (radianos)
+    float ClipScaleX;    // largura e altura do clip (1 = 100%)
+    float ClipScaleY;
+    float4 ClipRadius;   // cantos do clip em pixels: ↖ ↗ ↘ ↙
+    float LayerX;        // posição da layer inteira (-1..1 = meia tela)
+    float LayerY;
+    float LayerScaleX;   // largura e altura da layer (1 = 100%)
+    float LayerScaleY;
+    float LayerRotation; // giro da layer (radianos)
     float3 _layerPad;
+    float4 LayerRadius;  // cantos da layer em pixels: ↖ ↗ ↘ ↙
 };
+
+float2 rotate2(float2 v, float a)
+{
+    float s = sin(a), c = cos(a);
+    return float2(v.x * c - v.y * s, v.x * s + v.y * c);
+}
+
+// retângulo de cantos arredondados (um raio por canto): 1 dentro, 0 fora, borda suave de 1 pixel
+float roundedMask(float2 p, float2 size, float4 r)
+{
+    if (all(r <= 0)) return 1;
+    float2 h = size * 0.5;
+    float2 q = p - h;
+    float rad = q.x < 0 ? (q.y < 0 ? r.x : r.w) : (q.y < 0 ? r.y : r.z);
+    rad = min(max(rad, 0), min(h.x, h.y));
+    float2 d = abs(q) - h + rad;
+    float sd = length(max(d, 0)) + min(max(d.x, d.y), 0) - rad;
+    return saturate(0.5 - sd);
+}
+
+// leva um ponto da tela para dentro de um retângulo que foi movido, girado e escalado; devolve 0..1 dentro dele
+float2 untransform(float2 uv, float2 offset, float rotation, float2 scale)
+{
+    float2 px = uv * Resolution - Resolution * (0.5 + float2(offset.x, -offset.y) * 0.5);
+    px = rotate2(px, -rotation) / scale;
+    return px / Resolution + 0.5;
+}
 
 Texture2D Tex0 : register(t0);
 Texture2D Tex1 : register(t1);
@@ -228,15 +265,18 @@ float4 videoSource(float2 uv)
     else if (FitMode > 0.5) scale = dstAspect > VideoAspect         // preencher (corta as sobras)
         ? float2(1, VideoAspect / dstAspect)
         : float2(dstAspect / VideoAspect, 1);
-    // zoom e posição do clip
-    uv = (uv - 0.5 - float2(OffsetX, -OffsetY) * 0.5) / max(Zoom, 0.01) + 0.5;
+    // zoom, largura/altura, giro e posição do clip
+    float2 size = max(Zoom, 0.01) * (ClipScaleX == 0 && ClipScaleY == 0 ? float2(1, 1) : max(abs(float2(ClipScaleX, ClipScaleY)), 0.01));
+    uv = untransform(uv, float2(OffsetX, OffsetY), ClipRotation, size);
     float2 v = (uv - 0.5) * scale + 0.5;
     if (any(v < 0) || any(v > 1)) return float4(0, 0, 0, 0);
+    float2 shown = Resolution / scale * size; // tamanho da imagem na tela, em pixels
+    float mask = roundedMask(v * shown, shown, ClipRadius);
     float4 c = Tex0.SampleLevel(LinearClamp, v * UvScale, 0);
     if (ColorMode > 2.5) return c.a > 0.0001 ? float4(c.rgb / c.a, c.a) : float4(0, 0, 0, 0); // pré-multiplicado (letras)
-    if (ColorMode > 1.5) return float4(scaledYCoCgToRgb(c), 1);
-    if (ColorMode > 0.5) return c;
-    return float4(c.rgb, 1);
+    if (ColorMode > 1.5) return float4(scaledYCoCgToRgb(c), mask);
+    if (ColorMode > 0.5) return float4(c.rgb, c.a * mask);
+    return float4(c.rgb, mask);
 }
 
 float4 PSSource(VSOut i) : SV_Target
@@ -266,10 +306,40 @@ float4 PSTransition(VSOut i) : SV_Target
 }
 // ---------- mistura na composição ----------
 
+float lum(float3 c) { return dot(c, float3(0.3, 0.59, 0.11)); }
+float3 clipColor(float3 c)
+{
+    float l = lum(c), n = min(min(c.r, c.g), c.b), x = max(max(c.r, c.g), c.b);
+    if (n < 0) c = l + (c - l) * l / max(l - n, 1e-5);
+    if (x > 1) c = l + (c - l) * (1 - l) / max(x - l, 1e-5);
+    return c;
+}
+float3 setLum(float3 c, float l) { return clipColor(c + (l - lum(c))); }
+float satOf(float3 c) { return max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b); }
+float3 setSat(float3 c, float s)
+{
+    float mx = max(max(c.r, c.g), c.b), mn = min(min(c.r, c.g), c.b);
+    return mx > mn ? (c - mn) * s / (mx - mn) : float3(0, 0, 0);
+}
+
 float3 blend(float3 b, float3 s, int mode)
 {
+    b = saturate(b);
+    s = saturate(s);
     switch (mode)
     {
+        case 8: return b - s;                                                   // Subtrair
+        case 9: return b + s - 2 * b * s;                                       // Exclusão
+        case 10: return s < 0.5 ? 2 * b * s : 1 - 2 * (1 - b) * (1 - s);        // Luz forte
+        case 11: return (1 - 2 * s) * b * b + 2 * s * b;                        // Luz suave
+        case 12: return s >= 1 ? float3(1, 1, 1) : saturate(b / (1 - s));       // Subexpor cor
+        case 13: return s <= 0 ? float3(0, 0, 0) : 1 - saturate((1 - b) / s);   // Superexpor cor
+        case 14: return b + 2 * s - 1;                                          // Luz linear
+        case 15: return b / max(s, 0.001);                                      // Dividir
+        case 16: return setLum(setSat(s, satOf(b)), lum(b));                    // Matiz
+        case 17: return setLum(setSat(b, satOf(s)), lum(b));                    // Saturação
+        case 18: return setLum(s, lum(b));                                      // Cor
+        case 19: return setLum(b, lum(s));                                      // Luminosidade
         case 1: return b + s;                                   // Add
         case 2: return b * s;                                   // Multiply
         case 3: return 1 - (1 - b) * (1 - s);                   // Screen
@@ -284,7 +354,11 @@ float3 blend(float3 b, float3 s, int mode)
 float4 PSBlend(VSOut i) : SV_Target
 {
     float3 base = Tex0.SampleLevel(LinearClamp, i.uv, 0).rgb;
-    float4 src = Tex1.SampleLevel(LinearClamp, i.uv, 0);
+    // posição, tamanho, giro e cantos da layer inteira
+    float2 size = LayerScaleX == 0 && LayerScaleY == 0 ? float2(1, 1) : max(abs(float2(LayerScaleX, LayerScaleY)), 0.01);
+    float2 luv = untransform(i.uv, float2(LayerX, LayerY), LayerRotation, size);
+    float4 src = any(luv < 0) || any(luv > 1) ? float4(0, 0, 0, 0) : Tex1.SampleLevel(LinearClamp, luv, 0);
+    src.a *= roundedMask(luv * Resolution * size, Resolution * size, LayerRadius);
     float3 mixed = blend(base, src.rgb, (int)Blend);
     return float4(saturate(lerp(base, mixed, Opacity * saturate(src.a))), 1);
 }
