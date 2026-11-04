@@ -60,19 +60,7 @@ export function OverlayPanel({ overlay, timer, fonts }: { overlay: OverlayState;
   }
   return (
     <div className="overlay-panel">
-      {targets.length > 1 && (
-        <section className="overlay-where">
-          <h2>Onde a contagem e os avisos aparecem</h2>
-          <div className="row">
-            {targets.map((t) => (
-              <label key={t.id} className="check">
-                <input type="checkbox" checked={chosen.length === 0 || chosen.includes(t.id)} onChange={() => toggleTarget(t.id)} /> {t.name}
-              </label>
-            ))}
-          </div>
-          <p className="meta">Telões do mapeamento. A tela de pânico sempre cobre todos.</p>
-        </section>
-      )}      <section>
+      <section>
         <div className="effects-head">
           <h2>Contagem regressiva</h2>
           <button className={mode === 'timer' ? 'onair-btn' : 'primary'} onClick={() => send({ type: 'overlayTimer', on: mode !== 'timer' })}>
@@ -148,6 +136,16 @@ export function OverlayPanel({ overlay, timer, fonts }: { overlay: OverlayState;
           </div>
         )}
       </section>
+      {targets.length > 1 && (
+        <div className="overlay-where" title="Telões do mapeamento. A tela de pânico sempre cobre todos.">
+          <span className="meta">Contagem e avisos aparecem em:</span>
+          {targets.map((t) => (
+            <label key={t.id} className="check">
+              <input type="checkbox" checked={chosen.length === 0 || chosen.includes(t.id)} onChange={() => toggleTarget(t.id)} /> {t.name}
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

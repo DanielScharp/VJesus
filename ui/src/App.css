@@ -888,3 +888,11 @@ button.onair-btn { background: #c93030; border-color: #c93030; color: #fff; font
 .media-sugg button { font-size: 10px; padding: 0 5px; }
 .panic-fields label { align-items: stretch; text-align: left; }
 .panic-fields label .row { justify-content: flex-start; }
+
+/* biblioteca recolhível e escolha dos telões dos avisos */
+.media-toggle { display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; padding: 2px 4px; cursor: pointer; color: inherit; }
+.media-toggle h2 { margin: 0; }
+.media-toggle .caret { color: var(--muted); width: 12px; }
+.media-toggle:hover h2 { color: var(--accent); }
+.media-lib.closed { padding-top: 8px; padding-bottom: 8px; }
+.overlay-where { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }

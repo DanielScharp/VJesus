@@ -22,6 +22,9 @@ export function MediaLibrary({ thumbs }: { thumbs: Record<string, string | null>
   const [previews, setPreviews] = useState<Record<string, string[]>>({})
   const [editing, setEditing] = useState<string | null>(null)
   const asked = useRef(new Set<string>())
+  // aberta ou fechada fica lembrado (fechada por padrão, para não ocupar a tela)
+  const [open, setOpen] = useState(() => { try { return localStorage.getItem('biblioteca.aberta') === '1' } catch { return false } })
+  const toggle = () => setOpen((o) => { try { localStorage.setItem('biblioteca.aberta', o ? '0' : '1') } catch { /* sem armazenamento */ } return !o })
 
   useEffect(() => {
     const off = onMessage((m) => {
@@ -29,9 +32,10 @@ export function MediaLibrary({ thumbs }: { thumbs: Record<string, string | null>
       if (m.type === 'libraryPreview') setPreviews((p) => ({ ...p, [m.path]: m.frames }))
       if (m.type === 'libraryTags') setItems((list) => list?.map((i) => (i.path === m.path ? { ...i, tags: m.tags } : i)) ?? null)
     })
-    send({ type: 'libraryGet' })
     return off
   }, [])
+  // só lê as pastas quando a biblioteca é aberta
+  useEffect(() => { if (open && items === null) send({ type: 'libraryGet' }) }, [open])
 
   const allTags = useMemo(() => {
     const count = new Map<string, number>()
@@ -51,23 +55,30 @@ export function MediaLibrary({ thumbs }: { thumbs: Record<string, string | null>
   const visible = shown.slice(0, 200)
   // miniaturas só do que aparece na tela
   useEffect(() => {
+    if (!open) return
     const need = visible.filter((i) => i.kind !== 'presentationFile' && !(i.path in thumbs) && !asked.current.has(i.path)).map((i) => i.path)
     if (need.length === 0) return
     need.forEach((p) => asked.current.add(p))
     for (let k = 0; k < need.length; k += 40) send({ type: 'libraryThumbs', paths: need.slice(k, k + 40) })
-  }, [visible, thumbs])
+  }, [visible, thumbs, open])
 
   return (
-    <section className="media-lib">
+    <section className={`media-lib ${open ? 'open' : 'closed'}`}>
       <div className="media-head">
-        <h2>Biblioteca de mídia</h2>
+        <button className="media-toggle" onClick={toggle} aria-expanded={open} title={open ? 'Recolher a biblioteca' : 'Abrir a biblioteca'}>
+          <span className="caret">{open ? '▾' : '▸'}</span> <h2>Biblioteca de mídia</h2>
+          {items && <span className="meta">{items.length} itens</span>}
+        </button>
+        {open && <>
         <input className="media-search" placeholder="Buscar por nome, pasta ou tag…" value={q} onChange={(e) => setQ(e.target.value)} />
         <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
           <option value="all">Tudo</option><option value="video">Vídeos</option><option value="image">Imagens</option><option value="pres">Apresentações</option>
         </select>
         <button onClick={() => send({ type: 'libraryAddFolder' })}>+ Pasta…</button>
         <button onClick={() => send({ type: 'libraryGet' })} disabled={scanning}>{scanning ? 'Lendo…' : 'Atualizar'}</button>
+        </>}
       </div>
+      {open && <>
       <div className="media-folders">
         {folders.length === 0 && <span className="meta">Adicione as pastas onde ficam os vídeos da igreja. O que já está na grade aparece aqui sozinho.</span>}
         {folders.map((f) => (
@@ -92,6 +103,7 @@ export function MediaLibrary({ thumbs }: { thumbs: Record<string, string | null>
       </div>
       {shown.length > visible.length && <div className="meta">Mostrando 200 de {shown.length}. Use a busca para achar o resto.</div>}
       <p className="hint">Arraste da biblioteca para uma célula da grade · passe o mouse para ver o vídeo · # para marcar com tags</p>
+      </>}
     </section>
   )
 }
