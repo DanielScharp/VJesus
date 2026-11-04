@@ -316,7 +316,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
           layer={propsEdit.layer} column={propsEdit.column} playing={comp.layers[propsEdit.layer].active === propsEdit.column}
           library={library} onClose={() => setPropsEdit(null)}
           pb={comp.layers[propsEdit.layer].active === propsEdit.column ? playback[propsEdit.layer] ?? null : null}
-          muted={!!comp.layers[propsEdit.layer].muted} onMute={(m) => onLayerChange(propsEdit.layer, { muted: m })} />
+          muted={!!comp.layers[propsEdit.layer].muted} onMute={(m) => onLayerChange(propsEdit.layer, { muted: m })} comp={comp} />
       )}
 
       {genEdit && (

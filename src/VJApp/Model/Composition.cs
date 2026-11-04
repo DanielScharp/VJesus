@@ -73,8 +73,10 @@ sealed class ClipProps
     public float OffsetX { get; set; }
     public float OffsetY { get; set; }
     public float Volume { get; set; } = 1;
-    /// <summary>repetir ou parar (segura o último quadro).</summary>
+    /// <summary>repetir, parar (segura o último quadro) ou seguir (toca o que está em Next).</summary>
     public string End { get; set; } = "repetir";
+    /// <summary>O que entra quando o vídeo acaba (End = "seguir").</summary>
+    public ClipNext? Next { get; set; }
     /// <summary>Pontos de corte (segundos): o clip toca só deste trecho (saída 0 = até o fim).</summary>
     public double InPoint { get; set; }
     public double OutPoint { get; set; }
@@ -84,6 +86,16 @@ sealed class ClipProps
     public float Height { get; set; } = 1;
     public float[] Radius { get; set; } = [0, 0, 0, 0];
     public List<EffectInstance> Effects { get; set; } = [];
+}
+
+/// <summary>Próxima exibição programada: outro clip (de qualquer aba e layer), a próxima coluna ou limpar a layer.</summary>
+sealed class ClipNext
+{
+    /// <summary>clip, proxima ou limpar.</summary>
+    public string Action { get; set; } = "clip";
+    public string? DeckId { get; set; }
+    public int Layer { get; set; } = -1;
+    public int Column { get; set; } = -1;
 }
 
 /// <summary>Ajustes do fundo gerado (para fundos leves de culto).</summary>

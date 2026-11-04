@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { send, type Clip, type ClipProps, type EffectDef, type EffectInstance, type LayerPlayback } from './bridge'
+import { send, type Clip, type ClipNext, type ClipProps, type Composition, type EffectDef, type EffectInstance, type LayerPlayback } from './bridge'
 import { EffectsPanel } from './EffectsPanel'
 import { CornerControls, RotationControl } from './ShapeControls'
 
@@ -79,9 +79,58 @@ function VideoTimeline({ layer, playing, pb, duration, inPoint, outPoint, muted,
   )
 }
 
-export function ClipPropsPanel({ clip, layer, column, playing, library, onClose, pb, muted, onMute }: {
+/**
+ * Próxima exibição: quando este vídeo acabar, entra outro clip (qualquer aba e layer), a próxima coluna
+ * desta layer, ou a layer é limpa. A troca usa a transição da layer de destino.
+ */
+function NextPicker({ comp, layer, column, next, onChange }: {
+  comp: Composition; layer: number; column: number; next: ClipNext; onChange: (n: ClipNext) => void
+}) {
+  const deck = comp.decks.find((d) => d.id === next.deckId) ?? comp.decks[comp.currentDeck]
+  const row = deck?.clips?.[next.layer] ?? []
+  const colName = (c: number) => deck?.columnNames?.[c] || `Coluna ${c + 1}`
+  const options = row.map((c, i) => ({ c, i })).filter(({ c, i }) => c && !(deck?.id === comp.decks[comp.currentDeck]?.id && next.layer === layer && i === column))
+  const chosen = row[next.column]
+  return (
+    <div className="next-picker">
+      <div className="row chips">
+        {([['clip', 'Tocar outro clip'], ['proxima', 'Próxima coluna desta layer'], ['limpar', 'Limpar a layer']] as const).map(([v, l]) => (
+          <button key={v} className={`small ${next.action === v ? 'active' : ''}`} onClick={() => onChange({ ...next, action: v })}>{l}</button>
+        ))}
+      </div>
+      {next.action === 'clip' && (
+        <>
+          <label>Aba <output />
+            <select value={deck?.id ?? ''} onChange={(e) => onChange({ ...next, deckId: e.target.value, column: -1 })}>
+              {comp.decks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </label>
+          <label>Layer <output />
+            <select value={next.layer} onChange={(e) => onChange({ ...next, layer: Number(e.target.value), column: -1 })}>
+              {comp.layers.map((_, i) => i).reverse().map((i) => <option key={i} value={i}>{comp.layers[i].name}{i === layer ? ' (esta)' : ''}</option>)}
+            </select>
+          </label>
+          <label>Clip <output />
+            <select value={next.column} onChange={(e) => onChange({ ...next, column: Number(e.target.value) })}>
+              <option value={-1}>Escolha…</option>
+              {options.map(({ c, i }) => <option key={i} value={i}>{c!.name} ({colName(i)})</option>)}
+            </select>
+          </label>
+          {next.column < 0 && <p className="warn-text">Escolha o clip que entra quando este vídeo acabar.</p>}
+          {next.column >= 0 && !chosen && <p className="warn-text">Essa célula ficou vazia; escolha outro clip.</p>}
+          {chosen && next.layer !== layer && <p className="meta">Quando acabar, este vídeo sai e “{chosen.name}” entra na {comp.layers[next.layer]?.name}.</p>}
+        </>
+      )}
+      {next.action === 'proxima' && <p className="meta">Toca o próximo clip à direita nesta layer; se não houver, limpa a layer.</p>}
+      {next.action === 'limpar' && <p className="meta">O vídeo some com a transição da layer e fica o que estiver embaixo.</p>}
+      <p className="meta">Enquanto o próximo não entra, o último quadro fica parado na tela, sem piscar.</p>
+    </div>
+  )
+}
+
+export function ClipPropsPanel({ clip, layer, column, playing, library, onClose, pb, muted, onMute, comp }: {
   clip: Clip; layer: number; column: number; playing: boolean; library: EffectDef[]; onClose: () => void
-  pb: LayerPlayback; muted: boolean; onMute: (m: boolean) => void
+  pb: LayerPlayback; muted: boolean; onMute: (m: boolean) => void; comp?: Composition
 }) {
   const [p, setP] = useState<ClipProps>({ ...DEFAULT_PROPS, ...(clip.props ?? {}) })
   const [name, setName] = useState(clip.name)
@@ -137,7 +186,12 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
                   <span>No fim:</span>
                   <button className={`small ${p.end === 'repetir' ? 'active' : ''}`} onClick={() => update({ end: 'repetir' })}>Repetir</button>
                   <button className={`small ${p.end === 'parar' ? 'active' : ''}`} onClick={() => update({ end: 'parar' })}>Parar no último quadro</button>
+                  <button className={`small ${p.end === 'seguir' ? 'active' : ''}`} title="Quando o vídeo acabar, entra sozinho o que você programar"
+                    onClick={() => update({ end: 'seguir', next: p.next ?? { action: 'clip', deckId: comp?.decks[comp.currentDeck]?.id ?? null, layer, column: -1 } })}>Depois, ir para…</button>
                 </div>
+                {p.end === 'seguir' && comp && (
+                  <NextPicker comp={comp} layer={layer} column={column} next={p.next ?? { action: 'clip', layer, column: -1 }} onChange={(next) => update({ next })} />
+                )}
                 {slider('Volume', 'volume', 0, 1.5, 0.01, (v) => Math.round(v * 100) + '%')}
               </>
             )}

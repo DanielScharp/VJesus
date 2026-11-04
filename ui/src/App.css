@@ -789,4 +789,5 @@ button.onair-btn { background: #c93030; border-color: #c93030; color: #fff; font
 .timeline-bar input[type=range] { width: 100%; position: relative; z-index: 1; }
 .timeline-range { position: absolute; top: 50%; height: 10px; transform: translateY(-50%); background: rgba(255, 176, 32, .28); border-radius: 3px; pointer-events: none; }
 .timeline-info { align-items: center; margin-bottom: 4px; }
-.timeline-time { font-variant-numeric: tabular-nums; font-size: 13px; margin-right: 6px; }
+.timeline-time { font-variant-numeric: tabular-nums; font-size: 13px; margin-right: 6px; }.next-picker { border-left: 3px solid var(--accent); padding: 4px 0 4px 10px; margin: 4px 0 10px; }
+.next-picker label { grid-template-columns: 60px 10px 1fr; }

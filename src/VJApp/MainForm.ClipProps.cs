@@ -42,7 +42,7 @@ sealed partial class MainForm
         if (_players[layer] is { } player)
         {
             player.Speed = Math.Clamp(p.Speed, 0.05f, 8);
-            player.HoldAtEnd = p.End == "parar";
+            player.HoldAtEnd = p.End is "parar" or "seguir"; // seguir: segura o último quadro até o próximo entrar
             if (clip.Kind == ClipKind.Video) player.SetRange(p.InPoint, p.OutPoint);
             // a duração fica guardada no clip, para marcar os pontos de corte mesmo sem ele tocar
             if (clip.Kind == ClipKind.Video && player.Duration > 0 && clip.Duration != player.Duration) { clip.Duration = player.Duration; ScheduleSave(); }
