@@ -245,7 +245,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
                 {current?.kind === 'plasma' && <button onClick={pick(() => setGenEdit({ ...cell, gen: current.gen ?? null }))}>Ajustar fundo animado…</button>}
                 {menu.filled && <div className="menu-label">Trocar por</div>}
                 <button onClick={pick(() => send({ type: 'browseClip', ...cell }))}>Vídeo ou imagem…</button>
-                <button onClick={pick(() => send({ type: 'presentationBrowse', ...cell }))}>Apresentação (PowerPoint)…</button>
+                <button onClick={pick(() => send({ type: 'presentationBrowse', ...cell }))}>Apresentação (PowerPoint ou PDF)…</button>
                 <button onClick={pick(() => { send({ type: 'setGenerator', kind: 'plasma', ...cell, gen: DEFAULT_GEN }); setGenEdit({ ...cell, gen: DEFAULT_GEN }) })}>Fundo animado (ajustável)…</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'testCard', ...cell }))}>Gerador: Test card</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'lyrics', ...cell }))}>Letras (aba Letras)</button>

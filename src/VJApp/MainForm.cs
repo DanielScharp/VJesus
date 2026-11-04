@@ -16,7 +16,7 @@ sealed partial class MainForm : Form
 {
     const string UiHost = "app.vj";
     const string VideoFilter =
-        "Vídeos, imagens e apresentações|*.mov;*.mp4;*.avi;*.mkv;*.webm;*.m4v;*.wmv;*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp;*.pptx;*.ppt;*.ppsx;*.pps|Todos os arquivos|*.*";
+        "Vídeos, imagens e apresentações|*.mov;*.mp4;*.avi;*.mkv;*.webm;*.m4v;*.wmv;*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp;*.pptx;*.ppt;*.ppsx;*.pps;*.pdf|Todos os arquivos|*.*";
 
     static readonly JsonSerializerOptions Json = new()
     {

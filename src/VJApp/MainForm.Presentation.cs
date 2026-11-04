@@ -15,8 +15,8 @@ namespace VJApp;
 /// </summary>
 sealed partial class MainForm
 {
-    const string PresentationFilter = "Apresentações do PowerPoint|*.pptx;*.ppt;*.ppsx;*.pps;*.pptm|Todos os arquivos|*.*";
-    static readonly string[] PresentationExtensions = [".pptx", ".ppt", ".ppsx", ".pps", ".pptm"];
+    const string PresentationFilter = "Apresentações (PowerPoint ou PDF)|*.pptx;*.ppt;*.ppsx;*.pps;*.pptm;*.pdf|Todos os arquivos|*.*";
+    static readonly string[] PresentationExtensions = [".pptx", ".ppt", ".ppsx", ".pps", ".pptm", ".pdf"];
 
     /// <summary>%AppData%\VJesus\apresentacoes: uma pasta por apresentação, com um PNG por slide.</summary>
     static string PresentationsDir => Path.Combine(AppInfo.DataDir, "apresentacoes");
@@ -58,7 +58,7 @@ sealed partial class MainForm
     async Task ImportPresentationAsync(int layer, int column, string file)
     {
         if (layer < 0 || layer >= _comp.Layers.Count || column < 0 || column >= _comp.Columns) return;
-        Send(new { type = "notice", message = $"Preparando {Path.GetFileName(file)} (o PowerPoint exporta os slides; pode levar alguns segundos)…" });
+        Send(new { type = "notice", message = $"Preparando {Path.GetFileName(file)} (convertendo as páginas; pode levar alguns segundos)…" });
         try
         {
             var folder = await ConvertPresentationAsync(file);
@@ -83,6 +83,10 @@ sealed partial class MainForm
         var key = Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes($"{info.FullName}|{info.Length}|{info.LastWriteTimeUtc.Ticks}|etapas")))[..12].ToLowerInvariant();
         var folder = Path.Combine(PresentationsDir, $"{Slug(Path.GetFileNameWithoutExtension(file))}-{key}");
         if (PresentationSlides(folder).Length > 0) return Task.FromResult(folder); // já convertida
+
+        // PDF: as páginas são desenhadas aqui mesmo (PDFium), sem precisar de outro programa
+        if (Path.GetExtension(file).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
+            return Task.Run(() => { ExportPdf(info.FullName, folder); return folder; });
 
         var done = new TaskCompletionSource<string>();
         // o PowerPoint é COM: precisa de uma thread STA própria (fora da interface)
@@ -147,6 +151,47 @@ sealed partial class MainForm
             if (pres != null) Marshal.FinalReleaseComObject(pres);
             if (app != null) Marshal.FinalReleaseComObject(app);
             try { if (Directory.Exists(tmp)) Directory.Delete(tmp, true); } catch { }
+        }
+    }
+
+    static readonly object PdfLock = new(); // o PDFium não pode desenhar dois documentos ao mesmo tempo
+
+    /// <summary>Cada página do PDF vira um PNG com fundo branco, no maior tamanho que cabe em 1920×1080.</summary>
+    static void ExportPdf(string file, string folder)
+    {
+        var tmp = Path.Combine(Path.GetTempPath(), "VJesus-slides-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(tmp);
+        try
+        {
+            lock (PdfLock)
+            {
+                using var doc = Docnet.Core.DocLib.Instance.GetDocReader(file, new Docnet.Core.Models.PageDimensions(1080, 1920));
+                int pages = doc.GetPageCount();
+                if (pages == 0) throw new InvalidOperationException("o PDF não tem páginas");
+                for (int i = 0; i < pages; i++)
+                {
+                    using var page = doc.GetPageReader(i);
+                    int w = page.GetPageWidth(), h = page.GetPageHeight();
+                    var bgra = page.GetImage(new Docnet.Core.Converters.NaiveTransparencyRemover(255, 255, 255));
+                    using var bmp = new System.Drawing.Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                    var data = bmp.LockBits(new System.Drawing.Rectangle(0, 0, w, h), System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                    for (int y = 0; y < h; y++) Marshal.Copy(bgra, y * w * 4, data.Scan0 + y * data.Stride, w * 4);
+                    bmp.UnlockBits(data);
+                    bmp.Save(Path.Combine(tmp, $"slide{i + 1:000}.png"), System.Drawing.Imaging.ImageFormat.Png);
+                }
+            }
+            File.WriteAllText(Path.Combine(tmp, "origem.txt"), file);
+            if (Directory.Exists(folder)) Directory.Delete(folder, true);
+            Directory.CreateDirectory(folder);
+            foreach (var f in Directory.GetFiles(tmp)) File.Copy(f, Path.Combine(folder, Path.GetFileName(f)));
+        }
+        catch (Exception ex) when (ex is not InvalidOperationException)
+        {
+            throw new InvalidOperationException($"não consegui ler o PDF ({ex.Message.Trim()})");
+        }
+        finally
+        {
+            try { Directory.Delete(tmp, true); } catch { }
         }
     }
 
