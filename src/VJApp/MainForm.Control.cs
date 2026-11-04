@@ -187,6 +187,8 @@ sealed partial class MainForm
             case "/lyrics/next": if (press) StepSlide(1); break;
             case "/lyrics/prev": if (press) StepSlide(-1); break;
             case "/culto/next": if (press) ServiceStep(1); break;
+            case "/apresentacao/next": if (press) PresentationStep(-1, 1); break;
+            case "/apresentacao/prev": if (press) PresentationStep(-1, -1); break;
             case "/culto/prev": if (press) ServiceStep(-1); break;
             case "/lyrics/blank": _blank = press; UpdateLyricsOutput(); break;
             case "/composition/tempocontroller/tempotap": if (press) Tap(); break;

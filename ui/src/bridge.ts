@@ -2,7 +2,8 @@
 
 export type Display = { index: number; name: string; width: number; height: number; primary: boolean }
 
-export type ClipKind = 'video' | 'plasma' | 'testCard' | 'camera' | 'spout' | 'lyrics' | 'ndi'
+export type ClipKind = 'video' | 'plasma' | 'testCard' | 'camera' | 'spout' | 'lyrics' | 'ndi' | 'presentation'
+export type PresentationState = { layer: number; layerName: string; name: string; slide: number; count: number; images: string[] }
 export type LiveSources = { cameras: string[]; spout: string[]; ndi?: string[]; ndiAvailable?: boolean }
 export type GeneratorSettings = { type: string; speed: number; intensity: number; scale: number; detail: number; angle: number; colors: string[] }
 export type ClipProps = { speed: number; fit: 'encaixar' | 'preencher' | 'esticar'; zoom: number; offsetX: number; offsetY: number; volume: number; end: 'repetir' | 'parar'; rotation?: number; width?: number; height?: number; radius?: number[]; effects: EffectInstance[] }
@@ -186,6 +187,7 @@ export type EngineMessage =
   | ({ type: 'update' } & UpdateState)
   | { type: 'slidePreview'; id: string; data: string | null; error?: string }
   | { type: 'carousels'; running: CarouselRun[] }
+  | { type: 'presentations'; list: PresentationState[] }
   | { type: 'outputPreview'; screenId: string | null; data: string }
   | { type: 'ledTest'; mode: 'off' | 'regua' | 'partes' }
 
@@ -280,6 +282,9 @@ export type UiMessage =
   | { type: 'serviceReset' }
   | { type: 'carouselSet'; deckId: string; settings: CarouselSettings }
   | { type: 'outputPreview'; screenId: string | null }
+  | ({ type: 'presentationBrowse' } & Cell)
+  | { type: 'presentationStep'; layer: number; direction: 1 | -1 }
+  | { type: 'presentationGo'; layer: number; slide: number }
   | { type: 'ledTest'; mode: 'off' | 'regua' | 'partes' }
   | { type: 'carouselRun'; deckId: string; on: boolean }
   | { type: 'carouselStep'; deckId: string; direction: 1 | -1 }

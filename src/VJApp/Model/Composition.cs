@@ -7,7 +7,7 @@ namespace VJApp.Model;
 
 /// <summary>Tipo de fonte de um clip.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<ClipKind>))]
-enum ClipKind { Video, Plasma, TestCard, Camera, Spout, Lyrics, Ndi }
+enum ClipKind { Video, Plasma, TestCard, Camera, Spout, Lyrics, Ndi, Presentation }
 
 /// <summary>Transição ao trocar o clip de uma layer (a ordem bate com o shader).</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<TransitionType>))]

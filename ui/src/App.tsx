@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   inApp, onMessage, send,
-  type Composition, type Display, type EffectDef, type EffectInstance, type Layer, type LayerPlayback, type MappingSetup, type ControlInfo, type StreamingInfo, type LiveSources, type Song, type LyricStyle, type LyricsState, type LyricScene, type StageState, type StageConfig, type AttackPreset, type OverlayState, type ServiceState, type UpdateState, type CarouselRun,
+  type Composition, type Display, type EffectDef, type EffectInstance, type Layer, type LayerPlayback, type MappingSetup, type ControlInfo, type StreamingInfo, type LiveSources, type Song, type LyricStyle, type LyricsState, type LyricScene, type StageState, type StageConfig, type AttackPreset, type OverlayState, type ServiceState, type UpdateState, type CarouselRun, type PresentationState,
 } from './bridge'
 import { ClipGrid } from './ClipGrid'
 import { EffectsPanel } from './EffectsPanel'
@@ -15,6 +15,7 @@ import { injectFontFaces } from './fontFaces'
 import { BiblePage } from './BiblePage'
 import { CultoPage } from './CultoPage'
 import { UpdateBadge } from './UpdateBadge'
+import { PresentationBar } from './PresentationBar'
 import { StagePage } from './StagePage'
 import { MonitorsBar } from './MonitorsBar'
 import { AttacksBar } from './AttacksBar'
@@ -60,6 +61,7 @@ function App() {
   const [service, setService] = useState<ServiceState>({ planId: '', name: 'Culto', date: null, plans: [], items: [], current: null, verse: 0 })
   const [update, setUpdate] = useState<UpdateState | null>(null)
   const [carousels, setCarousels] = useState<CarouselRun[]>([])
+  const [presentations, setPresentations] = useState<PresentationState[]>([])
 
   // atalhos que valem em qualquer aba: encerrar letra/versículo e parar ataques
   useEffect(() => {
@@ -108,6 +110,7 @@ function App() {
         case 'service': setService(msg); break
         case 'update': setUpdate(msg); break
         case 'carousels': setCarousels(msg.running); break
+        case 'presentations': setPresentations(msg.list); break
         case 'shortcuts': setCustom(msg.shortcuts); break
         case 'master': setBrightness(msg.brightness); setSpeed(msg.speed); setTestCard(msg.testCard); break
       }
@@ -177,6 +180,8 @@ function App() {
       {notice && <div className="notice">{notice}</div>}
 
       <AttacksBar attacks={attacks} />
+
+      {(tab === 'clips' || tab === 'culto') && <PresentationBar list={presentations} keys={tab === 'clips'} />}
 
       <MonitorsBar preview={preview} stagePreview={stagePreview} stage={stage} lyrics={lyricsState} comp={comp} displays={displays} />
 

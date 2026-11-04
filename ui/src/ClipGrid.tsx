@@ -60,6 +60,8 @@ export const BLEND_LABELS: Record<string, string> = {
 function ClipThumb({ clip, thumb }: { clip: Clip; thumb?: string }) {
   if (clip.kind === 'video')
     return thumb ? <img src={thumb} alt="" draggable={false} /> : <div className="thumb-placeholder" />
+  if (clip.kind === 'presentation')
+    return <>{thumb ? <img src={thumb} alt="" draggable={false} /> : <div className="thumb-placeholder" />}<span className="thumb-badge">SLIDES</span></>
   if (clip.kind === 'lyrics')
     return <div className="thumb-lyrics"><span>Aa</span><small>LETRAS</small></div>
   if (clip.kind === 'camera' || clip.kind === 'spout' || clip.kind === 'ndi')
@@ -243,6 +245,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
                 {current?.kind === 'plasma' && <button onClick={pick(() => setGenEdit({ ...cell, gen: current.gen ?? null }))}>Ajustar fundo animado…</button>}
                 {menu.filled && <div className="menu-label">Trocar por</div>}
                 <button onClick={pick(() => send({ type: 'browseClip', ...cell }))}>Vídeo ou imagem…</button>
+                <button onClick={pick(() => send({ type: 'presentationBrowse', ...cell }))}>Apresentação (PowerPoint)…</button>
                 <button onClick={pick(() => { send({ type: 'setGenerator', kind: 'plasma', ...cell, gen: DEFAULT_GEN }); setGenEdit({ ...cell, gen: DEFAULT_GEN }) })}>Fundo animado (ajustável)…</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'testCard', ...cell }))}>Gerador: Test card</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'lyrics', ...cell }))}>Letras (aba Letras)</button>

@@ -52,6 +52,9 @@ Na aba **Culto**, em **Roteiro**, monte a lista em ordem com músicas, versícul
 ### Atualizar pelo programa
 Quando há versão nova, aparece um aviso no topo. Clique em **Baixar** e depois em **Instalar agora**: o VJesus fecha, instala e abre de novo. Nada é instalado sem o seu clique. Também dá para conferir em **Menu → Verificar atualizações**. A versão portátil só abre a página de download.
 
+### Apresentações do PowerPoint
+Na grade, clique numa célula vazia e escolha **Apresentação (PowerPoint)…**, ou arraste o arquivo .pptx para a grade. O VJesus usa o PowerPoint instalado no computador para guardar cada slide como imagem (uma vez só); depois a apresentação funciona sem o PowerPoint. Clique no clip para começar e passe os slides pela barra que aparece acima da grade (setas, Page Up/Page Down ou as miniaturas). No roteiro do culto, um item com a apresentação passa slide a slide antes de ir para o próximo item. Animações e vídeos dentro dos slides não são reproduzidos: cada slide entra como imagem, com a transição da layer.
+
 ### Carrossel de colunas
 Na aba **Clips e efeitos**, o botão **⟳ Carrossel** (acima da grade, à direita) faz a aba aberta passar sozinha de coluna em coluna. Escolha o tempo em cada coluna e se vale para **todas as layers** da aba ou só para as marcadas. Cada aba tem o seu carrossel, e ele continua rodando quando você abre outra aba.
 

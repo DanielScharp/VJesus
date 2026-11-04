@@ -16,7 +16,7 @@ sealed partial class MainForm : Form
 {
     const string UiHost = "app.vj";
     const string VideoFilter =
-        "Vídeos e imagens|*.mov;*.mp4;*.avi;*.mkv;*.webm;*.m4v;*.wmv;*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp|Todos os arquivos|*.*";
+        "Vídeos, imagens e apresentações|*.mov;*.mp4;*.avi;*.mkv;*.webm;*.m4v;*.wmv;*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp;*.pptx;*.ppt;*.ppsx;*.pps|Todos os arquivos|*.*";
 
     static readonly JsonSerializerOptions Json = new()
     {
@@ -117,6 +117,9 @@ sealed partial class MainForm : Form
             // fontes importadas (para a prévia das letras usar as mesmas fontes do telão)
             Directory.CreateDirectory(VJApp.Engine.FontStore.Dir);
             core.SetVirtualHostNameToFolderMapping("fonts.vj", VJApp.Engine.FontStore.Dir, CoreWebView2HostResourceAccessKind.Allow);
+            // slides das apresentações (miniaturas na barra de apresentação)
+            Directory.CreateDirectory(PresentationsDir);
+            core.SetVirtualHostNameToFolderMapping("slides.vj", PresentationsDir, CoreWebView2HostResourceAccessKind.Allow);
             core.Navigate($"https://{UiHost}/index.html");
         }
         _playbackTimer.Start();
@@ -190,6 +193,7 @@ sealed partial class MainForm : Form
             case var carouselType when carouselType?.StartsWith("carousel") == true: OnCarouselMessage(carouselType, msg); break;
             case "ledTest": OnLedTestMessage(msg); break;
             case "outputPreview": SetOutputPreview((string?)msg["screenId"]); break;
+            case var presType when presType?.StartsWith("presentation") == true: OnPresentationMessage(presType, msg); break;
             case var serviceType when serviceType?.StartsWith("service") == true: OnServiceMessage(serviceType, msg); break;
             case var updateType when updateType?.StartsWith("update") == true: OnUpdateMessage(updateType, msg); break;
             case "previewRender": _ = RenderPreviewAsync(msg); break;
@@ -439,6 +443,7 @@ sealed partial class MainForm : Form
         foreach (var path in paths)
         {
             if (c >= _comp.Columns) break;
+            if (IsPresentationFile(path)) { _ = ImportPresentationAsync(layer, c++, path); continue; }
             _comp.Layers[layer].Clips[c] = Clip.FromFile(path);
             if (_comp.Layers[layer].Active == c) ClearLayer(layer);
             c++;
@@ -455,6 +460,10 @@ sealed partial class MainForm : Form
 
         switch (clip.Kind)
         {
+            case ClipKind.Presentation:
+                // apresentação: começa no primeiro slide (◀ ▶, teclado e roteiro passam os slides)
+                if (!ShowPresentationSlide(layer, clip, 0)) return;
+                break;
             case ClipKind.Video:
                 VideoPlayer player;
                 try
@@ -559,6 +568,7 @@ sealed partial class MainForm : Form
 
     void ClearLayer(int layer)
     {
+        _presSlide.Remove(layer);
         _players[layer] = null;
         _renderer?.SetLayerSource(layer, null);
         _comp.Layers[layer].Active = -1;
@@ -706,10 +716,15 @@ sealed partial class MainForm : Form
         });
         BroadcastRemoteState();
         SendStage(); // a imagem do retorno depende do que está tocando
+        SendPresentations();
 
         // miniaturas que ainda não foram geradas (em segundo plano)
-        foreach (var path in _comp.Decks.SelectMany(d => d.Clips).SelectMany(r => r).Where(c => c?.Kind == ClipKind.Video).Select(c => c!.Path!).Distinct())
+        foreach (var clipPath in _comp.Decks.SelectMany(d => d.Clips).SelectMany(r => r)
+            .Where(c => c?.Kind is ClipKind.Video or ClipKind.Presentation).Select(c => c!.Path!).Distinct())
         {
+            // apresentação: a miniatura é o primeiro slide, guardada com o caminho da pasta
+            string path = clipPath;
+            string source = Directory.Exists(clipPath) ? PresentationSlides(clipPath).FirstOrDefault() ?? clipPath : clipPath;
             if (_thumbs.TryGetValue(path, out var cached))
             {
                 if (cached != null && withThumbs) Send(new { type = "thumb", path, data = cached });
@@ -718,7 +733,7 @@ sealed partial class MainForm : Form
             _thumbs[path] = null;
             Task.Run(() =>
             {
-                var data = Thumbnailer.Create(path);
+                var data = Thumbnailer.Create(source);
                 _thumbs[path] = data;
                 if (data != null) Send(new { type = "thumb", path, data });
             });

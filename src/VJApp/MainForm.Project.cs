@@ -152,10 +152,19 @@ sealed partial class MainForm
             var toCopy = files.Where(f => !IsInside(f, media) && !SameFileExists(f, Path.Combine(media, Path.GetFileName(f)))).ToList();
             if (toCopy.Count > 0)
                 Send(new { type = "notice", message = $"Copiando {toCopy.Count} vídeo(s)/imagem(ns) para a pasta do projeto…" });
+            var decks = AllClips(_comp).Where(c => c?.Kind == ClipKind.Presentation && Directory.Exists(c.Path)).Select(c => c!.Path!).Distinct().ToList();
             await Task.Run(() =>
             {
-                if (files.Count > 0) Directory.CreateDirectory(media);
+                if (files.Count > 0 || decks.Count > 0) Directory.CreateDirectory(media);
                 foreach (var f in toCopy) File.Copy(f, Path.Combine(media, Path.GetFileName(f)), overwrite: true);
+                // apresentações: a pasta com os slides (só se ainda não estiver lá)
+                foreach (var d in decks)
+                {
+                    var dest = Path.Combine(media, Path.GetFileName(d));
+                    if (Directory.Exists(dest)) continue;
+                    Directory.CreateDirectory(dest);
+                    foreach (var s in Directory.GetFiles(d)) File.Copy(s, Path.Combine(dest, Path.GetFileName(s)), overwrite: true);
+                }
             });
 
             var json = BuildProjectJson(path);
@@ -179,7 +188,7 @@ sealed partial class MainForm
         var mediaName = Path.GetFileName(MediaDirFor(path));
         var comp = JsonSerializer.Deserialize<Composition>(JsonSerializer.Serialize(_comp, ProjectJson), ProjectJson)!;
         foreach (var c in AllClips(comp))
-            if (c?.Kind == ClipKind.Video && !string.IsNullOrEmpty(c.Path))
+            if (c?.Kind is ClipKind.Video or ClipKind.Presentation && !string.IsNullOrEmpty(c.Path))
                 c.Path = Path.Combine(mediaName, Path.GetFileName(c.Path)); // relativo ao .vjproj
         return SerializeProject(comp);
     }
@@ -196,6 +205,20 @@ sealed partial class MainForm
         var media = MediaDirFor(projectFile);
         foreach (var c in AllClips(comp))
         {
+            if (c?.Kind == ClipKind.Presentation && !string.IsNullOrEmpty(c.Path))
+            {
+                // os slides ficam na pasta de apresentações do VJesus (é de lá que a interface mostra as miniaturas)
+                var src = Path.IsPathRooted(c.Path) ? c.Path : Path.GetFullPath(Path.Combine(dir, c.Path));
+                if (!Directory.Exists(src)) src = Path.Combine(media, Path.GetFileName(c.Path));
+                var dest = Path.Combine(PresentationsDir, Path.GetFileName(c.Path));
+                if (!Directory.Exists(dest) && Directory.Exists(src))
+                {
+                    Directory.CreateDirectory(dest);
+                    foreach (var s in Directory.GetFiles(src)) File.Copy(s, Path.Combine(dest, Path.GetFileName(s)), overwrite: true);
+                }
+                c.Path = dest;
+                continue;
+            }
             if (c?.Kind != ClipKind.Video || string.IsNullOrEmpty(c.Path)) continue;
             if (!Path.IsPathRooted(c.Path)) c.Path = Path.GetFullPath(Path.Combine(dir, c.Path));
             var local = Path.Combine(media, Path.GetFileName(c.Path));

@@ -8,12 +8,13 @@ import { send } from './bridge'
  * A mesma tecla não pode estar em duas ações que valem ao mesmo tempo (global + qualquer aba,
  * ou duas da mesma aba); em abas diferentes ela pode se repetir (ex.: → nas Letras e na Bíblia).
  */
-export type Scope = 'global' | 'culto' | 'letras' | 'biblia' | 'mapeamento'
+export type Scope = 'global' | 'clips' | 'culto' | 'letras' | 'biblia' | 'mapeamento'
 
 export type ActionDef = { id: string; label: string; hint?: string; scope: Scope; defaults: string[] }
 
 export const SCOPE_LABEL: Record<Scope, string> = {
   global: 'Em qualquer aba',
+  clips: 'Aba Clips e efeitos',
   culto: 'Aba Culto',
   letras: 'Aba Letras',
   biblia: 'Aba Bíblia',
@@ -28,6 +29,9 @@ export const ACTIONS: ActionDef[] = [
   { id: 'tempo.tap', label: 'TAP do BPM', hint: 'Toque no ritmo da música para acertar o BPM.', scope: 'global', defaults: ['T'] },
   { id: 'telao.encerrar', label: 'Encerrar letra / versículo', hint: 'Tira a letra ou o versículo do telão e da tela de retorno (fim da música).', scope: 'global', defaults: ['Shift+Escape', 'Delete'] },
   { id: 'ataques.parar', label: 'Parar todos os ataques', hint: 'Interrompe na hora flash, strobe, tremor…', scope: 'global', defaults: [] },
+
+  { id: 'apresentacao.proximo', label: 'Próximo slide da apresentação', hint: 'Passa o slide da apresentação (PowerPoint) que está tocando.', scope: 'clips', defaults: ['ArrowRight', 'PageDown', 'Space'] },
+  { id: 'apresentacao.anterior', label: 'Slide anterior da apresentação', hint: 'Volta um slide da apresentação que está tocando.', scope: 'clips', defaults: ['ArrowLeft', 'PageUp'] },
 
   { id: 'culto.proximo', label: 'Próximo do roteiro', hint: 'Passa o slide ou o versículo; no fim, entra o próximo item.', scope: 'culto', defaults: ['ArrowRight', 'ArrowDown', 'PageDown', 'Space'] },
   { id: 'culto.anterior', label: 'Anterior do roteiro', hint: 'Volta o slide ou o versículo; no começo, volta ao item anterior.', scope: 'culto', defaults: ['ArrowLeft', 'ArrowUp', 'PageUp'] },

@@ -95,6 +95,10 @@ sealed partial class MainForm
                 return;
             }
         }
+        else if (item.Kind == "clip" && item.Layer < _comp.Layers.Count && _comp.Layers[item.Layer].PlayingClip?.Kind == ClipKind.Presentation)
+        {
+            if (PresentationStep(item.Layer, direction)) { SendService(); return; }
+        }
         else if (item.Kind == "bible" && _serviceVerse + direction >= item.Verse && _serviceVerse + direction <= item.VerseEnd)
         {
             _serviceVerse += direction;

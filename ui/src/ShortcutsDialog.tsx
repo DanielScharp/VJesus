@@ -10,6 +10,7 @@ type Item = { id: string; label: string; hint?: string; scope: Scope; keys: stri
 
 const GROUPS: { scope: Scope; title: string }[] = [
   { scope: 'global', title: 'Em qualquer aba' },
+  { scope: 'clips', title: 'Aba Clips e efeitos' },
   { scope: 'culto', title: 'Aba Culto' },
   { scope: 'letras', title: 'Aba Letras' },
   { scope: 'biblia', title: 'Aba Bíblia' },
