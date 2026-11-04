@@ -779,3 +779,14 @@ button.onair-btn { background: #c93030; border-color: #c93030; color: #fff; font
 .pres-thumb span { position: absolute; left: 4px; top: 2px; font-size: 11px; color: #fff; text-shadow: 0 0 3px #000; }
 .pres-thumb.live { border-color: #ff5a5a; }
 .thumb-badge { position: absolute; right: 4px; top: 4px; font-size: 9px; font-weight: 700; background: #2f7de1; color: #fff; padding: 1px 5px; border-radius: 3px; }.pres-thumb.step { border-style: dashed; }
+.layer-transport { display: flex; align-items: center; gap: 3px; margin-top: 4px; }
+.layer-transport button.small { padding: 1px 6px; }
+.layer-time { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 2px; }
+.cell .progress.seekable { cursor: pointer; height: 8px; }
+.progress-range { position: absolute; top: 0; bottom: 0; background: rgba(255, 255, 255, .25); pointer-events: none; }
+.video-timeline { margin-bottom: 10px; }
+.timeline-bar { position: relative; margin: 6px 0 2px; }
+.timeline-bar input[type=range] { width: 100%; position: relative; z-index: 1; }
+.timeline-range { position: absolute; top: 50%; height: 10px; transform: translateY(-50%); background: rgba(255, 176, 32, .28); border-radius: 3px; pointer-events: none; }
+.timeline-info { align-items: center; margin-bottom: 4px; }
+.timeline-time { font-variant-numeric: tabular-nums; font-size: 13px; margin-right: 6px; }

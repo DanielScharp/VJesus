@@ -6,10 +6,10 @@ export type ClipKind = 'video' | 'plasma' | 'testCard' | 'camera' | 'spout' | 'l
 export type PresentationState = { layer: number; layerName: string; name: string; slide: number; count: number; slides: number; labels: string[]; current: string; images: string[] }
 export type LiveSources = { cameras: string[]; spout: string[]; ndi?: string[]; ndiAvailable?: boolean }
 export type GeneratorSettings = { type: string; speed: number; intensity: number; scale: number; detail: number; angle: number; colors: string[] }
-export type ClipProps = { speed: number; fit: 'encaixar' | 'preencher' | 'esticar'; zoom: number; offsetX: number; offsetY: number; volume: number; end: 'repetir' | 'parar'; rotation?: number; width?: number; height?: number; radius?: number[]; effects: EffectInstance[] }
+export type ClipProps = { speed: number; fit: 'encaixar' | 'preencher' | 'esticar'; zoom: number; offsetX: number; offsetY: number; volume: number; end: 'repetir' | 'parar'; inPoint?: number; outPoint?: number; rotation?: number; width?: number; height?: number; radius?: number[]; effects: EffectInstance[] }
 /** Posição, tamanho, giro e cantos (px: ↖ ↗ ↘ ↙) da layer inteira. */
 export type LayerTransform = { x: number; y: number; scale: number; width: number; height: number; rotation: number; radius: number[] }
-export type Clip = { kind: ClipKind; path: string | null; name: string; captureSize?: string | null; captureFps?: number | null; gen?: GeneratorSettings | null; props?: ClipProps | null }
+export type Clip = { kind: ClipKind; path: string | null; name: string; captureSize?: string | null; captureFps?: number | null; gen?: GeneratorSettings | null; props?: ClipProps | null; duration?: number | null }
 
 export const BLEND_MODES = ['normal', 'add', 'multiply', 'screen', 'overlay', 'difference', 'lighten', 'darken', 'subtract', 'exclusion', 'hardLight', 'softLight', 'colorDodge', 'colorBurn', 'linearLight', 'divide', 'hue', 'saturation', 'color', 'luminosity'] as const
 export type BlendMode = (typeof BLEND_MODES)[number]
@@ -36,6 +36,7 @@ export type Layer = {
   transitionBetween?: boolean
   transitionOut?: boolean
   volume: number
+  muted?: boolean
   hasAudio: boolean
   sendToStage: boolean
   transform?: LayerTransform
@@ -123,7 +124,7 @@ export type BibleSettings = {
 export type BiblePassage = { book: string; chapter: number; verse: number; verseEnd: number }
 export type BibleBookInfo = { id: string; name: string; chapters: number[] }
 export type BibleHit = { book: string; bookName: string; chapter: number; verse: number; text: string }
-export type LayerPlayback = { position: number; duration: number; playing: boolean } | null
+export type LayerPlayback = { position: number; duration: number; playing: boolean; inPoint?: number; outPoint?: number } | null
 
 export type ServiceKind = 'song' | 'bible' | 'text' | 'clip' | 'column' | 'notice' | 'timer' | 'clear'
 export type ServiceItem = {
@@ -246,11 +247,11 @@ export type UiMessage =
   | { type: 'deckSelect' | 'deckRemove'; index: number }
   | { type: 'deckRename'; index: number; name: string }
   | { type: 'deckMove'; index: number; direction: -1 | 1 }
-  | { type: 'layerParams'; layer: number; name?: string; opacity?: number; blend?: BlendMode; transition?: Transition; transitionSeconds?: number; transitionIn?: boolean; transitionBetween?: boolean; transitionOut?: boolean; volume?: number; sendToStage?: boolean; transform?: LayerTransform }
+  | { type: 'layerParams'; layer: number; name?: string; opacity?: number; blend?: BlendMode; transition?: Transition; transitionSeconds?: number; transitionIn?: boolean; transitionBetween?: boolean; transitionOut?: boolean; volume?: number; muted?: boolean; sendToStage?: boolean; transform?: LayerTransform }
   | { type: 'tap' | 'beatResync' }
   | { type: 'setBpm'; bpm: number }
   | { type: 'setMasterVolume'; volume: number }
-  | { type: 'transport'; layer: number; action: 'play' | 'pause' }
+  | { type: 'transport'; layer: number; action: 'play' | 'pause' | 'toggle' | 'stop' | 'restart' }
   | { type: 'seek'; layer: number; position: number }
   | { type: 'effectAdd'; target: number; effect: string }
   | { type: 'effectRemove'; target: number; index: number }

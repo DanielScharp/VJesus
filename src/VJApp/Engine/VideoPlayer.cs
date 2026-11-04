@@ -110,6 +110,35 @@ sealed unsafe class VideoPlayer : IDisposable
     /// <summary>No fim do arquivo, para no último quadro em vez de repetir.</summary>
     public volatile bool HoldAtEnd;
 
+    // trecho que toca (pontos de corte): de _in até _out; o loop volta para _in
+    double _in, _out;
+    volatile bool _hitOut;
+    double End => _out > 0 && _out <= Duration ? _out : Duration;
+    double LoopLength => Math.Max(0.05, End - _in);
+
+    /// <summary>Pontos de entrada e saída do clip (segundos; saída 0 = até o fim).</summary>
+    public void SetRange(double inPoint, double outPoint)
+    {
+        if (IsLive || IsStill || Duration <= 0) return;
+        double a = Math.Clamp(inPoint, 0, Math.Max(0, Duration - 0.1));
+        double b = outPoint <= 0 ? 0 : Math.Clamp(outPoint, a + 0.1, Duration);
+        bool changed;
+        lock (_lock) { changed = a != _in || b != _out; _in = a; _out = b; }
+        if (!changed) return;
+        double pos = Position;
+        if (pos < a - 0.01 || pos > End + 0.01 || (a > 0 && _clockBase == 0 && pos < a + 0.05)) Seek(a);
+    }
+
+    public double InPoint { get { lock (_lock) return _in; } }
+    public double OutPoint { get { lock (_lock) return End; } }
+
+    /// <summary>Volta para a entrada e pausa.</summary>
+    public void Stop()
+    {
+        Pause();
+        Seek(InPoint);
+    }
+
     static bool _devicesRegistered;
 
     static void RegisterDevices()
@@ -290,7 +319,9 @@ sealed unsafe class VideoPlayer : IDisposable
             lock (_lock)
             {
                 double t = ClockNow;
-                return Duration > 0 ? (HoldAtEnd ? Math.Min(t, Duration) : t % Duration) : t;
+                if (Duration <= 0) return t;
+                if (HoldAtEnd) return Math.Min(t, End);
+                return t < _in ? t : _in + (t - _in) % LoopLength;
             }
         }
     }
@@ -302,7 +333,7 @@ sealed unsafe class VideoPlayer : IDisposable
     {
         lock (_lock)
         {
-            seconds = Math.Clamp(seconds, 0, Math.Max(0, Duration - 0.001));
+            seconds = Math.Clamp(seconds, _in, Math.Max(_in, End - 0.001));
             _seekTarget = seconds;
             _clockBase = seconds;
             if (_clock.IsRunning) _clock.Restart(); else _clock.Reset();
@@ -377,6 +408,7 @@ sealed unsafe class VideoPlayer : IDisposable
 
                 int ret = av_read_frame(_fmt, pkt);
                 if (ret < 0 && IsLive) { Thread.Sleep(5); continue; } // câmera sem quadro novo ainda
+                if (_hitOut && ret >= 0) { av_packet_unref(pkt); ret = AVERROR_EOF; } // ponto de saída = fim do trecho
                 if (ret == AVERROR_EOF && IsStill && _stillShown) { Thread.Sleep(20); continue; } // imagem parada: segura o quadro
                 if (ret == AVERROR_EOF)
                 {
@@ -389,14 +421,18 @@ sealed unsafe class VideoPlayer : IDisposable
                     }
                     if (_audioCodec != null) avcodec_flush_buffers(_audioCodec);
                     if (IsStill) { _stillShown = true; continue; }
+                    _hitOut = false;
                     if (HoldAtEnd)
                     {
                         // "parar no fim": segura o último quadro até alguém voltar o clip (seek) ou mudar para repetir
                         while (_running && HoldAtEnd && Volatile.Read(ref _seekTarget) < 0) Thread.Sleep(20);
                         if (Volatile.Read(ref _seekTarget) >= 0) continue;
                     }
-                    av_seek_frame(_fmt, _stream, 0, AVSEEK_FLAG_BACKWARD);
-                    lock (_lock) _loops++;
+                    // volta para a entrada do trecho (o começo do arquivo, sem pontos de corte)
+                    double from;
+                    lock (_lock) { from = _in; _loops++; }
+                    av_seek_frame(_fmt, _stream, (long)(from / Q(_timeBase)), AVSEEK_FLAG_BACKWARD);
+                    if (from > 0) dropBefore = from - 0.5 / FrameRate;
                     continue;
                 }
                 if (ret < 0) { Thread.Sleep(5); continue; }
@@ -443,7 +479,7 @@ sealed unsafe class VideoPlayer : IDisposable
             while (_running && _free.Count == 0 && _seekTarget < 0) Monitor.Wait(_lock, 50);
             if (!_running || _seekTarget >= 0) return null;
             var slot = _free.Pop();
-            slot.Time = t + _loops * Duration;
+            slot.Time = t + _loops * LoopLength;
             return slot;
         }
     }
@@ -463,6 +499,7 @@ sealed unsafe class VideoPlayer : IDisposable
     {
         double t = PtsToSeconds(frame->best_effort_timestamp);
         if (t < dropBefore) return; // quadros antes do ponto de seek
+        if (_out > 0 && t >= _out) { _hitOut = true; return; } // passou do ponto de saída
         dropBefore = -1;
 
         var slot = AcquireSlot(t);
@@ -483,6 +520,7 @@ sealed unsafe class VideoPlayer : IDisposable
     {
         double t = PtsToSeconds(pkt->pts != NoPts ? pkt->pts : pkt->dts);
         if (t < dropBefore) return;
+        if (_out > 0 && t >= _out) { _hitOut = true; return; }
         dropBefore = -1;
 
         var slot = AcquireSlot(t);
@@ -499,6 +537,7 @@ sealed unsafe class VideoPlayer : IDisposable
     {
         if (_swr == null) return;
         if (dropBefore >= 0 && PtsToSecondsAudio(frame->best_effort_timestamp) < dropBefore) return;
+        if (_out > 0 && PtsToSecondsAudio(frame->best_effort_timestamp) >= _out) return; // som depois da saída
 
         int maxOut = (int)av_rescale_rnd(swr_get_delay(_swr, _audioCodec->sample_rate) + frame->nb_samples,
             AudioRate, _audioCodec->sample_rate, AVRounding.Up);

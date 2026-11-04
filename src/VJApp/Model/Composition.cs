@@ -49,6 +49,8 @@ sealed class Clip
     public string? CaptureSize { get; set; }
     /// <summary>Câmera/placa de captura: quadros por segundo pedidos (null = padrão).</summary>
     public int? CaptureFps { get; set; }
+    /// <summary>Duração do vídeo em segundos (anotada quando ele toca pela primeira vez; para os pontos de corte).</summary>
+    public double? Duration { get; set; }
 
     public static Clip FromFile(string path) =>
         new() { Kind = ClipKind.Video, Path = path, Name = System.IO.Path.GetFileNameWithoutExtension(path) };
@@ -73,6 +75,9 @@ sealed class ClipProps
     public float Volume { get; set; } = 1;
     /// <summary>repetir ou parar (segura o último quadro).</summary>
     public string End { get; set; } = "repetir";
+    /// <summary>Pontos de corte (segundos): o clip toca só deste trecho (saída 0 = até o fim).</summary>
+    public double InPoint { get; set; }
+    public double OutPoint { get; set; }
     /// <summary>Giro (graus), largura e altura (1 = 100%) e raio de cada canto em pixels (↖ ↗ ↘ ↙).</summary>
     public float Rotation { get; set; }
     public float Width { get; set; } = 1;
@@ -127,6 +132,8 @@ sealed class Layer
     public bool TransitionBetween { get; set; } = true;
     public bool TransitionOut { get; set; } = true;
     public float Volume { get; set; } = 1f;
+    /// <summary>Som da layer desligado (sem perder o volume escolhido).</summary>
+    public bool Muted { get; set; }
     /// <summary>Quando esta layer está tocando, ela aparece no item "Telão" da tela de retorno.</summary>
     public bool SendToStage { get; set; }
 

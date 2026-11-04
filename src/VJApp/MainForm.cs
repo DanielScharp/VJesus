@@ -410,6 +410,7 @@ sealed partial class MainForm : Form
                 if (msg["transitionBetween"] is JsonNode tb) layer.TransitionBetween = (bool)tb;
                 if (msg["transitionOut"] is JsonNode to) layer.TransitionOut = (bool)to;
                 if (msg["volume"] is JsonNode vo) layer.Volume = Math.Clamp((float)vo, 0, 1.5f);
+                if (msg["muted"] is JsonNode mu) layer.Muted = (bool)mu;
                 if (msg["sendToStage"] is JsonNode st) { layer.SendToStage = (bool)st; SendStage(); }
                 if (msg["transform"] is JsonNode tf && tf.Deserialize<LayerTransform>(JsonRead) is { } transform) layer.Transform = transform;
                 ApplyLayerParams(L());
@@ -424,6 +425,9 @@ sealed partial class MainForm : Form
                 {
                     case "play": player?.Play(); break;
                     case "pause": player?.Pause(); break;
+                    case "toggle": if (player?.Playing == true) player.Pause(); else player?.Play(); break;
+                    case "stop": player?.Stop(); break;
+                    case "restart": player?.Seek(player.InPoint); player?.Play(); break;
                 }
                 SendPlayback();
                 break;
@@ -586,7 +590,7 @@ sealed partial class MainForm : Form
         slot.TransitionIn = _comp.Layers[layer].TransitionIn;
         slot.TransitionBetween = _comp.Layers[layer].TransitionBetween;
         slot.TransitionOut = _comp.Layers[layer].TransitionOut;
-        slot.Volume = _comp.Layers[layer].Volume;
+        slot.Volume = _comp.Layers[layer].Muted ? 0 : _comp.Layers[layer].Volume;
         slot.ToStage = _comp.Layers[layer].SendToStage;
         var t = _comp.Layers[layer].Transform ??= new LayerTransform();
         slot.LayerShape = new Engine.Shape(Math.Clamp(t.X, -4, 4), Math.Clamp(t.Y, -4, 4),
@@ -702,6 +706,7 @@ sealed partial class MainForm : Form
                 transitionBetween = l.TransitionBetween,
                 transitionOut = l.TransitionOut,
                 volume = l.Volume,
+                muted = l.Muted,
                 sendToStage = l.SendToStage,
                 transform = l.Transform,
                 hasAudio = _players[_comp.Layers.IndexOf(l)]?.HasAudio ?? false,
@@ -747,7 +752,7 @@ sealed partial class MainForm : Form
             type = "playback",
             beat = _renderer?.Beat ?? 0,
             bpm = _renderer?.Bpm ?? 120,
-            layers = _players.Select(p => p == null ? null : new { position = p.Position, duration = p.Duration, playing = p.Playing }),
+            layers = _players.Select(p => p == null ? null : new { position = p.Position, duration = p.Duration, playing = p.Playing, inPoint = p.InPoint, outPoint = p.OutPoint }),
         });
     }
 

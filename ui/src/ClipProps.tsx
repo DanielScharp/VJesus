@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { send, type Clip, type ClipProps, type EffectDef, type EffectInstance } from './bridge'
+import { send, type Clip, type ClipProps, type EffectDef, type EffectInstance, type LayerPlayback } from './bridge'
 import { EffectsPanel } from './EffectsPanel'
 import { CornerControls, RotationControl } from './ShapeControls'
 
@@ -12,8 +12,76 @@ export const clipTarget = (layer: number, column: number) => 10000 + layer * 100
  * Propriedades de um clip só: nome, velocidade, como ocupa a tela (encaixar/preencher/esticar, zoom e posição),
  * volume, o que fazer no fim e efeitos próprios. Muda na hora se o clip estiver tocando.
  */
-export function ClipPropsPanel({ clip, layer, column, playing, library, onClose }: {
+/** 83,5 → "1:23.5" */
+export function fmtTime(s: number) {
+  if (!isFinite(s) || s < 0) s = 0
+  const m = Math.floor(s / 60), r = s - m * 60
+  return `${m}:${r.toFixed(1).padStart(4, '0')}`
+}
+
+/**
+ * Linha do tempo do vídeo: posição (arrastável quando está no ar), play/pause/stop/do início, mudo da
+ * layer e os pontos de corte (entrada e saída), marcados pelos controles ou "aqui" no ponto em que está tocando.
+ */
+function VideoTimeline({ layer, playing, pb, duration, inPoint, outPoint, muted, onMute, onRange }: {
+  layer: number; playing: boolean; pb: LayerPlayback; duration: number; inPoint: number; outPoint: number
+  muted: boolean; onMute: (m: boolean) => void; onRange: (inPoint: number, outPoint: number) => void
+}) {
+  const [drag, setDrag] = useState<number | null>(null)
+  const out = outPoint > 0 ? outPoint : duration
+  const live = playing && pb && pb.duration > 0
+  const pos = drag ?? (live ? pb!.position : inPoint)
+  const pct = (v: number) => (duration > 0 ? `${(v / duration) * 100}%` : '0%')
+  return (
+    <div className="video-timeline">
+      <h3>Linha do tempo e corte</h3>
+      {duration <= 0 ? (
+        <p className="meta">Toque o clip uma vez para o VJesus saber a duração; depois dá para marcar a entrada e a saída mesmo sem ele tocar.</p>
+      ) : (
+        <>
+          <div className="timeline-bar">
+            <div className="timeline-range" style={{ left: pct(inPoint), width: `calc(${pct(out)} - ${pct(inPoint)})` }} />
+            {live && <div className="timeline-head" style={{ left: pct(pos) }} />}
+            <input type="range" min={0} max={duration} step={0.01} value={pos} disabled={!live}
+              title={live ? 'Arraste para ir a outro ponto do vídeo' : 'Toque o clip para mudar a posição'}
+              onChange={(e) => setDrag(Number(e.target.value))}
+              onPointerUp={() => { if (drag !== null) send({ type: 'seek', layer, position: drag }); setDrag(null) }}
+              onKeyUp={() => { if (drag !== null) send({ type: 'seek', layer, position: drag }); setDrag(null) }} />
+          </div>
+          <div className="row timeline-info">
+            <span className="timeline-time">{fmtTime(pos)} / {fmtTime(duration)}</span>
+            {live && (
+              <>
+                <button className="small" onClick={() => send({ type: 'transport', layer, action: 'toggle' })}>{pb!.playing ? '⏸ Pausar' : '▶ Tocar'}</button>
+                <button className="small" title="Para e volta para a entrada" onClick={() => send({ type: 'transport', layer, action: 'stop' })}>⏹ Parar</button>
+                <button className="small" title="Volta para a entrada e toca" onClick={() => send({ type: 'transport', layer, action: 'restart' })}>⏮ Do início</button>
+              </>
+            )}
+            <button className={`small ${muted ? 'active' : ''}`} title="Desliga o som da layer (o volume continua guardado)" onClick={() => onMute(!muted)}>{muted ? '🔇 Mudo' : '🔊 Som'}</button>
+          </div>
+          <label>Entrada <output>{fmtTime(inPoint)}</output>
+            <input type="range" min={0} max={duration} step={0.01} value={inPoint}
+              onChange={(e) => { const v = Number(e.target.value); onRange(Math.min(v, out - 0.1), outPoint) }} />
+          </label>
+          <label>Saída <output>{fmtTime(out)}</output>
+            <input type="range" min={0} max={duration} step={0.01} value={out}
+              onChange={(e) => { const v = Number(e.target.value); onRange(inPoint, v >= duration - 0.01 ? 0 : Math.max(v, inPoint + 0.1)) }} />
+          </label>
+          <div className="row chips">
+            {live && <button className="small" title="A entrada vira o ponto que está tocando agora" onClick={() => onRange(Math.min(pb!.position, out - 0.1), outPoint)}>Entrada aqui</button>}
+            {live && <button className="small" title="A saída vira o ponto que está tocando agora" onClick={() => onRange(inPoint, Math.max(pb!.position, inPoint + 0.1))}>Saída aqui</button>}
+            <button className="small" disabled={inPoint === 0 && outPoint === 0} onClick={() => onRange(0, 0)}>Sem corte</button>
+          </div>
+          {(inPoint > 0 || outPoint > 0) && <p className="meta">Toca só de {fmtTime(inPoint)} até {fmtTime(out)} ({fmtTime(out - inPoint)}); “No fim” abaixo decide se repete o trecho ou para.</p>}
+        </>
+      )}
+    </div>
+  )
+}
+
+export function ClipPropsPanel({ clip, layer, column, playing, library, onClose, pb, muted, onMute }: {
   clip: Clip; layer: number; column: number; playing: boolean; library: EffectDef[]; onClose: () => void
+  pb: LayerPlayback; muted: boolean; onMute: (m: boolean) => void
 }) {
   const [p, setP] = useState<ClipProps>({ ...DEFAULT_PROPS, ...(clip.props ?? {}) })
   const [name, setName] = useState(clip.name)
@@ -50,6 +118,11 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose 
 
         <div className="clip-props-body">
           <div>
+            {isVideo && (
+              <VideoTimeline layer={layer} playing={playing} pb={pb} duration={pb?.duration || clip.duration || 0}
+                inPoint={p.inPoint ?? 0} outPoint={p.outPoint ?? 0} muted={muted} onMute={onMute}
+                onRange={(inPoint, outPoint) => update({ inPoint, outPoint })} />
+            )}
             {isVideo && (
               <>
                 <h3>Reprodução</h3>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { EffectChips, type ToggleEffect } from './EffectChips'
 import { DEFAULT_GEN, GeneratorPanel, genThumbStyle } from './GeneratorPanel'
-import { ClipPropsPanel } from './ClipProps'
+import { ClipPropsPanel, fmtTime } from './ClipProps'
 import { CarouselPanel } from './CarouselPanel'
 import { BLEND_MODES, send, sendFiles, type CarouselRun, type EffectDef, type BlendMode, type Clip, type Composition, type GeneratorSettings, type LayerPlayback, type LiveSources } from './bridge'
 
@@ -10,7 +10,7 @@ type Props = {
   comp: Composition
   thumbs: Record<string, string>
   playback: LayerPlayback[]
-  onLayerChange: (layer: number, patch: { opacity?: number; blend?: BlendMode }) => void
+  onLayerChange: (layer: number, patch: { opacity?: number; blend?: BlendMode; muted?: boolean }) => void
   selected: number
   onSelect: (layer: number) => void
   live: LiveSources | null
@@ -183,6 +183,20 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
                 {BLEND_MODES.map((b) => <option key={b} value={b}>{BLEND_LABELS[b]}</option>)}
               </select>
               <EffectChips chain={layer.effects} target={li} library={library} onToggle={onToggleEffect} />
+              {(pb && pb.duration > 0 || layer.hasAudio) && (
+                <div className="layer-transport" onClick={(e) => e.stopPropagation()}>
+                  {pb && pb.duration > 0 && (
+                    <>
+                      <button className="small" title={pb.playing ? 'Pausar' : 'Tocar'} onClick={() => send({ type: 'transport', layer: li, action: 'toggle' })}>{pb.playing ? '⏸' : '▶'}</button>
+                      <button className="small" title="Parar e voltar para a entrada" onClick={() => send({ type: 'transport', layer: li, action: 'stop' })}>⏹</button>
+                      <button className="small" title="Do início (entrada)" onClick={() => send({ type: 'transport', layer: li, action: 'restart' })}>⏮</button>
+                      <span className="layer-time">{fmtTime(pb.position)}</span>
+                    </>
+                  )}
+                  <button className={`small ${layer.muted ? 'active' : ''}`} title={layer.muted ? 'Ligar o som da layer' : 'Mudo (o volume continua guardado)'}
+                    onClick={() => onLayerChange(li, { muted: !layer.muted })}>{layer.muted ? '🔇' : '🔊'}</button>
+                </div>
+              )}
             </div>
 
             {columns.map((c) => {
@@ -214,7 +228,18 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
                       <span className={`clip-name ${propsEdit?.layer === li && propsEdit?.column === c ? 'editing' : ''}`} title="Clique no nome para ver e mudar as propriedades (sem tocar o clip)"
                         onClick={(e) => { e.stopPropagation(); setMenu(null); setPropsEdit(propsEdit?.layer === li && propsEdit?.column === c ? null : { layer: li, column: c }) }}>{clip.name}</span>
                       {active && pb && pb.duration > 0 && (
-                        <div className="progress"><div style={{ width: `${(pb.position / pb.duration) * 100}%` }} /></div>
+                        // clique na barra para ir a outro ponto do vídeo; a faixa clara é o trecho entre a entrada e a saída
+                        <div className="progress seekable" title="Clique para ir a este ponto do vídeo"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const r = e.currentTarget.getBoundingClientRect()
+                            send({ type: 'seek', layer: li, position: ((e.clientX - r.left) / r.width) * pb.duration })
+                          }}>
+                          {(pb.inPoint ?? 0) > 0 || (pb.outPoint ?? pb.duration) < pb.duration - 0.05 ? (
+                            <span className="progress-range" style={{ left: `${((pb.inPoint ?? 0) / pb.duration) * 100}%`, width: `${(((pb.outPoint ?? pb.duration) - (pb.inPoint ?? 0)) / pb.duration) * 100}%` }} />
+                          ) : null}
+                          <div style={{ width: `${(pb.position / pb.duration) * 100}%` }} />
+                        </div>
                       )}
                     </>
                   ) : (
@@ -289,7 +314,9 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
       {propsEdit && comp.layers[propsEdit.layer]?.clips[propsEdit.column] && (
         <ClipPropsPanel key={propsEdit.layer + ':' + propsEdit.column} clip={comp.layers[propsEdit.layer].clips[propsEdit.column]!}
           layer={propsEdit.layer} column={propsEdit.column} playing={comp.layers[propsEdit.layer].active === propsEdit.column}
-          library={library} onClose={() => setPropsEdit(null)} />
+          library={library} onClose={() => setPropsEdit(null)}
+          pb={comp.layers[propsEdit.layer].active === propsEdit.column ? playback[propsEdit.layer] ?? null : null}
+          muted={!!comp.layers[propsEdit.layer].muted} onMute={(m) => onLayerChange(propsEdit.layer, { muted: m })} />
       )}
 
       {genEdit && (
