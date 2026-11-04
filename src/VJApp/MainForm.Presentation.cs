@@ -337,7 +337,42 @@ sealed partial class MainForm
         })];
     }
 
-    /// <summary>Estado para a barra de apresentação: o que está no ar e as miniaturas (servidas em https://slides.vj/).</summary>
+    /// <summary>Miniaturas já prontas (por arquivo e data): pequenas, vão junto com a mensagem.</summary>
+    readonly Dictionary<string, (DateTime Time, string Data)> _slideThumbs = [];
+
+    /// <summary>
+    /// Miniatura do slide como imagem embutida (JPEG pequeno). Antes a barra lia os PNGs pelo endereço
+    /// https://slides.vj/, e o WebView às vezes passava a negar o acesso à pasta: o slide ia para o telão,
+    /// mas a miniatura ficava vazia. Embutida, não depende de nada.
+    /// </summary>
+    string SlideThumb(string file)
+    {
+        try
+        {
+            var time = File.GetLastWriteTimeUtc(file);
+            if (_slideThumbs.TryGetValue(file, out var c) && c.Time == time) return c.Data;
+            using var src = new Bitmap(file);
+            int w = 240, h = Math.Max(1, (int)Math.Round(w * (double)src.Height / src.Width));
+            using var thumb = new Bitmap(w, h);
+            using (var g = Graphics.FromImage(thumb))
+            {
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.Clear(Color.Black);
+                g.DrawImage(src, 0, 0, w, h);
+            }
+            using var ms = new MemoryStream();
+            var jpeg = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders().First(e => e.FormatID == System.Drawing.Imaging.ImageFormat.Jpeg.Guid);
+            using var prms = new System.Drawing.Imaging.EncoderParameters(1);
+            prms.Param[0] = new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 80L);
+            thumb.Save(ms, jpeg, prms);
+            string data = "data:image/jpeg;base64," + Convert.ToBase64String(ms.ToArray());
+            _slideThumbs[file] = (time, data);
+            return data;
+        }
+        catch { return ""; }
+    }
+
+    /// <summary>Estado para a barra de apresentação: o que está no ar e as miniaturas.</summary>
     void SendPresentations()
     {
         var list = new List<object>();
@@ -345,7 +380,6 @@ sealed partial class MainForm
         {
             if (_comp.Layers[l].PlayingClip is not { Kind: ClipKind.Presentation } clip) continue;
             var slides = PresentationSlides(clip.Path);
-            string folder = Path.GetFileName(clip.Path ?? "");
             var labels = StepLabels(slides);
             int current = _presSlide.GetValueOrDefault(l);
             list.Add(new
@@ -358,7 +392,7 @@ sealed partial class MainForm
                 slides = labels.Count == 0 ? 0 : labels.Max(x => x.Slide),
                 labels = labels.Select(x => x.Label),
                 current = current < labels.Count ? labels[current].Long : "",
-                images = slides.Select(s => $"https://slides.vj/{Uri.EscapeDataString(folder)}/{Uri.EscapeDataString(Path.GetFileName(s))}"),
+                images = slides.Select(SlideThumb),
             });
         }
         Send(new { type = "presentations", list });
