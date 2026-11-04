@@ -286,8 +286,8 @@ export function BiblePage({ scenes, comp }: Props) {
             </button>
           </div>
           {comp && !lyricsPlaying && (
-            <div className="warn-box">
-              Para o versículo aparecer no telão, o clip <b>Letras</b> precisa estar tocando na grade.
+            <div className="warn-box info">
+              O clip <b>Letras</b> não está tocando. Ao projetar, o VJesus liga ele sozinho.
               <button className="small" onClick={playLyricsClip}>
                 {lyricsCell ? 'Tocar o clip Letras' : 'Colocar na grade e tocar'}
               </button>

@@ -6,6 +6,9 @@ import { formatTime, OverlayPanel } from './OverlayPanel'
 import { isTyping, matches } from './shortcuts'
 import { SlidePreview } from './SlidePreview'
 
+/** "Aba Principal", mas "Aba 2" (e não "Aba Aba 2") quando o nome já começa com Aba. */
+const deckLabel = (name: string) => (/^aba\b/i.test(name.trim()) ? name : `Aba ${name}`)
+
 const newId = () => Math.random().toString(16).slice(2, 12)
 
 const KIND_LABEL: Record<ServiceKind, string> = {
@@ -181,10 +184,10 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
     if (i.kind === 'clip' || i.kind === 'column') {
       const d = deckOf(i.deckId)
       if (!d) return 'A aba deste item não existe mais'
-      if (missing(i)) return `Aba ${d.name}: não há nada nessa posição`
+      if (missing(i)) return `${deckLabel(d.name)}: não há nada nessa posição`
       return i.kind === 'clip'
-        ? `Aba ${d.name} · ${comp?.layers[i.layer ?? 0]?.name ?? `Layer ${(i.layer ?? 0) + 1}`} · ${deckColName(d, i.column ?? 0)}`
-        : `Aba ${d.name} · coluna inteira`
+        ? `${deckLabel(d.name)} · ${comp?.layers[i.layer ?? 0]?.name ?? `Layer ${(i.layer ?? 0) + 1}`} · ${deckColName(d, i.column ?? 0)}`
+        : `${deckLabel(d.name)} · coluna inteira`
     }
     return ''
   }

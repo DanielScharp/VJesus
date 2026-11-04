@@ -185,7 +185,8 @@ function App() {
       {error && <div className="error" onClick={() => setError(null)}>{error}</div>}
       {notice && <div className="notice">{notice}</div>}
 
-      <AttacksBar attacks={attacks} />
+      {/* no mapeamento as setas e números ajustam pontos: os ataques ficam escondidos para não disparar sem querer */}
+      {tab !== 'mapping' && <AttacksBar attacks={attacks} />}
 
       {(tab === 'clips' || tab === 'culto') && <PresentationBar list={presentations} keys={tab === 'clips'} />}
 

@@ -122,6 +122,7 @@ sealed partial class MainForm
 
     void OnOutputPreview(byte[] bgra, int width, int height, int pitch)
     {
+        if (_minimized) return;
         string? id = _outputPreviewScreen;
         EncodePreview(_outputGate, bgra, width, height, pitch, data => Send(new { type = "outputPreview", screenId = id, data }));
     }
@@ -139,15 +140,27 @@ sealed partial class MainForm
     readonly EncodeGate _mainGate = new(), _stageGate = new();
 
     /// <summary>Preview do telão: JPEG para a UI.</summary>
-    void OnPreview(byte[] bgra, int width, int height, int pitch) =>
+    void OnPreview(byte[] bgra, int width, int height, int pitch)
+    {
+        if (_minimized) return; // ninguém está vendo: não gasta processador convertendo imagem
         EncodePreview(_mainGate, bgra, width, height, pitch, data => Send(new { type = "preview", data }));
+    }
+
+    /// <summary>Janela principal minimizada (as prévias da tela param; telões e retorno continuam).</summary>
+    volatile bool _minimized;
+
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+        _minimized = WindowState == FormWindowState.Minimized;
+    }
 
     /// <summary>Imagem do item "Telão" da tela de retorno: para a janela de retorno e o monitor RETORNO da UI.</summary>
     void OnStagePreview(byte[] bgra, int width, int height, int pitch) =>
         EncodePreview(_stageGate, bgra, width, height, pitch, data =>
         {
             var payload = new { type = "stagePreview", data };
-            Send(payload);
+            if (!_minimized) Send(payload); // a janela de retorno continua recebendo
             BeginInvoke(() => _stageWindow?.Post(JsonSerializer.Serialize(payload, Json)));
         });
 

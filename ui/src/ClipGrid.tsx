@@ -181,7 +181,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
               <input type="range" min={0} max={1} step={0.01} value={layer.opacity} title="Opacidade"
                 data-address={`/composition/layers/${li + 1}/video/opacity`}
                 onChange={(e) => onLayerChange(li, { opacity: Number(e.target.value) })} />
-              <select value={layer.blend}
+              <select value={layer.blend} title="Mistura (blend): como esta layer se junta com as layers de baixo"
                 onChange={(e) => onLayerChange(li, { blend: e.target.value as BlendMode })}>
                 {BLEND_MODES.map((b) => <option key={b} value={b}>{BLEND_LABELS[b]}</option>)}
               </select>

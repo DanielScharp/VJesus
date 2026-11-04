@@ -896,3 +896,8 @@ button.onair-btn { background: #c93030; border-color: #c93030; color: #fff; font
 .media-toggle:hover h2 { color: var(--accent); }
 .media-lib.closed { padding-top: 8px; padding-bottom: 8px; }
 .overlay-where { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+
+/* revisão de layout: campos de escolha não passam da borda do painel (o nome longo do monitor ou da fonte empurrava) */
+label { grid-template-columns: 110px 50px minmax(0, 1fr); }
+label > select, label > input[type=text], label > input:not([type]) { min-width: 0; max-width: 100%; }
+.warn-box.info { border-color: var(--line); background: transparent; color: var(--muted); }

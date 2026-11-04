@@ -159,8 +159,33 @@ sealed partial class MainForm
     {
         _lyricsFeed.Show(_blank ? null : _liveText, LiveStyle());
         SendLyricsState();
-        if (!quiet && !_comp.Layers.Any(l => l.Clips.Any(c => c?.Kind == ClipKind.Lyrics)) && !_blank && _liveText != null)
-            Send(new { type = "notice", message = "Para a letra aparecer no telão, coloque o clip Letras na grade (botão \"Colocar na grade\")." });
+        if (!_blank && _liveText != null) EnsureLyricsClip(quiet);
+    }
+
+    /// <summary>
+    /// Letra, versículo ou texto indo ao ar sem o clip "Letras" tocando: antes nada aparecia no telão e a
+    /// pessoa precisava descobrir que faltava o clip. Agora o VJesus liga o clip sozinho (ou coloca na grade).
+    /// </summary>
+    void EnsureLyricsClip(bool quiet)
+    {
+        if (_comp.Layers.Any(l => l.PlayingClip?.Kind == ClipKind.Lyrics)) return;
+        for (int l = _comp.Layers.Count - 1; l >= 0; l--)
+        {
+            int c = Array.FindIndex(_comp.Layers[l].Clips, x => x?.Kind == ClipKind.Lyrics);
+            if (c < 0) continue;
+            Trigger(l, c);
+            SendComposition(withThumbs: false);
+            if (!quiet) Send(new { type = "notice", message = $"Liguei o clip Letras (layer {_comp.Layers[l].Name}) para o texto aparecer no telão." });
+            return;
+        }
+        // não tem clip Letras na aba: coloca na layer de cima, na primeira coluna livre
+        int top = _comp.Layers.Count - 1;
+        int col = Array.FindIndex(_comp.Layers[top].Clips, x => x == null);
+        if (col < 0) col = _comp.Columns - 1;
+        _comp.Layers[top].Clips[col] = new Clip { Kind = ClipKind.Lyrics, Name = "Letras" };
+        Trigger(top, col);
+        CompositionChanged();
+        if (!quiet) Send(new { type = "notice", message = $"Coloquei o clip Letras na layer {_comp.Layers[top].Name} (coluna {col + 1}) para o texto aparecer no telão." });
     }
 
     void ImportSongs()
