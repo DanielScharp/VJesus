@@ -3,7 +3,7 @@
 export type Display = { index: number; name: string; width: number; height: number; primary: boolean }
 
 export type ClipKind = 'video' | 'plasma' | 'testCard' | 'camera' | 'spout' | 'lyrics' | 'ndi' | 'presentation'
-export type PresentationState = { layer: number; layerName: string; name: string; slide: number; count: number; images: string[] }
+export type PresentationState = { layer: number; layerName: string; name: string; slide: number; count: number; slides: number; labels: string[]; current: string; images: string[] }
 export type LiveSources = { cameras: string[]; spout: string[]; ndi?: string[]; ndiAvailable?: boolean }
 export type GeneratorSettings = { type: string; speed: number; intensity: number; scale: number; detail: number; angle: number; colors: string[] }
 export type ClipProps = { speed: number; fit: 'encaixar' | 'preencher' | 'esticar'; zoom: number; offsetX: number; offsetY: number; volume: number; end: 'repetir' | 'parar'; rotation?: number; width?: number; height?: number; radius?: number[]; effects: EffectInstance[] }

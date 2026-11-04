@@ -778,4 +778,4 @@ button.onair-btn { background: #c93030; border-color: #c93030; color: #fff; font
 .pres-thumb img { width: 100%; display: block; aspect-ratio: 16 / 9; object-fit: contain; }
 .pres-thumb span { position: absolute; left: 4px; top: 2px; font-size: 11px; color: #fff; text-shadow: 0 0 3px #000; }
 .pres-thumb.live { border-color: #ff5a5a; }
-.thumb-badge { position: absolute; right: 4px; top: 4px; font-size: 9px; font-weight: 700; background: #2f7de1; color: #fff; padding: 1px 5px; border-radius: 3px; }
+.thumb-badge { position: absolute; right: 4px; top: 4px; font-size: 9px; font-weight: 700; background: #2f7de1; color: #fff; padding: 1px 5px; border-radius: 3px; }.pres-thumb.step { border-style: dashed; }

@@ -62,11 +62,13 @@ sealed partial class MainForm
         try
         {
             var folder = await ConvertPresentationAsync(file);
-            int count = PresentationSlides(folder).Length;
+            var labels = StepLabels(PresentationSlides(folder));
+            int slides = labels.Count == 0 ? 0 : labels.Max(x => x.Slide);
             _comp.Layers[layer].Clips[column] = new Clip { Kind = ClipKind.Presentation, Path = folder, Name = Path.GetFileNameWithoutExtension(file) };
             if (_comp.ActiveHere(_comp.Layers[layer]) == column) ClearLayer(layer);
             CompositionChanged();
-            Send(new { type = "notice", message = $"{Path.GetFileNameWithoutExtension(file)}: {count} slides prontos. Clique no clip para começar." });
+            string extra = labels.Count > slides ? $" ({labels.Count} etapas contando os cliques das animações)" : "";
+            Send(new { type = "notice", message = $"{Path.GetFileNameWithoutExtension(file)}: {slides} slides prontos{extra}. Clique no clip para começar." });
         }
         catch (Exception ex)
         {
@@ -78,7 +80,7 @@ sealed partial class MainForm
     static Task<string> ConvertPresentationAsync(string file)
     {
         var info = new FileInfo(file);
-        var key = Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes($"{info.FullName}|{info.Length}|{info.LastWriteTimeUtc.Ticks}")))[..12].ToLowerInvariant();
+        var key = Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes($"{info.FullName}|{info.Length}|{info.LastWriteTimeUtc.Ticks}|etapas")))[..12].ToLowerInvariant();
         var folder = Path.Combine(PresentationsDir, $"{Slug(Path.GetFileNameWithoutExtension(file))}-{key}");
         if (PresentationSlides(folder).Length > 0) return Task.FromResult(folder); // já convertida
 
@@ -126,7 +128,7 @@ sealed partial class MainForm
                 dynamic slide = pres.Slides.Item(i);
                 if ((int)slide.SlideShowTransition.Hidden == -1) continue; // slide oculto não entra
                 n++;
-                slide.Export(Path.Combine(tmp, $"slide{n:000}.png"), "PNG", w, h);
+                ExportSlideSteps(slide, tmp, n, w, h);
             }
             if (n == 0) throw new InvalidOperationException("a apresentação não tem slides visíveis");
             File.WriteAllText(Path.Combine(tmp, "origem.txt"), file);
@@ -145,6 +147,79 @@ sealed partial class MainForm
             if (pres != null) Marshal.FinalReleaseComObject(pres);
             if (app != null) Marshal.FinalReleaseComObject(app);
             try { if (Directory.Exists(tmp)) Directory.Delete(tmp, true); } catch { }
+        }
+    }
+
+    /// <summary>Uma animação que mostra ou esconde algo (a forma inteira ou um parágrafo dela).</summary>
+    sealed record AnimStep(int Group, int ShapeZ, int Paragraph, bool Show);
+
+    /// <summary>
+    /// Exporta o slide como etapas: uma imagem para cada clique do PowerPoint, com tudo o que já entrou
+    /// até aquele clique (e sem o que já saiu). O movimento da animação não vem junto; no VJesus cada
+    /// etapa entra com a transição da layer. Sem animações de entrada ou saída, é uma imagem só.
+    /// </summary>
+    static void ExportSlideSteps(dynamic slide, string folder, int n, int w, int h)
+    {
+        var steps = new List<AnimStep>();
+        int group = 0;
+        try
+        {
+            dynamic seq = slide.TimeLine.MainSequence;
+            for (int i = 1; i <= (int)seq.Count; i++)
+            {
+                dynamic e = seq.Item(i);
+                if ((int)e.Timing.TriggerType == 1) group++; // novo clique
+                bool exit = (int)e.Exit != 0;
+                int type = (int)e.EffectType;
+                // tipos 54 a 99 são ênfase e mídia, 100 em diante são trajetórias: não mostram nem escondem
+                bool entrance = !exit && type is > 0 and < 54;
+                if (!exit && !entrance) continue;
+                int paragraph = 0;
+                try { paragraph = (int)e.Paragraph; } catch { }
+                steps.Add(new AnimStep(group, (int)e.Shape.ZOrderPosition, paragraph, entrance));
+            }
+        }
+        catch { steps.Clear(); } // slide sem linha do tempo legível: exporta como está
+
+        if (steps.Count == 0 || steps.Max(s => s.Group) == 0)
+        {
+            // nada muda com os cliques: o estado final (tudo que entra sozinho já entrou)
+            slide.Export(Path.Combine(folder, $"slide{n:000}.png"), "PNG", w, h);
+            return;
+        }
+
+        int clicks = steps.Max(s => s.Group);
+        // quem começa escondido: o que tem uma entrada como primeira animação
+        var targets = steps.Select(s => (s.ShapeZ, s.Paragraph)).Distinct().ToList();
+        for (int k = 0; k <= clicks; k++)
+        {
+            dynamic copy = slide.Duplicate().Item(1);
+            try
+            {
+                var hide = new List<dynamic>();
+                foreach (var t in targets)
+                {
+                    // um parágrafo também obedece às animações da forma inteira
+                    var mine = steps.Where(s => s.ShapeZ == t.ShapeZ && (s.Paragraph == t.Paragraph || s.Paragraph == 0)).ToList();
+                    bool visible = !mine[0].Show;
+                    foreach (var s in mine.Where(s => s.Group <= k)) visible = s.Show;
+                    if (visible) continue;
+                    dynamic? shape = null;
+                    foreach (dynamic sh in copy.Shapes) if ((int)sh.ZOrderPosition == t.ShapeZ) { shape = sh; break; }
+                    if (shape == null) continue;
+                    if (t.Paragraph == 0) hide.Add(shape); // apagada depois (Visible = falso não vale na exportação)
+                    else
+                    {
+                        // esconde só o parágrafo, sem mexer no lugar dos outros
+                        dynamic para = shape.TextFrame2.TextRange.Paragraphs(t.Paragraph);
+                        para.Font.Fill.Transparency = 1f;
+                        try { para.ParagraphFormat.Bullet.Visible = 0; } catch { }
+                    }
+                }
+                foreach (var shape in hide) shape.Delete(); // a cópia é descartada logo em seguida
+                copy.Export(Path.Combine(folder, $"slide{n:000}-{k + 1:00}.png"), "PNG", w, h);
+            }
+            finally { copy.Delete(); }
         }
     }
 
@@ -200,6 +275,23 @@ sealed partial class MainForm
         if (ShowPresentationSlide(layer, clip, slide)) { ApplyClipProps(layer, clip); SendPresentations(); }
     }
 
+    /// <summary>Rótulo de cada imagem: "slide002-03.png" vira "2.3" e "slide 2 · etapa 3 de 4".</summary>
+    static List<(int Slide, string Label, string Long)> StepLabels(string[] files)
+    {
+        var parsed = files.Select(f =>
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(Path.GetFileNameWithoutExtension(f), @"slide(\d+)(?:-(\d+))?");
+            return (Slide: m.Success ? int.Parse(m.Groups[1].Value) : 0, Step: m.Success && m.Groups[2].Success ? int.Parse(m.Groups[2].Value) : 0);
+        }).ToList();
+        return [.. parsed.Select(p =>
+        {
+            int steps = parsed.Count(q => q.Slide == p.Slide);
+            return steps > 1
+                ? (p.Slide, $"{p.Slide}.{p.Step}", $"slide {p.Slide} · etapa {p.Step} de {steps}")
+                : (p.Slide, $"{p.Slide}", $"slide {p.Slide}");
+        })];
+    }
+
     /// <summary>Estado para a barra de apresentação: o que está no ar e as miniaturas (servidas em https://slides.vj/).</summary>
     void SendPresentations()
     {
@@ -209,13 +301,18 @@ sealed partial class MainForm
             if (_comp.Layers[l].PlayingClip is not { Kind: ClipKind.Presentation } clip) continue;
             var slides = PresentationSlides(clip.Path);
             string folder = Path.GetFileName(clip.Path ?? "");
+            var labels = StepLabels(slides);
+            int current = _presSlide.GetValueOrDefault(l);
             list.Add(new
             {
                 layer = l,
                 layerName = _comp.Layers[l].Name,
                 name = clip.Name,
-                slide = _presSlide.GetValueOrDefault(l),
+                slide = current,
                 count = slides.Length,
+                slides = labels.Count == 0 ? 0 : labels.Max(x => x.Slide),
+                labels = labels.Select(x => x.Label),
+                current = current < labels.Count ? labels[current].Long : "",
                 images = slides.Select(s => $"https://slides.vj/{Uri.EscapeDataString(folder)}/{Uri.EscapeDataString(Path.GetFileName(s))}"),
             });
         }
