@@ -791,3 +791,14 @@ button.onair-btn { background: #c93030; border-color: #c93030; color: #fff; font
 .timeline-info { align-items: center; margin-bottom: 4px; }
 .timeline-time { font-variant-numeric: tabular-nums; font-size: 13px; margin-right: 6px; }.next-picker { border-left: 3px solid var(--accent); padding: 4px 0 4px 10px; margin: 4px 0 10px; }
 .next-picker label { grid-template-columns: 60px 10px 1fr; }
+
+/* ---------- grade com muitas colunas: a coluna das layers fica fixa e opaca por cima dos clips ---------- */
+.grid { padding-left: 0; }
+.grid .layer-head {
+  position: sticky; left: 0; z-index: 5;
+  /* fundo opaco (o --btn tem transparência em alguns temas) + cobre o espaço entre a layer e a 1ª coluna */
+  background: linear-gradient(var(--btn), var(--btn)), var(--panel);
+  box-shadow: 6px 0 0 var(--panel), -1px 0 0 var(--panel);
+}
+.grid .grid-head .layer-head { background: var(--panel); }
+.grid .grid-row > :not(.layer-head) { position: relative; z-index: 0; }
