@@ -144,6 +144,23 @@ Cria `artifacts\VJesus-vX.Y.Z-win-x64.zip` com tudo dentro (não exige .NET nem 
 
 ---
 
+## Tela de pânico e voltar onde estava
+
+- O botão vermelho **PÂNICO** no topo (ou a tecla **F9**) cobre o telão na hora com o logo da igreja ou uma cor, por cima de vídeos, letra e avisos. Aperte de novo para voltar exatamente ao que estava.
+- Na engrenagem ao lado do botão você escolhe o logo, a cor de fundo, o tamanho do logo e o tempo do esmaecer. A tecla muda em **Menu → Atalhos de teclado**.
+- Se o VJesus fechar sem querer (queda de energia, travamento), ao abrir de novo ele recoloca no telão os clips que estavam tocando, na mesma posição, e avisa. Fechando pelo X, ele abre normal da próxima vez.
+- Erros ficam anotados em `%AppData%\VJesus\erros.log`; se o programa cair por um erro interno, ele se reabre sozinho.
+
+## Checagem antes do culto
+
+Na aba **Culto** (botão **✔ Checar antes do culto**) ou em **Menu → Checar antes do culto**: confere de uma vez o roteiro (músicas e clips que sumiram), os arquivos da grade, os vídeos pesados para este PC, as telas de saída (monitor desligado, saída em cima do monitor do operador), as apresentações, o som, a tela de pânico e o espaço em disco. Arquivos que mudaram de lugar podem ser apontados de novo ali mesmo (**Procurar arquivo…** ou **Procurar todos numa pasta…**), e todos os clips que usavam o arquivo são corrigidos.
+
+## Biblioteca de mídia
+
+Na aba **Clips e efeitos**, embaixo da grade. Clique em **+ Pasta…** para incluir as pastas com os vídeos, imagens e apresentações da igreja (as subpastas entram junto); o que já está na grade aparece sozinho. Busque por nome, pasta ou tag, filtre por tipo, passe o mouse num vídeo para ver a prévia animada e **arraste para uma célula da grade**. O botão **#** marca o arquivo com tags (louvor, ceia, batismo...), salvas em `%AppData%\VJesus\biblioteca.json`.
+
+---
+
 ## Desempenho do vídeo (placa de vídeo ou processador)
 
 Em **Menu → Desempenho do vídeo** você escolhe onde os vídeos são decodificados neste computador:

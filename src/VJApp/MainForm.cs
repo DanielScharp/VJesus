@@ -46,7 +46,7 @@ sealed partial class MainForm : Form
         ClientSize = new Size(1400, 900);
         Controls.Add(_web);
         _players = new VideoPlayer?[_comp.Layers.Count];
-        _playbackTimer.Tick += (_, _) => { CheckClipEnds(); SendPlayback(); };
+        _playbackTimer.Tick += (_, _) => { CheckClipEnds(); SendPlayback(); SaveLiveState(); };
         _saveTimer.Tick += (_, _) => { _saveTimer.Stop(); _comp.Save(Composition.DefaultPath); };
         _effectReloadTimer.Tick += (_, _) => { _effectReloadTimer.Stop(); LoadEffects(); };
 
@@ -64,6 +64,7 @@ sealed partial class MainForm : Form
     protected override async void OnShown(EventArgs e)
     {
         base.OnShown(e);
+        BeginSession();
 
         var errors = new List<string>();
         _effectDefs = EffectLibrary.Load(_effectDir, errors);
@@ -129,6 +130,7 @@ sealed partial class MainForm : Form
         RegisterProjectFileType();
         StartControl();
         StartOverlay();
+        StartPanic();
         StartUpdateCheck();
         StartCarousels();
     }
@@ -184,6 +186,8 @@ sealed partial class MainForm : Form
                 SendCarousels();
                 Send(new { type = "ledTest", mode = _ledTest });
                 SendPerformance();
+                SendPanic();
+                RecoverLiveState();
                 break;
 
             case "tap": Tap(); break;
@@ -194,6 +198,9 @@ sealed partial class MainForm : Form
             case var overlayType when overlayType?.StartsWith("overlay") == true: OnOverlayMessage(overlayType, msg); break;
             case var carouselType when carouselType?.StartsWith("carousel") == true: OnCarouselMessage(carouselType, msg); break;
             case "ledTest": OnLedTestMessage(msg); break;
+            case var checkType when checkType?.StartsWith("check") == true: OnCheckMessage(checkType, msg); break;
+            case var libType when libType?.StartsWith("library") == true: OnLibraryMessage(libType, msg); break;
+            case var panicType when panicType?.StartsWith("panic") == true: OnPanicMessage(panicType, msg); break;
             case var perfType when perfType?.StartsWith("performance") == true: OnPerformanceMessage(perfType, msg); break;
             case "outputPreview": SetOutputPreview((string?)msg["screenId"]); break;
             case var presType when presType?.StartsWith("presentation") == true: OnPresentationMessage(presType, msg); break;
@@ -770,6 +777,7 @@ sealed partial class MainForm : Form
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
         _playbackTimer.Stop();
+        EndSession();
         StopControl();
         _audio?.Dispose();
         _renderer?.Dispose();

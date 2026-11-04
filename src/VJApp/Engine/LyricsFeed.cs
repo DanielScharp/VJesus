@@ -56,6 +56,21 @@ sealed class LyricsFeed
         Transition = transition, TransitionSeconds = seconds,
     };
 
+    /// <summary>
+    /// Mostra uma imagem pronta do tamanho da composição (BGRA, 1920×1080), ou nada (null), entrando e
+    /// saindo com um esmaecer do tempo dado. Usado pela tela de pânico.
+    /// </summary>
+    public void ShowImage(byte[]? bgra, float seconds)
+    {
+        Interlocked.Increment(ref _renderSeq); // um texto que ainda estava sendo desenhado não substitui a imagem
+        var frame = bgra == null ? EmptyFrame("fade", seconds) : new LyricsFrame
+        {
+            Static = bgra, Animated = null, Box = null, BoxRect = RectangleF.Empty,
+            Sprites = [new LyricSprite(new RectangleF(0, 0, Width, Height), false, 0, 0, null)],
+            Transition = seconds <= 0.01f ? "corte" : "fade", TransitionSeconds = seconds,
+        };
+        lock (_lock) { _frame = frame; _version++; }
+    }
     /// <summary>Muda o texto (null ou vazio = telão sem letra). O desenho acontece fora da thread da UI.</summary>
     public void Show(string? text, LyricStyle style)
     {

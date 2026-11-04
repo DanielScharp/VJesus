@@ -88,6 +88,7 @@ partial class Renderer
     void DisposeLyrics()
     {
         _overlayGpu.Dispose();
+        _panicGpu.Dispose();
         _alphaBlend?.Dispose();
         _spriteCb?.Dispose();
         _psSprite?.Dispose();
@@ -125,10 +126,18 @@ partial class Renderer
 
     void DrawOverlay(RenderTexture target, double now, float time)
     {
-        if (Overlay is not { } feed) return;
-        if (OverlayBackground) _ctx!.ClearRenderTargetView(target.Rtv, new Color4(0, 0, 0, 1));
-        DrawFeed(feed, _overlayGpu, target.Rtv, now, time);
+        if (Overlay is { } feed)
+        {
+            if (OverlayBackground) _ctx!.ClearRenderTargetView(target.Rtv, new Color4(0, 0, 0, 1));
+            DrawFeed(feed, _overlayGpu, target.Rtv, now, time);
+        }
+        // tela de pânico: por cima de absolutamente tudo (vídeos, letra, avisos e ataques)
+        if (Panic is { } panic) DrawFeed(panic, _panicGpu, target.Rtv, now, time);
     }
+
+    /// <summary>Tela de pânico (logo ou cor) que cobre o telão inteiro na hora.</summary>
+    public volatile LyricsFeed? Panic;
+    readonly LyricsGpu _panicGpu = new();
 
     void DrawFeed(LyricsFeed feed, LyricsGpu gpu, ID3D11RenderTargetView target, double now, float time)
     {

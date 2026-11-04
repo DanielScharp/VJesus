@@ -385,6 +385,23 @@ sealed unsafe class VideoPlayer : IDisposable
         }
     }
 
+    /// <summary>Lê só o cabeçalho do arquivo (rápido, sem decodificar): tamanho, codec e quadros por segundo.</summary>
+    public static (int Width, int Height, string Codec, double Fps)? Probe(string path)
+    {
+        AVFormatContext* fmt = null;
+        if (avformat_open_input(&fmt, path, null, null) < 0) return null;
+        try
+        {
+            if (avformat_find_stream_info(fmt, null) < 0) return null;
+            AVCodec* dec = null;
+            int s = av_find_best_stream(fmt, AVMediaType.Video, -1, -1, &dec, 0);
+            if (s < 0) return null;
+            var st = fmt->streams[s];
+            string codec = dec != null ? new string((sbyte*)dec->name) : st->codecpar->codec_id.ToString().ToLowerInvariant();
+            return (st->codecpar->width, st->codecpar->height, codec, st->avg_frame_rate.Den != 0 ? Q(st->avg_frame_rate) : 30);
+        }
+        finally { avformat_close_input(&fmt); }
+    }
     static double Q(AVRational r) => r.Den == 0 ? 0 : (double)r.Num / r.Den;
 
     static void Check(int ret, string what)

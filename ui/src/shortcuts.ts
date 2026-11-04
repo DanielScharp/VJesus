@@ -28,6 +28,7 @@ export const ACTIONS: ActionDef[] = [
   { id: 'projeto.salvarComo', label: 'Salvar projeto como…', hint: 'Salva com outro nome ou em outra pasta.', scope: 'global', defaults: ['Ctrl+Shift+S'] },
   { id: 'tempo.tap', label: 'TAP do BPM', hint: 'Toque no ritmo da música para acertar o BPM.', scope: 'global', defaults: ['T'] },
   { id: 'telao.encerrar', label: 'Encerrar letra / versículo', hint: 'Tira a letra ou o versículo do telão e da tela de retorno (fim da música).', scope: 'global', defaults: ['Shift+Escape', 'Delete'] },
+  { id: 'telao.panico', label: 'Tela de pânico (liga/desliga)', hint: 'Cobre o telão na hora com o logo ou a cor da tela de pânico; de novo volta ao que estava.', scope: 'global', defaults: ['F9'] },
   { id: 'ataques.parar', label: 'Parar todos os ataques', hint: 'Interrompe na hora flash, strobe, tremor…', scope: 'global', defaults: [] },
 
   { id: 'apresentacao.proximo', label: 'Próximo slide da apresentação', hint: 'Passa o slide da apresentação (PowerPoint) que está tocando.', scope: 'clips', defaults: ['ArrowRight', 'PageDown', 'Space'] },

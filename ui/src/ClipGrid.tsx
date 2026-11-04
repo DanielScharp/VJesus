@@ -1,3 +1,4 @@
+import { MEDIA_MIME } from './MediaLibrary'
 import { useState } from 'react'
 import { EffectChips, type ToggleEffect } from './EffectChips'
 import { DEFAULT_GEN, GeneratorPanel, genThumbStyle } from './GeneratorPanel'
@@ -101,6 +102,8 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
   const onDrop = (e: React.DragEvent, layer: number, column: number) => {
     e.preventDefault()
     setDropTarget(null)
+    const media = e.dataTransfer.getData(MEDIA_MIME)
+    if (media) { send({ type: 'libraryPlace', layer, column, paths: JSON.parse(media) }); return }
     const internal = e.dataTransfer.getData(CLIP_MIME)
     if (internal) {
       const [fromLayer, fromColumn] = internal.split(':').map(Number)

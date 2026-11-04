@@ -142,6 +142,18 @@ export type OverlaySettings = {
   timerLabel: string; timerEndText: string; timerBackground: boolean; timerStyle: LyricStyle
 }
 export type OverlayState = { settings: OverlaySettings; mode: 'off' | 'timer' | 'notices' | 'notice'; noticeId: string | null }
+export type CheckItem = { level: 'erro' | 'aviso' | 'info' | 'ok'; area: string; title: string; detail?: string | null; fix?: 'relink' | 'searchFolder' | null; fixLabel?: string | null; path?: string | null }
+export type CheckState = { running: boolean; when?: string; errors?: number; warnings?: number; items: CheckItem[] }
+export type LibraryItem = { path: string; name: string; kind: 'video' | 'image' | 'presentation' | 'presentationFile'; folder: string; size: number; modified: string; tags: string[]; used: boolean }
+
+export type PanicState = {
+  on: boolean
+  settings: { image: string | null; color: string; fade: number; size: number }
+  imageName: string | null
+  imageMissing: boolean
+  thumb: string | null
+}
+
 export type DecodeMode = 'auto' | 'gpu' | 'cpu'
 export type PerfResult = { smooth: number; usage: number; count?: number; total?: number }
 export type PerformanceState = {
@@ -203,6 +215,11 @@ export type EngineMessage =
   | { type: 'outputPreview'; screenId: string | null; data: string }
   | { type: 'ledTest'; mode: 'off' | 'regua' | 'partes' }
   | ({ type: 'performance' } & PerformanceState)
+  | ({ type: 'panic' } & PanicState)
+  | ({ type: 'check' } & CheckState)
+  | { type: 'library'; scanning: boolean; folders: string[]; items: LibraryItem[] | null }
+  | { type: 'libraryPreview'; path: string; frames: string[] }
+  | { type: 'libraryTags'; path: string; tags: string[] }
 
 type Cell = { layer: number; column: number }
 
@@ -303,6 +320,16 @@ export type UiMessage =
   | { type: 'carouselStep'; deckId: string; direction: 1 | -1 }
   | { type: 'updateCheck' | 'updateDownload' | 'updateInstall' }
   | { type: 'performanceGet' | 'performanceTest' }
+  | { type: 'panicToggle'; on?: boolean }
+  | { type: 'panicBrowse' }
+  | { type: 'checkRun' | 'checkSearchFolder' }
+  | { type: 'checkRelink'; path: string }
+  | { type: 'libraryGet' | 'libraryAddFolder' }
+  | { type: 'libraryRemoveFolder' | 'libraryPreview' | 'libraryReveal'; path: string }
+  | { type: 'libraryTags'; path: string; tags: string[] }
+  | { type: 'libraryThumbs'; paths: string[] }
+  | { type: 'libraryPlace'; layer: number; column: number; paths: string[] }
+  | { type: 'panicSet'; settings: PanicState['settings'] }
   | { type: 'performanceSet'; decode: DecodeMode }
   | ({ type: 'previewRender'; id: string } & PreviewRequest)
 

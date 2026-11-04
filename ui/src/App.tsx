@@ -1,3 +1,6 @@
+import { MediaLibrary } from './MediaLibrary'
+import { PreflightDialog } from './PreflightDialog'
+import { PanicButton } from './PanicButton'
 import { useEffect, useState } from 'react'
 import {
   inApp, onMessage, send,
@@ -57,6 +60,7 @@ function App() {
   const [stagePreview, setStagePreview] = useState<string | null>(null)
   const [attacks, setAttacks] = useState<AttackPreset[]>([])
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [checkOpen, setCheckOpen] = useState(false)
   const [overlay, setOverlay] = useState<OverlayState | null>(null)
   const [service, setService] = useState<ServiceState>({ planId: '', name: 'Culto', date: null, plans: [], items: [], current: null, verse: 0 })
   const [update, setUpdate] = useState<UpdateState | null>(null)
@@ -158,7 +162,7 @@ function App() {
     <div className="app">
       <header className="topbar">
         <h1>VJesus</h1>
-        <ProjectMenu project={project} onShortcuts={() => setShortcutsOpen(true)} update={update} mappingOpen={tab === 'mapping'} onMapping={() => setTab('mapping')} />
+        <ProjectMenu project={project} onShortcuts={() => setShortcutsOpen(true)} update={update} mappingOpen={tab === 'mapping'} onMapping={() => setTab('mapping')} onCheck={() => setCheckOpen(true)} />
         <nav className="row tabs">
           <button className={tab === 'clips' ? 'active' : ''} onClick={() => setTab('clips')}>Clips e efeitos</button>
           <button className={tab === 'culto' ? 'active' : ''} onClick={() => setTab('culto')}>Culto</button>
@@ -167,6 +171,7 @@ function App() {
           <button className={tab === 'stage' ? 'active' : ''} onClick={() => setTab('stage')}>Retorno</button>
         </nav>
         <div className="topbar-right">
+          <PanicButton />
           <UpdateBadge update={update} />
           <TempoBar bpm={tempo.bpm} beat={tempo.beat} />
         </div>
@@ -175,6 +180,7 @@ function App() {
         </span>
       </header>
 
+      {checkOpen && <PreflightDialog onClose={() => setCheckOpen(false)} />}
       {shortcutsOpen && <ShortcutsDialog attacks={attacks} onClose={() => setShortcutsOpen(false)} />}
       {error && <div className="error" onClick={() => setError(null)}>{error}</div>}
       {notice && <div className="notice">{notice}</div>}
@@ -192,6 +198,9 @@ function App() {
         }} />
       )}
 
+      {tab === 'culto' && (
+        <div className="check-bar"><button onClick={() => setCheckOpen(true)}>✔ Checar antes do culto</button><span className="meta">Confere roteiro, arquivos, vídeos, telas, apresentações e som de uma vez.</span></div>
+      )}
       {tab === 'culto' && (
         <CultoPage service={service} songs={songs} comp={comp} state={lyricsState} preview={preview} thumbs={thumbs} overlay={overlay} timer={stage?.timer ?? null} fonts={fonts} />
       )}
@@ -221,6 +230,8 @@ function App() {
             Clique num clip para tocar · clique numa célula vazia ou arraste vídeos do Explorer para adicionar ·
             arraste clips entre células para mover · botão direito para trocar ou remover · número da coluna dispara a coluna inteira
           </p>
+
+          <MediaLibrary thumbs={thumbs} />
 
           <div className="panels">
             {comp && (
