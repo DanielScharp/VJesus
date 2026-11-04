@@ -122,6 +122,7 @@ sealed partial class MainForm : Form
             core.SetVirtualHostNameToFolderMapping("slides.vj", PresentationsDir, CoreWebView2HostResourceAccessKind.Allow);
             core.Navigate($"https://{UiHost}/index.html");
         }
+        LoadPerformance();
         _playbackTimer.Start();
         StartAutosave();
         EnsureDesktopShortcut();
@@ -182,6 +183,7 @@ sealed partial class MainForm : Form
                 SendUpdate();
                 SendCarousels();
                 Send(new { type = "ledTest", mode = _ledTest });
+                SendPerformance();
                 break;
 
             case "tap": Tap(); break;
@@ -192,6 +194,7 @@ sealed partial class MainForm : Form
             case var overlayType when overlayType?.StartsWith("overlay") == true: OnOverlayMessage(overlayType, msg); break;
             case var carouselType when carouselType?.StartsWith("carousel") == true: OnCarouselMessage(carouselType, msg); break;
             case "ledTest": OnLedTestMessage(msg); break;
+            case var perfType when perfType?.StartsWith("performance") == true: OnPerformanceMessage(perfType, msg); break;
             case "outputPreview": SetOutputPreview((string?)msg["screenId"]); break;
             case var presType when presType?.StartsWith("presentation") == true: OnPresentationMessage(presType, msg); break;
             case var serviceType when serviceType?.StartsWith("service") == true: OnServiceMessage(serviceType, msg); break;

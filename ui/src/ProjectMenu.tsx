@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { send, type UpdateState } from './bridge'
 import { comboLabel, keysOf, matches, subscribe } from './shortcuts'
+import { PerformanceDialog } from './PerformanceDialog'
 
 const ITEMS = [
   { label: 'Novo', action: 'projeto.novo', type: 'projectNew' },
@@ -12,6 +13,7 @@ const ITEMS = [
 /** Menu "Projeto" no topo (Novo, Abrir, Salvar, Salvar como) com atalhos de teclado. */
 export function ProjectMenu({ project, onShortcuts, update, mappingOpen, onMapping }: { project: string | null; onShortcuts: () => void; update: UpdateState | null; mappingOpen: boolean; onMapping: () => void }) {
   const [open, setOpen] = useState(false)
+  const [perf, setPerf] = useState(false)
   const [, force] = useState(0)
   useEffect(() => subscribe(() => force((n) => n + 1)), [])
   const ref = useRef<HTMLDivElement>(null)
@@ -56,6 +58,7 @@ export function ProjectMenu({ project, onShortcuts, update, mappingOpen, onMappi
           <div className="dropdown-sep" />
           <button onClick={() => { onMapping(); setOpen(false) }}><span>Mapeamento{mappingOpen ? ' ●' : ''}</span><kbd /></button>
           <button onClick={() => { onShortcuts(); setOpen(false) }}><span>Atalhos de teclado…</span><kbd /></button>
+          <button onClick={() => { setPerf(true); setOpen(false) }}><span>Desempenho do vídeo…</span><kbd /></button>
           <button disabled={update?.status === 'checking' || update?.status === 'downloading'} onClick={() => send({ type: 'updateCheck' })}>
             <span>{update?.status === 'checking' ? 'Conferindo…' : 'Verificar atualizações'}</span><kbd />
           </button>
@@ -70,6 +73,7 @@ export function ProjectMenu({ project, onShortcuts, update, mappingOpen, onMappi
           <div className="dropdown-note">Salvamento automático a cada minuto</div>
         </div>
       )}
+      {perf && <PerformanceDialog onClose={() => setPerf(false)} />}
     </div>
   )
 }

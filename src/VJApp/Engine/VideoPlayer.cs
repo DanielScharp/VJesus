@@ -66,6 +66,38 @@ sealed unsafe class VideoPlayer : IDisposable
     AVFormatContext* _fmt;
     AVCodecContext* _codec;
     SwsContext* _sws;
+    int _swsFormat = -1;
+    /// <summary>Quadro na memória para onde vai a imagem decodificada pela placa.</summary>
+    AVFrame* _swFrame;
+
+    /// <summary>
+    /// Onde os vídeos novos são decodificados: "auto" (placa de vídeo quando ela aceita o formato,
+    /// senão o processador), "gpu" (mesmo que "auto", mas avisa quando não deu) ou "cpu" (só o processador).
+    /// Vale para os vídeos abertos depois da troca.
+    /// </summary>
+    public static volatile string DecodeMode = "auto";
+
+    /// <summary>Este vídeo está sendo decodificado pela placa de vídeo.</summary>
+    public bool HardwareDecode { get; }
+
+    /// <summary>Liga a decodificação D3D11VA (Windows 8+, qualquer placa com DirectX 11) se o codec tiver.</summary>
+    bool TryHardware(AVCodec* decoder)
+    {
+        const AVHWDeviceType D3D11 = (AVHWDeviceType)7; // AV_HWDEVICE_TYPE_D3D11VA
+        const int HwDeviceCtx = 1;                       // AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX
+        bool supported = false;
+        for (int i = 0; ; i++)
+        {
+            var cfg = avcodec_get_hw_config(decoder, i);
+            if (cfg == null) break;
+            if (cfg->device_type == D3D11 && (cfg->methods & HwDeviceCtx) != 0) { supported = true; break; }
+        }
+        if (!supported) return false;
+        AVBufferRef* device = null;
+        if (av_hwdevice_ctx_create(&device, D3D11, null, null, 0) < 0 || device == null) return false;
+        _codec->hw_device_ctx = device; // o codec fica dono da referência
+        return true;
+    }
     readonly int _stream;
     readonly AVRational _timeBase;
     readonly long _startPts;
@@ -195,7 +227,7 @@ sealed unsafe class VideoPlayer : IDisposable
     /// <param name="path">Arquivo de vídeo, ou nome do dispositivo quando <paramref name="liveDevice"/> é true.</param>
     /// <param name="captureSize">Câmera/placa: resolução pedida ("1920x1080"); null = padrão do aparelho.</param>
     /// <param name="captureFps">Câmera/placa: quadros por segundo pedidos; null = padrão.</param>
-    public VideoPlayer(string path, bool liveDevice = false, string? captureSize = null, int? captureFps = null)
+    public VideoPlayer(string path, bool liveDevice = false, string? captureSize = null, int? captureFps = null, string? decodeMode = null)
     {
         FilePath = path;
         IsLive = liveDevice;
@@ -253,7 +285,13 @@ sealed unsafe class VideoPlayer : IDisposable
         {
             _codec = avcodec_alloc_context3(decoder);
             Check(avcodec_parameters_to_context(_codec, st->codecpar), "configurar codec");
-            _codec->thread_count = 0; // automático
+            // placa de vídeo (D3D11VA) quando a escolha permite e ela aceita o formato; senão, o processador
+            string mode = decodeMode ?? DecodeMode;
+            // automático: a placa só entra onde o processador sofre (maior que Full HD, ou HEVC/AV1/VP9);
+            // um 1080p H.264 o processador abre sem esforço, e copiar da placa de volta custaria mais
+            bool heavy = (long)SourceWidth * SourceHeight > 1920L * 1088 || CodecName is "hevc" or "av1" or "libdav1d" or "vp9";
+            HardwareDecode = !IsLive && !IsStill && (mode == "gpu" || mode == "auto" && heavy) && TryHardware(decoder);
+            _codec->thread_count = HardwareDecode ? 1 : 0; // na placa, mais threads só gastam memória
             Check(avcodec_open2(_codec, decoder, null), "abrir codec");
             // reduz na mesma passada que converte a cor (não custa a mais)
             double shrink = Math.Min(1, Math.Min((double)MaxSide / SourceWidth, (double)MaxSide / SourceHeight));
@@ -262,9 +300,14 @@ sealed unsafe class VideoPlayer : IDisposable
                 Width = Math.Max(2, (int)Math.Round(SourceWidth * shrink / 2) * 2);
                 Height = Math.Max(2, (int)Math.Round(SourceHeight * shrink / 2) * 2);
             }
-            _sws = sws_getContext(SourceWidth, SourceHeight, _codec->pix_fmt, Width, Height, AVPixelFormat.Bgra,
-                SWS_BILINEAR, null, null, null);
-            if (_sws == null) throw new InvalidOperationException("Formato de pixel não suportado.");
+            // a conversão de cor é criada no primeiro quadro: vindo da placa, o formato só é conhecido nessa hora
+            if (!HardwareDecode)
+            {
+                _sws = sws_getContext(SourceWidth, SourceHeight, _codec->pix_fmt, Width, Height, AVPixelFormat.Bgra,
+                    SWS_BILINEAR, null, null, null);
+                if (_sws == null) throw new InvalidOperationException("Formato de pixel não suportado.");
+                _swsFormat = (int)_codec->pix_fmt;
+            }
             TextureWidth = Width;
             TextureHeight = Height;
             stride = Width * 4;
@@ -544,6 +587,23 @@ sealed unsafe class VideoPlayer : IDisposable
 
         var slot = AcquireSlot(t);
         if (slot == null) return;
+        if (frame->hw_frames_ctx != null)
+        {
+            // quadro decodificado na placa: copia para a memória (NV12, metade do tamanho do BGRA) e converte
+            if (_swFrame == null) _swFrame = av_frame_alloc();
+            av_frame_unref(_swFrame);
+            if (av_hwframe_transfer_data(_swFrame, frame, 0) < 0) { lock (_lock) _free.Push(slot); return; }
+            _swFrame->pts = frame->pts;
+            frame = _swFrame;
+        }
+        if (_sws == null || _swsFormat != frame->format)
+        {
+            if (_sws != null) sws_freeContext(_sws);
+            _sws = sws_getContext(SourceWidth, SourceHeight, (AVPixelFormat)frame->format, Width, Height, AVPixelFormat.Bgra,
+                SWS_BILINEAR, null, null, null);
+            _swsFormat = frame->format;
+            if (_sws == null) { lock (_lock) _free.Push(slot); return; }
+        }
         fixed (byte* dst = slot.Pixels)
         {
             byte*[] dstData = [dst, null, null, null];
@@ -703,6 +763,7 @@ sealed unsafe class VideoPlayer : IDisposable
         _thread.Join(2000);
         _audioThread?.Join(2000);
         if (_sws != null) { sws_freeContext(_sws); _sws = null; }
+        if (_swFrame != null) { var sf = _swFrame; av_frame_free(&sf); _swFrame = null; }
         if (_swr != null) { var s = _swr; swr_free(&s); _swr = null; }
         if (_codec != null) { var c = _codec; avcodec_free_context(&c); _codec = null; }
         if (_audioCodec != null) { var a = _audioCodec; avcodec_free_context(&a); _audioCodec = null; }

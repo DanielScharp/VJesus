@@ -144,13 +144,26 @@ Cria `artifacts\VJesus-vX.Y.Z-win-x64.zip` com tudo dentro (não exige .NET nem 
 
 ---
 
+## Desempenho do vídeo (placa de vídeo ou processador)
+
+Em **Menu → Desempenho do vídeo** você escolhe onde os vídeos são decodificados neste computador:
+
+- **Automático (recomendado):** vídeos pesados (maiores que Full HD, HEVC, AV1, VP9) vão para a placa de vídeo; os leves ficam no processador.
+- **Placa de vídeo:** todos os vídeos que a placa aceita vão para ela.
+- **Processador:** como era antes; use se algum driver der problema.
+
+O botão **Testar este computador** toca os vídeos mais pesados da grade por alguns segundos, sem aparecer no telão, dos dois jeitos, e mostra a fluidez e o uso do processador de cada um com uma sugestão. A escolha fica salva no PC (não no projeto) e vale para os vídeos que começarem a tocar depois. A janela também mostra, para cada layer tocando, se o vídeo está na placa ou no processador.
+
+---
+
 ## Problemas comuns
 
 | Sintoma | Solução |
 |---|---|
 | Janela do VJesus em branco | Instale o WebView2 Runtime (passo A.1). |
 | "Motor de vídeo: ..." / tela preta | Atualize o driver da placa de vídeo; confirme suporte a DirectX 11 (`dxdiag`). |
-| Vídeo travando com várias layers | Converta para **HAP** (passo A.4); reduza para 1080p. |
+| Vídeo travando com várias layers | Menu → **Desempenho do vídeo** → **Testar este computador** e use a sugestão. Se ainda travar, converta para **HAP** (passo A.4). |
+| Imagem estranha ou travada depois de trocar para "Placa de vídeo" | Menu → **Desempenho do vídeo** → **Processador** e atualize o driver da placa. |
 | Celular não abre o controle remoto | Celular e PC na mesma rede Wi-Fi; permita o VJesus no Firewall (Redes privadas). |
 | NDI desabilitado | Instale o NDI Tools e reabra o VJesus. |
 | Sem som dos clips | O áudio sai no dispositivo padrão do Windows (Configurações → Som). |

@@ -802,3 +802,23 @@ button.onair-btn { background: #c93030; border-color: #c93030; color: #fff; font
 }
 .grid .grid-head .layer-head { background: var(--panel); }
 .grid .grid-row > :not(.layer-head) { position: relative; z-index: 0; }
+
+/* ---------- desempenho do vídeo ---------- */
+.modal.perf-dialog { width: min(620px, 94vw); overflow: auto; gap: 10px; }
+.perf-dialog h3 { margin: 0; }
+.perf-modes { display: flex; flex-direction: column; gap: 6px; }
+.perf-mode { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+.perf-mode.on { border-color: var(--accent); }
+.perf-mode span { display: flex; flex-direction: column; gap: 2px; }
+.perf-mode small { color: var(--muted); }
+.perf-test { display: flex; gap: 10px; align-items: center; }
+.perf-test button { flex: 0 0 auto; }
+.perf-result table { border-collapse: collapse; width: 100%; margin-bottom: 6px; }
+.perf-result th, .perf-result td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.perf-result p { margin: 6px 0; }
+.perf-layers { display: flex; flex-direction: column; gap: 4px; }
+.perf-layer { display: flex; gap: 10px; align-items: center; font-size: 12px; }
+.perf-layer > span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.perf-tag { font-size: 10px; padding: 1px 6px; border-radius: 3px; background: var(--btn); color: var(--muted); }
+.perf-tag.gpu { background: #2e7d32; color: #fff; }
+.perf-dialog .modal-actions { display: flex; justify-content: flex-end; }

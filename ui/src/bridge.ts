@@ -142,6 +142,15 @@ export type OverlaySettings = {
   timerLabel: string; timerEndText: string; timerBackground: boolean; timerStyle: LyricStyle
 }
 export type OverlayState = { settings: OverlaySettings; mode: 'off' | 'timer' | 'notices' | 'notice'; noticeId: string | null }
+export type DecodeMode = 'auto' | 'gpu' | 'cpu'
+export type PerfResult = { smooth: number; usage: number; count?: number; total?: number }
+export type PerformanceState = {
+  decode: DecodeMode
+  testing: boolean
+  layers: { layer: string; clip: string; codec: string; size: string; gpu: boolean }[]
+  test: null | { error: string } | { files: string[]; cpu: PerfResult; gpu: PerfResult; suggestion: DecodeMode; why: string }
+}
+
 export type UpdateState = {
   current: string; status: 'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'ready' | 'error'
   latest: string | null; page: string | null; notes: string | null; error: string | null; progress: number; canInstall: boolean
@@ -193,6 +202,7 @@ export type EngineMessage =
   | { type: 'presentations'; list: PresentationState[] }
   | { type: 'outputPreview'; screenId: string | null; data: string }
   | { type: 'ledTest'; mode: 'off' | 'regua' | 'partes' }
+  | ({ type: 'performance' } & PerformanceState)
 
 type Cell = { layer: number; column: number }
 
@@ -292,6 +302,8 @@ export type UiMessage =
   | { type: 'carouselRun'; deckId: string; on: boolean }
   | { type: 'carouselStep'; deckId: string; direction: 1 | -1 }
   | { type: 'updateCheck' | 'updateDownload' | 'updateInstall' }
+  | { type: 'performanceGet' | 'performanceTest' }
+  | { type: 'performanceSet'; decode: DecodeMode }
   | ({ type: 'previewRender'; id: string } & PreviewRequest)
 
 type WebView = {
