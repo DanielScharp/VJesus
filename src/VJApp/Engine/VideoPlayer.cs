@@ -37,8 +37,17 @@ sealed unsafe class VideoPlayer : IDisposable
 
     public string FilePath { get; }
     public string CodecName { get; }
+    /// <summary>Tamanho da imagem entregue ao motor (vídeos maiores que 1920 px num lado são reduzidos).</summary>
     public int Width { get; }
     public int Height { get; }
+    /// <summary>Tamanho original do arquivo.</summary>
+    public int SourceWidth { get; }
+    public int SourceHeight { get; }
+    /// <summary>
+    /// Maior lado entregue ao motor. A composição tem 1920×1080: um vídeo 4K reduzido para 1920 no
+    /// lado maior fica com a mesma nitidez na tela e pesa 4 vezes menos para copiar para a placa de vídeo.
+    /// </summary>
+    const int MaxSide = 1920;
     public double Duration { get; }
     public double FrameRate { get; }
     /// <summary>Câmera/dispositivo ao vivo (sem duração; sempre mostra o quadro mais novo).</summary>
@@ -50,6 +59,9 @@ sealed unsafe class VideoPlayer : IDisposable
     public int TextureWidth { get; }
     public int TextureHeight { get; }
     public bool HasAudio => _audioCodec != null;
+    /// <summary>Quantas vezes faltou áudio para a placa de som (todas as layers; só para medir).</summary>
+    public static int AudioUnderruns;
+    public static string? LastUnderrun;
 
     AVFormatContext* _fmt;
     AVCodecContext* _codec;
@@ -64,6 +76,15 @@ sealed unsafe class VideoPlayer : IDisposable
     AVCodecContext* _audioCodec;
     SwrContext* _swr;
     readonly float[] _audioRing = new float[AudioRate * 2 * 2]; // 2 s estéreo
+    /// <summary>
+    /// O áudio tem sua própria leitura do arquivo e sua própria thread: se o computador não der conta de
+    /// decodificar o vídeo na velocidade certa (4K num PC fraco), a imagem pula quadros mas o som não falha.
+    /// </summary>
+    AVFormatContext* _afmt;
+    Thread? _audioThread;
+    double _audioSeek = -1;
+    /// <summary>Quanto som fica decodificado à frente (o anel guarda 2 s).</summary>
+    const int AudioAhead = AudioRate * 2; // 1 s estéreo
     int _audioRead, _audioCount;
 
     readonly Thread _thread;
@@ -205,9 +226,12 @@ sealed unsafe class VideoPlayer : IDisposable
         _timeBase = st->time_base;
         _startPts = st->start_time == NoPts ? 0 : st->start_time;
         CodecName = new string((sbyte*)decoder->name);
-        Width = st->codecpar->width;
-        Height = st->codecpar->height;
-        Duration = IsLive ? 0 : _fmt->duration > 0 ? _fmt->duration / 1_000_000.0 : st->duration * Q(_timeBase);
+        SourceWidth = st->codecpar->width;
+        SourceHeight = st->codecpar->height;
+        Width = SourceWidth;
+        Height = SourceHeight;
+        // a do stream de vídeo: o arquivo inteiro pode durar mais quando o áudio é mais longo, e o vídeo ficaria parado no fim
+        Duration = IsLive ? 0 : st->duration > 0 && st->duration != NoPts ? st->duration * Q(_timeBase) : _fmt->duration > 0 ? _fmt->duration / 1_000_000.0 : 0;
         FrameRate = st->avg_frame_rate.Den != 0 ? Q(st->avg_frame_rate) : 30;
 
         // HAP: lê o primeiro pacote para descobrir a variante; se suportada, pula o decoder do FFmpeg
@@ -218,8 +242,8 @@ sealed unsafe class VideoPlayer : IDisposable
             _hap = true;
             TextureFormat = hap.Format;
             Color = hap.Color;
-            TextureWidth = (Width + 3) / 4 * 4;
-            TextureHeight = (Height + 3) / 4 * 4;
+            TextureWidth = (SourceWidth + 3) / 4 * 4;
+            TextureHeight = (SourceHeight + 3) / 4 * 4;
             stride = TextureWidth / 4 * hap.BlockBytes;
             rows = TextureHeight / 4;
             framesBytes = stride * rows;
@@ -231,7 +255,14 @@ sealed unsafe class VideoPlayer : IDisposable
             Check(avcodec_parameters_to_context(_codec, st->codecpar), "configurar codec");
             _codec->thread_count = 0; // automático
             Check(avcodec_open2(_codec, decoder, null), "abrir codec");
-            _sws = sws_getContext(Width, Height, _codec->pix_fmt, Width, Height, AVPixelFormat.Bgra,
+            // reduz na mesma passada que converte a cor (não custa a mais)
+            double shrink = Math.Min(1, Math.Min((double)MaxSide / SourceWidth, (double)MaxSide / SourceHeight));
+            if (shrink < 1)
+            {
+                Width = Math.Max(2, (int)Math.Round(SourceWidth * shrink / 2) * 2);
+                Height = Math.Max(2, (int)Math.Round(SourceHeight * shrink / 2) * 2);
+            }
+            _sws = sws_getContext(SourceWidth, SourceHeight, _codec->pix_fmt, Width, Height, AVPixelFormat.Bgra,
                 SWS_BILINEAR, null, null, null);
             if (_sws == null) throw new InvalidOperationException("Formato de pixel não suportado.");
             TextureWidth = Width;
@@ -246,6 +277,11 @@ sealed unsafe class VideoPlayer : IDisposable
 
         _thread = new Thread(DecodeLoop) { IsBackground = true, Name = "Decode " + Path.GetFileName(path) };
         _thread.Start();
+        if (_audioStream >= 0)
+        {
+            _audioThread = new Thread(AudioLoop) { IsBackground = true, Name = "Audio " + Path.GetFileName(path) };
+            _audioThread.Start();
+        }
         // o relógio começa no primeiro quadro mostrado (TakeFrame): abrir o arquivo não "come" o começo do clip
     }
 
@@ -279,8 +315,13 @@ sealed unsafe class VideoPlayer : IDisposable
         if (index < 0 || dec == null) return -1;
         try
         {
+            AVFormatContext* afmt = null;
+            Check(avformat_open_input(&afmt, FilePath, null, null), "abrir o áudio");
+            _afmt = afmt;
+            Check(avformat_find_stream_info(_afmt, null), "ler o áudio");
+            if (index >= (int)_afmt->nb_streams) throw new InvalidOperationException("stream de áudio sumiu");
             _audioCodec = avcodec_alloc_context3(dec);
-            Check(avcodec_parameters_to_context(_audioCodec, _fmt->streams[index]->codecpar), "configurar áudio");
+            Check(avcodec_parameters_to_context(_audioCodec, _afmt->streams[index]->codecpar), "configurar áudio");
             Check(avcodec_open2(_audioCodec, dec, null), "abrir áudio");
 
             AVChannelLayout outLayout;
@@ -296,6 +337,7 @@ sealed unsafe class VideoPlayer : IDisposable
         {
             // sem áudio não é erro: o vídeo toca mudo
             if (_audioCodec != null) { var c = _audioCodec; avcodec_free_context(&c); _audioCodec = null; }
+            if (_afmt != null) { var a = _afmt; avformat_close_input(&a); _afmt = null; }
             return -1;
         }
     }
@@ -335,6 +377,7 @@ sealed unsafe class VideoPlayer : IDisposable
         {
             seconds = Math.Clamp(seconds, _in, Math.Max(_in, End - 0.001));
             _seekTarget = seconds;
+            _audioSeek = seconds;
             _clockBase = seconds;
             if (_clock.IsRunning) _clock.Restart(); else _clock.Reset();
             while (_ready.Count > 0) _free.Push(_ready.Dequeue());
@@ -372,6 +415,8 @@ sealed unsafe class VideoPlayer : IDisposable
         lock (_lock)
         {
             int n = Math.Min(dest.Length, _audioCount);
+            // faltou som no meio do vídeo (o decoder ficou para trás): conta para o diagnóstico de desempenho
+            if (n < dest.Length && Position is var pos && pos > _in + 0.5 && pos < End - 0.3) { Interlocked.Increment(ref AudioUnderruns); LastUnderrun = Path.GetFileName(FilePath); }
             for (int i = 0; i < n; i++)
             {
                 dest[i] += _audioRing[_audioRead] * (_speed == 1 ? gain : 0);
@@ -400,8 +445,7 @@ sealed unsafe class VideoPlayer : IDisposable
                     long ts = (long)(target / Q(_timeBase));
                     av_seek_frame(_fmt, _stream, ts, AVSEEK_FLAG_BACKWARD);
                     if (_codec != null) avcodec_flush_buffers(_codec);
-                    if (_audioCodec != null) avcodec_flush_buffers(_audioCodec);
-                    lock (_lock) { _loops = 0; _audioCount = 0; }
+                    lock (_lock) _loops = 0; // o áudio busca sozinho, na thread dele
                     _stillShown = false;
                     dropBefore = target - 0.5 / FrameRate;
                 }
@@ -419,7 +463,6 @@ sealed unsafe class VideoPlayer : IDisposable
                         while (avcodec_receive_frame(_codec, frame) >= 0) Deliver(frame, ref dropBefore);
                         avcodec_flush_buffers(_codec);
                     }
-                    if (_audioCodec != null) avcodec_flush_buffers(_audioCodec);
                     if (IsStill) { _stillShown = true; continue; }
                     _hitOut = false;
                     if (HoldAtEnd)
@@ -449,11 +492,7 @@ sealed unsafe class VideoPlayer : IDisposable
                             Deliver(frame, ref dropBefore);
                     }
                 }
-                else if (pkt->stream_index == _audioStream && avcodec_send_packet(_audioCodec, pkt) >= 0)
-                {
-                    while (avcodec_receive_frame(_audioCodec, frame) >= 0)
-                        WriteAudio(frame, dropBefore);
-                }
+                // o áudio é lido por outra thread, numa segunda abertura do arquivo (AudioLoop)
                 av_packet_unref(pkt);
             }
         }
@@ -501,6 +540,7 @@ sealed unsafe class VideoPlayer : IDisposable
         if (t < dropBefore) return; // quadros antes do ponto de seek
         if (_out > 0 && t >= _out) { _hitOut = true; return; } // passou do ponto de saída
         dropBefore = -1;
+        if (SkipLate(t)) return;
 
         var slot = AcquireSlot(t);
         if (slot == null) return;
@@ -510,9 +550,33 @@ sealed unsafe class VideoPlayer : IDisposable
             int[] dstStride = [slot.Stride, 0, 0, 0];
             byte*[] srcData = [(byte*)frame->data[0], (byte*)frame->data[1], (byte*)frame->data[2], (byte*)frame->data[3]];
             int[] srcStride = [frame->linesize[0], frame->linesize[1], frame->linesize[2], frame->linesize[3]];
-            sws_scale(_sws, srcData, srcStride, 0, Height, dstData, dstStride);
+            sws_scale(_sws, srcData, srcStride, 0, SourceHeight, dstData, dstStride);
         }
         Publish(slot);
+    }
+
+    int _lateRun;
+
+    /// <summary>
+    /// Computador sem fôlego para o vídeo (ex.: 4K num PC fraco): o quadro que já passou da hora não é
+    /// convertido (a conversão de cor é a parte cara) e, muito atrasado, o decoder pula os quadros que
+    /// nenhum outro usa. Assim o vídeo alcança o relógio e o áudio, que vem do mesmo arquivo, não falta.
+    /// De tempos em tempos um quadro atrasado é mostrado mesmo assim, para a imagem não congelar.
+    /// </summary>
+    bool SkipLate(double t)
+    {
+        if (IsLive || IsStill) return false;
+        double late;
+        lock (_lock)
+        {
+            if (!_clock.IsRunning) return false;
+            late = ClockNow - (t + _loops * LoopLength);
+        }
+        double frame = 1 / Math.Max(1, FrameRate);
+        // muito atrasado: só os quadros-chave (a imagem anda aos saltos, mas o som segue inteiro)
+        if (_codec != null) _codec->skip_frame = late > 0.6 ? AVDiscard.Nonkey : late > 0.25 ? AVDiscard.Nonref : AVDiscard.Default;
+        if (late <= 1.5 * frame || ++_lateRun > 4) { _lateRun = 0; return false; }
+        return true;
     }
 
     /// <summary>HAP: só tira a compressão Snappy; os blocos DXT vão como estão para a GPU.</summary>
@@ -522,6 +586,7 @@ sealed unsafe class VideoPlayer : IDisposable
         if (t < dropBefore) return;
         if (_out > 0 && t >= _out) { _hitOut = true; return; }
         dropBefore = -1;
+        if (SkipLate(t)) return; // HAP: quadro atrasado nem é descomprimido
 
         var slot = AcquireSlot(t);
         if (slot == null) return;
@@ -533,11 +598,72 @@ sealed unsafe class VideoPlayer : IDisposable
         Publish(slot);
     }
 
+    /// <summary>Thread do áudio: lê só os pacotes de som, mantém ~1 s pronto e segue os seeks e o loop do vídeo.</summary>
+    void AudioLoop()
+    {
+        AVPacket* pkt = av_packet_alloc();
+        AVFrame* frame = av_frame_alloc();
+        try
+        {
+            double dropBefore = -1;
+            bool ended = false;
+            while (_running)
+            {
+                double target;
+                lock (_lock) { target = _audioSeek; _audioSeek = -1; }
+                if (target < 0 && ended && !HoldAtEnd) target = InPoint; // voltou a repetir
+                if (target >= 0)
+                {
+                    var st = _afmt->streams[_audioStream];
+                    long start = st->start_time == NoPts ? 0 : st->start_time;
+                    av_seek_frame(_afmt, _audioStream, start + (long)(target / Q(st->time_base)), AVSEEK_FLAG_BACKWARD);
+                    avcodec_flush_buffers(_audioCodec);
+                    lock (_lock) _audioCount = 0;
+                    dropBefore = target;
+                    ended = false;
+                }
+                if (ended) { Thread.Sleep(20); continue; } // "parar no fim": espera alguém voltar o clip
+
+                // já tem som suficiente à frente: espera o mixer consumir
+                lock (_lock)
+                    while (_running && _audioSeek < 0 && _audioCount > AudioAhead) Monitor.Wait(_lock, 20);
+                if (Volatile.Read(ref _audioSeek) >= 0) continue;
+
+                int ret = av_read_frame(_afmt, pkt);
+                bool atEnd = ret == AVERROR_EOF;
+                if (ret < 0 && !atEnd) { Thread.Sleep(5); continue; }
+                if (!atEnd && pkt->stream_index == _audioStream && avcodec_send_packet(_audioCodec, pkt) >= 0)
+                {
+                    double end;
+                    lock (_lock) end = End;
+                    while (avcodec_receive_frame(_audioCodec, frame) >= 0)
+                    {
+                        // o som acaba junto com o vídeo (ponto de saída, ou áudio mais longo que a imagem)
+                        double ft = PtsToSecondsAudio(frame->best_effort_timestamp);
+                        if (ft >= end) { atEnd = true; break; }
+                        WriteAudio(frame, dropBefore);
+                        if (dropBefore >= 0 && ft >= dropBefore) dropBefore = -1;
+                    }
+                }
+                if (ret >= 0) av_packet_unref(pkt);
+                if (!atEnd) continue;
+
+                if (HoldAtEnd) { ended = true; continue; }
+                // loop: volta para a entrada, como o vídeo
+                lock (_lock) if (_audioSeek < 0) _audioSeek = _in;
+            }
+        }
+        finally
+        {
+            av_frame_free(&frame);
+            av_packet_free(&pkt);
+        }
+    }
+
     void WriteAudio(AVFrame* frame, double dropBefore)
     {
         if (_swr == null) return;
         if (dropBefore >= 0 && PtsToSecondsAudio(frame->best_effort_timestamp) < dropBefore) return;
-        if (_out > 0 && PtsToSecondsAudio(frame->best_effort_timestamp) >= _out) return; // som depois da saída
 
         int maxOut = (int)av_rescale_rnd(swr_get_delay(_swr, _audioCodec->sample_rate) + frame->nb_samples,
             AudioRate, _audioCodec->sample_rate, AVRounding.Up);
@@ -565,7 +691,7 @@ sealed unsafe class VideoPlayer : IDisposable
     double PtsToSecondsAudio(long pts)
     {
         if (pts == NoPts || _audioStream < 0) return 0;
-        var st = _fmt->streams[_audioStream];
+        var st = _afmt->streams[_audioStream];
         long start = st->start_time == NoPts ? 0 : st->start_time;
         return (pts - start) * Q(st->time_base);
     }
@@ -575,10 +701,12 @@ sealed unsafe class VideoPlayer : IDisposable
         _running = false;
         lock (_lock) Monitor.PulseAll(_lock);
         _thread.Join(2000);
+        _audioThread?.Join(2000);
         if (_sws != null) { sws_freeContext(_sws); _sws = null; }
         if (_swr != null) { var s = _swr; swr_free(&s); _swr = null; }
         if (_codec != null) { var c = _codec; avcodec_free_context(&c); _codec = null; }
         if (_audioCodec != null) { var a = _audioCodec; avcodec_free_context(&a); _audioCodec = null; }
         var f = _fmt; avformat_close_input(&f); _fmt = null;
+        if (_afmt != null) { var a = _afmt; avformat_close_input(&a); _afmt = null; }
     }
 }

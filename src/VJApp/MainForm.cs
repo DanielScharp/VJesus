@@ -473,7 +473,7 @@ sealed partial class MainForm : Form
                 VideoPlayer player;
                 try
                 {
-                    player = new VideoPlayer(clip.Path!);
+                    player = TakePreloaded(clip) ?? new VideoPlayer(clip.Path!);
                 }
                 catch (Exception ex)
                 {

@@ -334,8 +334,10 @@ partial class Renderer
         var ctx = _ctx!;
         if (ch.Pending)
         {
+            // a cópia ainda não terminou na placa de vídeo: tenta no próximo quadro em vez de esperar
+            // (esperar aqui travava o quadro inteiro do telão)
+            if (ctx.Map(ch.Staging, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.DoNotWait, out var map).Failure) return;
             ch.Pending = false;
-            var map = ctx.Map(ch.Staging, 0, MapMode.Read);
             int pitch = (int)map.RowPitch;
             var bytes = new byte[pitch * PreviewHeight];
             new ReadOnlySpan<byte>((void*)map.DataPointer, bytes.Length).CopyTo(bytes);

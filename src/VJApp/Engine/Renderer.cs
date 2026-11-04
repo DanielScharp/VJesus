@@ -329,7 +329,8 @@ sealed partial class Renderer : IDisposable
             else
             {
                 if (oldReady) leaving = old; else old?.Dispose();
-            }            bool hasOld = leaving != null || leavingUnder != null, hasNew = incoming != null;
+            }
+            bool hasOld = leaving != null || leavingUnder != null, hasNew = incoming != null;
             // entrada (vazio → clip), troca (clip → clip) e saída (clip → vazio) podem ter ou não transição
             bool wanted = hasOld && hasNew ? slot.TransitionBetween : hasNew ? slot.TransitionIn : hasOld && slot.TransitionOut;
             bool animate = slot.Transition != (int)TransitionKind.Cut && slot.TransitionSeconds > 0.01f && wanted;
@@ -353,7 +354,9 @@ sealed partial class Renderer : IDisposable
                 slot.TransitionStart = now;
                 slot.TransitionLength = slot.TransitionSeconds;
                 slot.TransitionProgress = 0;
-                slot.TransitionWaiting = hasNew; // só começa quando o clip novo aparecer
+                // só começa quando o clip novo aparecer; uma saída disparada junto com a entrada de outra layer
+                // (fim do vídeo indo para outra layer) espera essa entrada, para não abrir um buraco preto
+                slot.TransitionWaiting = hasNew || slot.TransitionGroup != 0;
                 slot.TransitionWaitSince = now;
                 slot.TransitionActive = true;
             }
@@ -604,6 +607,10 @@ sealed partial class Renderer : IDisposable
         return cur;
     }
 
+    /// <summary>VJ_PERF=caminho: grava, a cada segundo, quanto tempo cada etapa do quadro levou (diagnóstico).</summary>
+    static readonly string? PerfLog = Environment.GetEnvironmentVariable("VJ_PERF");
+    readonly long[] _perf = new long[4];
+
     void Run()
     {
         try { Init(); }
@@ -622,19 +629,31 @@ sealed partial class Renderer : IDisposable
             AdoptPendingSources(now);
 
             float time = (float)now;
+            long p0 = Stopwatch.GetTimestamp();
             UpdateSources(now);
+            long p1 = Stopwatch.GetTimestamp();
             int result = Compose(time, _comp, _ => true, main: true);
             result = ApplyAttacks(_comp, result, time);
             DrawOverlay(_comp[result]!, now, time);
 
             SendStreams(_comp[result]!);
+            long p2 = Stopwatch.GetTimestamp();
             UpdatePreview(_comp[result]!, time);
             UpdateStageFeed(_comp[result]!, time);
+            long p3 = Stopwatch.GetTimestamp();
             RenderOutputs(_comp[result]!, ComposeGroups(time), time);
+            long p4 = Stopwatch.GetTimestamp();
+            if (PerfLog != null) { _perf[0] += p1 - p0; _perf[1] += p2 - p1; _perf[2] += p3 - p2; _perf[3] += p4 - p3; }
 
             frames++;
             if (fpsClock.ElapsedMilliseconds >= 1000)
             {
+                if (PerfLog != null && frames > 0)
+                {
+                    double ms(long t) => t * 1000.0 / Stopwatch.Frequency / frames;
+                    File.AppendAllText(PerfLog, $"{DateTime.Now:HH:mm:ss} fps {frames} | por quadro (ms): videos {ms(_perf[0]):0.0}  composicao {ms(_perf[1]):0.0}  previa {ms(_perf[2]):0.0}  saidas {ms(_perf[3]):0.0}  | faltas de audio {Interlocked.Exchange(ref VideoPlayer.AudioUnderruns, 0)} {VideoPlayer.LastUnderrun}\n");
+                    Array.Clear(_perf);
+                }
                 Stats?.Invoke(frames * 1000.0 / fpsClock.ElapsedMilliseconds);
                 frames = 0;
                 fpsClock.Restart();

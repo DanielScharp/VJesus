@@ -49,7 +49,7 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
         if (Player is not { } p) return;
         Texture = device.CreateTexture2D(new Texture2DDescription(
             p.TextureFormat, (uint)p.TextureWidth, (uint)p.TextureHeight, 1, 1,
-            BindFlags.ShaderResource, ResourceUsage.Dynamic, CpuAccessFlags.Write));
+            BindFlags.ShaderResource, ResourceUsage.Default, CpuAccessFlags.None));
         Srv = device.CreateShaderResourceView(Texture);
     }
 
@@ -63,13 +63,10 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
         if (frame == null) return;
         ShownFrame = frame;
 
-        var mapped = ctx.Map(Texture, 0, MapMode.WriteDiscard);
+        // UpdateSubresource deixa o driver copiar quando a placa estiver livre: com Map(WriteDiscard) o
+        // processador esperava a placa a cada quadro de cada layer, e com várias layers isso somava.
         fixed (byte* src = frame.Pixels)
-        {
-            for (int y = 0; y < frame.Rows; y++)
-                Buffer.MemoryCopy(src + y * frame.Stride, (byte*)mapped.DataPointer + y * mapped.RowPitch, mapped.RowPitch, frame.Stride);
-        }
-        ctx.Unmap(Texture, 0);
+            ctx.UpdateSubresource(Texture, 0, null, (IntPtr)src, (uint)frame.Stride, 0);
     }
 
     /// <summary>Libera a GPU agora e o player em segundo plano (fechar o decoder pode demorar).</summary>
