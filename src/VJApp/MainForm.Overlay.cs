@@ -32,6 +32,7 @@ sealed partial class MainForm
                     _service.Overlay = settings;
                     SaveService();
                     _overlayDirty = true; // redesenha com o estilo novo
+                    ApplyOverlayTargets();
                     UpdateOverlay();
                     SendOverlay();
                 }
@@ -131,7 +132,32 @@ sealed partial class MainForm
         _overlayFeed.Show(text, style);
     }
 
-    void SendOverlay() => Send(new { type = "overlay", settings = _service.Overlay, mode = _overlayMode, noticeId = _overlayNoticeId });
+    /// <summary>Fontes do mapeamento (na ordem dos grupos do motor), da última vez que o mapeamento foi aplicado.</summary>
+    List<string> _overlaySources = [];
+
+    void ApplyOverlayTargets()
+    {
+        if (_renderer == null) return;
+        _renderer.OverlayGroups = _service.Overlay.Screens is { Count: > 0 } only
+            ? [.. only.Select(id => _overlaySources.IndexOf(id)).Where(i => i >= 0)]
+            : null;
+    }
+
+    /// <summary>Os telões possíveis (cada fonte usada nos slices e no LED), com nome, para escolher onde os avisos aparecem.</summary>
+    object[] OverlayTargets()
+    {
+        var used = _mapping.Screens.SelectMany(s => s.Slices.Select(x => x.Source)
+            .Concat(s.Led is { } led ? led.Parts.Select(p => p.Source).Append(led.Source) : []))
+            .Where(x => x != null).Select(x => x!).Distinct().ToList();
+        return [.. used.Select(id => new
+        {
+            id,
+            name = _mapping.Groups.FirstOrDefault(g => g.Id == id)?.Name
+                ?? (id.StartsWith("layer:") && int.TryParse(id[6..], out var n) && n < _comp.Layers.Count ? $"Layer {_comp.Layers[n].Name}" : id),
+        })];
+    }
+
+    void SendOverlay() => Send(new { type = "overlay", settings = _service.Overlay, mode = _overlayMode, noticeId = _overlayNoticeId, targets = OverlayTargets() });
 
     void SaveService()
     {

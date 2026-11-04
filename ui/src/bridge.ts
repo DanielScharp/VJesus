@@ -140,8 +140,9 @@ export type NoticeItem = { id: string; text: string }
 export type OverlaySettings = {
   notices: NoticeItem[]; noticeSeconds: number; noticeBackground: boolean; noticeStyle: LyricStyle
   timerLabel: string; timerEndText: string; timerBackground: boolean; timerStyle: LyricStyle
+  screens?: string[] | null
 }
-export type OverlayState = { settings: OverlaySettings; mode: 'off' | 'timer' | 'notices' | 'notice'; noticeId: string | null }
+export type OverlayState = { settings: OverlaySettings; mode: 'off' | 'timer' | 'notices' | 'notice'; noticeId: string | null; targets?: { id: string; name: string }[] }
 export type CheckItem = { level: 'erro' | 'aviso' | 'info' | 'ok'; area: string; title: string; detail?: string | null; fix?: 'relink' | 'searchFolder' | null; fixLabel?: string | null; path?: string | null }
 export type CheckState = { running: boolean; when?: string; errors?: number; warnings?: number; items: CheckItem[] }
 export type LibraryItem = { path: string; name: string; kind: 'video' | 'image' | 'presentation' | 'presentationFile'; folder: string; size: number; modified: string; tags: string[]; used: boolean }

@@ -641,7 +641,7 @@ sealed partial class Renderer : IDisposable
             UpdatePreview(_comp[result]!, time);
             UpdateStageFeed(_comp[result]!, time);
             long p3 = Stopwatch.GetTimestamp();
-            RenderOutputs(_comp[result]!, ComposeGroups(time), time);
+            RenderOutputs(_comp[result]!, ComposeGroups(time, now), time);
             long p4 = Stopwatch.GetTimestamp();
             if (PerfLog != null) { _perf[0] += p1 - p0; _perf[1] += p2 - p1; _perf[2] += p3 - p2; _perf[3] += p4 - p3; }
 

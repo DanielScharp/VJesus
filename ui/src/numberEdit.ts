@@ -1,6 +1,6 @@
 /**
  * Valores dos sliders editáveis: clique no número (o <output> ao lado de um <input type=range>) e digite.
- * Enter confirma, Esc cancela, ↑/↓ somam um passo. Aceita vírgula ou ponto; "%" vira 0..1 quando o slider é 0..1.
+ * Enter confirma, Esc cancela, ↑/↓ somam um passo. Aceita vírgula ou ponto; o número é lido na mesma unidade mostrada (100% = 1, 45° = 45, posição ±50%).
  * Funciona para todos os sliders da interface, sem mudar cada tela.
  */
 function rangeOf(output: HTMLElement): HTMLInputElement | null {
@@ -18,15 +18,39 @@ function setRange(range: HTMLInputElement, value: number) {
   range.dispatchEvent(new Event('change', { bubbles: true }))
 }
 
-/** Texto digitado → valor do slider, usando o que está mostrado como referência da unidade. */
-function parse(text: string, shown: string, range: HTMLInputElement): number | null {
+/** Quantas vezes o número mostrado é maior que o valor do slider (100 em "100%" com valor 1; 50 na posição ±50%). */
+const factors = new WeakMap<HTMLInputElement, number>()
+const NICE = [1, 10, 50, 100, 1000]
+
+function numberIn(text: string) {
   const n = parseFloat(text.replace(',', '.').replace(/[^\d.+-]/g, ''))
-  if (!isFinite(n)) return null
-  const max = Number(range.max || 100)
-  const percent = shown.trim().endsWith('%') || text.trim().endsWith('%')
-  return percent && max <= 2 ? n / 100 : n
+  return isFinite(n) ? n : null
 }
 
+/** Mede a escala comparando o texto mostrado com o valor real (só dá quando os dois não são zero). */
+function learn(range: HTMLInputElement, shown: string) {
+  const v = Number(range.value), n = numberIn(shown)
+  if (!v || n === null || n === 0) return
+  let f = n / v
+  const nice = NICE.find((x) => Math.abs(f - x) / x < 0.05)
+  if (nice) f = nice
+  factors.set(range, f)
+}
+
+/** Texto digitado → valor do slider, na mesma unidade que está mostrada. */
+function parse(text: string, shown: string, range: HTMLInputElement): number | null {
+  const n = numberIn(text)
+  if (n === null) return null
+  learn(range, shown)
+  let f = factors.get(range)
+  if (f === undefined) {
+    // valor zero agora: deduz pela unidade e pelos limites do slider
+    const min = Number(range.min || 0), max = Number(range.max || 100)
+    const percent = shown.trim().endsWith('%') || text.trim().endsWith('%')
+    f = !percent ? 1 : min < 0 ? 100 / (max - min) : max <= 10 ? 100 : 1
+  }
+  return n / f
+}
 function edit(output: HTMLElement) {
   const range = rangeOf(output)
   if (!range || range.disabled || output.querySelector('input')) return
@@ -78,7 +102,9 @@ document.addEventListener('click', (e) => {
 
 // marca os números editáveis (para o cursor e a dica)
 const mark = () => document.querySelectorAll('label output').forEach((o) => {
-  if (!o.classList.contains('editable') && rangeOf(o as HTMLElement)) {
+  const r = rangeOf(o as HTMLElement)
+  if (r) learn(r, o.textContent ?? '')
+  if (!o.classList.contains('editable') && r) {
     o.classList.add('editable')
     o.setAttribute('title', 'Clique para digitar o valor')
   }

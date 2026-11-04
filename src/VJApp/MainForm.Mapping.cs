@@ -94,6 +94,8 @@ sealed partial class MainForm
             index++;
         }
         _renderer.SetGroups([.. groupLayers]);
+        _overlaySources = groupIds;
+        ApplyOverlayTargets();
         _renderer.SetOutputs(specs);
         LedTestMappingChanged();
         if (_outputPreviewScreen != null) SetOutputPreview(_outputPreviewScreen); // a janela pode ter sido criada agora

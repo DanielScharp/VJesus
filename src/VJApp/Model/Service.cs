@@ -47,6 +47,8 @@ sealed class OverlaySettings
     public string TimerLabel { get; set; } = "O culto começa em";
     public string TimerEndText { get; set; } = "";
     public bool TimerBackground { get; set; } = true;
+    /// <summary>Fontes do mapeamento (grupo ou layer:N) onde a contagem e os avisos aparecem; null ou vazio = em todos os telões.</summary>
+    public List<string>? Screens { get; set; }
     public LyricStyle TimerStyle { get; set; } = new() { FontSize = 200, OutlineWidth = 0, Transition = "corte", FadeMs = 0 };
 }
 

@@ -50,9 +50,29 @@ export function OverlayPanel({ overlay, timer, fonts }: { overlay: OverlayState;
   }
   const live = mode !== 'off'
 
+  const targets = overlay.targets ?? []
+  const chosen = settings.screens ?? []
+  const toggleTarget = (id: string) => {
+    const all = chosen.length === 0 ? targets.map((t) => t.id) : chosen
+    const next = all.includes(id) ? all.filter((x) => x !== id) : [...all, id]
+    if (next.length === 0) return // pelo menos um telão
+    save({ screens: next.length === targets.length ? null : next })
+  }
   return (
     <div className="overlay-panel">
-      <section>
+      {targets.length > 1 && (
+        <section className="overlay-where">
+          <h2>Onde a contagem e os avisos aparecem</h2>
+          <div className="row">
+            {targets.map((t) => (
+              <label key={t.id} className="check">
+                <input type="checkbox" checked={chosen.length === 0 || chosen.includes(t.id)} onChange={() => toggleTarget(t.id)} /> {t.name}
+              </label>
+            ))}
+          </div>
+          <p className="meta">Telões do mapeamento. A tela de pânico sempre cobre todos.</p>
+        </section>
+      )}      <section>
         <div className="effects-head">
           <h2>Contagem regressiva</h2>
           <button className={mode === 'timer' ? 'onair-btn' : 'primary'} onClick={() => send({ type: 'overlayTimer', on: mode !== 'timer' })}>

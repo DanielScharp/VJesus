@@ -13,7 +13,7 @@ partial class Renderer
     /// <summary>Layers (índices) de cada grupo, na ordem do mapeamento.</summary>
     public void SetGroups(int[][] groups) => _groups = groups;
 
-    Dictionary<int, RenderTexture> ComposeGroups(float time)
+    Dictionary<int, RenderTexture> ComposeGroups(float time, double now)
     {
         _groupResult.Clear();
         var groups = _groups;
@@ -33,6 +33,8 @@ partial class Renderer
                     Pass(_psSource!, pair[r]!.Rtv, null);
                 }
                 r = ApplyAttacks(pair, r, time);
+                // contagem, avisos e tela de pânico valem para todos os telões, não só para a composição principal
+                DrawOverlay(pair[r]!, now, time, OverlayGroups is not { } only || only.Contains(source));
                 _groupResult[source] = pair[r]!;
             }
         // libera texturas de grupos que deixaram de existir

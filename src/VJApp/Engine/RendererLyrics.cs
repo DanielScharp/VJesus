@@ -124,9 +124,12 @@ partial class Renderer
     public volatile bool OverlayBackground;
     readonly LyricsGpu _overlayGpu = new();
 
-    void DrawOverlay(RenderTexture target, double now, float time)
+    /// <summary>Em quais grupos (telões) a contagem e os avisos aparecem; null = em todos. A tela de pânico vale sempre em todos.</summary>
+    public volatile HashSet<int>? OverlayGroups;
+
+    void DrawOverlay(RenderTexture target, double now, float time, bool text = true)
     {
-        if (Overlay is { } feed)
+        if (text && Overlay is { } feed)
         {
             if (OverlayBackground) _ctx!.ClearRenderTargetView(target.Rtv, new Color4(0, 0, 0, 1));
             DrawFeed(feed, _overlayGpu, target.Rtv, now, time);
