@@ -12,36 +12,6 @@ type Props = {
  * (clip, coluna, opacidade, slider de efeito, master) e depois mexer num knob/pad MIDI liga os dois.
  */
 export function ControlPanel({ info, learn, onLearn }: Props) {
-  const bound = new Set(info?.midiBindings.map((b) => b.address) ?? [])
-
-  // modo learn: intercepta o clique nos elementos com data-address antes da ação normal
-  useEffect(() => {
-    document.body.classList.toggle('learn', learn)
-    if (!learn) return
-    const pick = (e: Event) => {
-      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-address]')
-      if (!el) return
-      e.preventDefault()
-      e.stopPropagation()
-      if (e.type === 'pointerdown') send({ type: 'learnStart', address: el.dataset.address! })
-    }
-    document.addEventListener('pointerdown', pick, true)
-    document.addEventListener('click', pick, true)
-    document.addEventListener('contextmenu', pick, true)
-    return () => {
-      document.removeEventListener('pointerdown', pick, true)
-      document.removeEventListener('click', pick, true)
-      document.removeEventListener('contextmenu', pick, true)
-    }
-  }, [learn])
-
-  // marca na tela o que já tem MIDI e o que está esperando um controle
-  useEffect(() => {
-    document.querySelectorAll<HTMLElement>('[data-address]').forEach((el) => {
-      el.classList.toggle('midi-bound', bound.has(el.dataset.address!))
-      el.classList.toggle('midi-learning', info?.learning === el.dataset.address)
-    })
-  })
 
   if (!info) return null
   return (
@@ -107,5 +77,51 @@ export function StreamingPanel({ info }: { info: StreamingInfo }) {
           : 'Para NDI, instale o NDI Tools ou NDI Runtime (gratuito, ndi.video/tools) e reabra o app.'}
       </p>
     </section>
+  )
+}
+
+/**
+ * Modo MIDI learn: fica sempre montado (o painel de conexões fecha para você clicar no controle da tela).
+ * Intercepta o clique nos elementos com data-address e mostra uma faixa enquanto está ligado.
+ */
+export function MidiLearnLayer({ info, learn, onLearn }: Props) {
+  const bound = new Set(info?.midiBindings.map((b) => b.address) ?? [])
+
+  // modo learn: intercepta o clique nos elementos com data-address antes da ação normal
+  useEffect(() => {
+    document.body.classList.toggle('learn', learn)
+    if (!learn) return
+    const pick = (e: Event) => {
+      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-address]')
+      if (!el) return
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.type === 'pointerdown') send({ type: 'learnStart', address: el.dataset.address! })
+    }
+    document.addEventListener('pointerdown', pick, true)
+    document.addEventListener('click', pick, true)
+    document.addEventListener('contextmenu', pick, true)
+    return () => {
+      document.removeEventListener('pointerdown', pick, true)
+      document.removeEventListener('click', pick, true)
+      document.removeEventListener('contextmenu', pick, true)
+    }
+  }, [learn])
+
+  // marca na tela o que já tem MIDI e o que está esperando um controle
+  useEffect(() => {
+    document.querySelectorAll<HTMLElement>('[data-address]').forEach((el) => {
+      el.classList.toggle('midi-bound', bound.has(el.dataset.address!))
+      el.classList.toggle('midi-learning', info?.learning === el.dataset.address)
+    })
+  })
+
+  if (!learn) return null
+  return (
+    <div className="learn-banner">
+      <b>MIDI learn</b>
+      <span>{info?.learning ? <>Mexa no controle MIDI para ligar a <code>{info.learning}</code>…</> : 'Clique num clip, número de coluna, slider de opacidade, efeito ou master; depois mexa no controle MIDI.'}</span>
+      <button className="small" onClick={() => { send({ type: 'learnCancel' }); onLearn(false) }}>Concluir</button>
+    </div>
   )
 }

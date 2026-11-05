@@ -1,7 +1,7 @@
 import { MediaLibrary } from './MediaLibrary'
 import { PreflightDialog } from './PreflightDialog'
 import { PanicButton } from './PanicButton'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import {
   inApp, onMessage, send,
   type Composition, type Display, type EffectDef, type EffectInstance, type Layer, type LayerPlayback, type MappingSetup, type ControlInfo, type StreamingInfo, type LiveSources, type Song, type LyricStyle, type LyricsState, type LyricScene, type StageState, type StageConfig, type AttackPreset, type OverlayState, type ServiceState, type UpdateState, type CarouselRun, type PresentationState,
@@ -23,7 +23,8 @@ import { StagePage } from './StagePage'
 import { MonitorsBar } from './MonitorsBar'
 import { AttacksBar } from './AttacksBar'
 import { MappingEditor } from './MappingEditor'
-import { ControlPanel, StreamingPanel } from './ControlPanel'
+import { ControlPanel, MidiLearnLayer, StreamingPanel } from './ControlPanel'
+import { createPortal } from 'react-dom'
 import './App.css'
 
 type Tab = 'clips' | 'mapping' | 'culto' | 'lyrics' | 'bible' | 'stage'
@@ -48,6 +49,9 @@ function App() {
   const [notice, setNotice] = useState<string | null>(null)
   const [control, setControl] = useState<ControlInfo | null>(null)
   const [learn, setLearn] = useState(false)
+  const [connOpen, setConnOpen] = useState(false)
+  // ligar o MIDI learn fecha a janela de conexões, para clicar no controle da tela
+  const startLearn = (on: boolean) => { setLearn(on); if (on) setConnOpen(false) }
   const [streaming, setStreaming] = useState<StreamingInfo | null>(null)
   const [live, setLive] = useState<LiveSources | null>(null)
   const [tempo, setTempo] = useState({ bpm: 120, beat: 0 })
@@ -152,6 +156,22 @@ function App() {
     send({ type: 'effectToggle', target: t, index, enabled })
   }
 
+  // a prévia do telão é gerada no tamanho da maior imagem dela que está na tela (menor = mais leve)
+  const previewRef = useRef<string | null>(null)
+  previewRef.current = preview
+  useEffect(() => {
+    let last = 0
+    const measure = () => {
+      const src = previewRef.current
+      if (!src) return
+      let w = 0
+      document.querySelectorAll('img').forEach((img) => { if (img.src === src) w = Math.max(w, img.getBoundingClientRect().width) })
+      const want = Math.min(960, Math.max(240, Math.ceil((w * window.devicePixelRatio) / 80) * 80))
+      if (Math.abs(want - last) >= 80) { last = want; send({ type: 'previewSize', width: want }) }
+    }
+    const t = setInterval(measure, 1500)
+    return () => clearInterval(t)
+  }, [])
   // mapeamento: a UI é dona do estado enquanto edita e manda tudo para o motor a cada mudança
   const setMapping = (m: MappingSetup) => {
     setMappingState(m)
@@ -162,7 +182,7 @@ function App() {
     <div className="app">
       <header className="topbar">
         <h1>VJesus</h1>
-        <ProjectMenu project={project} onShortcuts={() => setShortcutsOpen(true)} update={update} mappingOpen={tab === 'mapping'} onMapping={() => setTab('mapping')} onCheck={() => setCheckOpen(true)} />
+        <ProjectMenu project={project} onShortcuts={() => setShortcutsOpen(true)} update={update} mappingOpen={tab === 'mapping'} onMapping={() => setTab('mapping')} onCheck={() => setCheckOpen(true)} onConnections={() => setConnOpen(true)} />
         <nav className="row tabs">
           <button className={tab === 'clips' ? 'active' : ''} onClick={() => setTab('clips')}>Clips e efeitos</button>
           <button className={tab === 'culto' ? 'active' : ''} onClick={() => setTab('culto')}>Culto</button>
@@ -181,6 +201,18 @@ function App() {
       </header>
 
       {checkOpen && <PreflightDialog onClose={() => setCheckOpen(false)} />}
+      <MidiLearnLayer info={control} learn={learn} onLearn={startLearn} />
+      {connOpen && createPortal(
+        <div className="modal-back" onMouseDown={() => setConnOpen(false)}>
+          <div className="modal conn-dialog" onMouseDown={(e) => e.stopPropagation()}>
+            <h3>Conexões: celular, MIDI, OSC, Spout e NDI</h3>
+            <ControlPanel info={control} learn={learn} onLearn={startLearn} />
+            {streaming && <StreamingPanel info={streaming} />}
+            <div className="modal-actions"><button onClick={() => setConnOpen(false)}>Fechar</button></div>
+          </div>
+        </div>,
+        document.body,
+      )}
       {shortcutsOpen && <ShortcutsDialog attacks={attacks} onClose={() => setShortcutsOpen(false)} />}
       {error && <div className="error" onClick={() => setError(null)}>{error}</div>}
       {notice && <div className="notice">{notice}</div>}
@@ -281,8 +313,6 @@ function App() {
                 </label>
                 <p className="meta">Telas de saída, monitores e tela cheia ficam em Menu → Mapeamento.</p>
               </section>
-              <ControlPanel info={control} learn={learn} onLearn={setLearn} />
-              {streaming && <StreamingPanel info={streaming} />}
             </div>
           </div>
         </>

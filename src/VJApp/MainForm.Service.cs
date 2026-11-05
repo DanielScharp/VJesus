@@ -28,6 +28,9 @@ sealed partial class MainForm
                     SendService();
                 }
                 break;
+            case "serviceAddMedia":
+                AddMediaToService((msg["paths"] as JsonArray ?? []).Select(x => (string?)x).Where(x => x != null).Select(x => x!).ToList(), (int?)msg["index"]);
+                break;
             case "servicePlanNew":
             {
                 // novo culto vazio, ou uma cópia do aberto (com novos itens para não misturar quem está no ar)
@@ -230,4 +233,42 @@ sealed partial class MainForm
         current = _serviceCurrent,
         verse = _serviceVerse,
     });
+
+    /// <summary>
+    /// Arquivo da biblioteca no roteiro: se já está na grade, o item aponta para aquela célula; senão ele
+    /// entra na aba aberta, na layer de baixo (fundos e vídeos ficam embaixo da letra), na primeira coluna livre.
+    /// </summary>
+    void AddMediaToService(List<string> paths, int? index)
+    {
+        if (paths.Count == 0) return;
+        _comp.StoreDeck();
+        var items = new List<ServiceItem>();
+        foreach (var path in paths)
+        {
+            ServiceItem? item = null;
+            foreach (var deck in _comp.Decks)
+                for (int l = 0; l < deck.Clips.Count && item == null; l++)
+                    for (int c = 0; c < deck.Clips[l].Length && item == null; c++)
+                        if (deck.Clips[l][c] is { Path: { } p } clip && string.Equals(p, path, StringComparison.OrdinalIgnoreCase))
+                            item = new ServiceItem { Kind = "clip", Title = clip.Name, DeckId = deck.Id, Layer = l, Column = c };
+            if (item == null)
+            {
+                int col = Array.FindIndex(_comp.Layers[0].Clips, x => x == null);
+                if (col < 0) { OnGridMessage("columnAdd", new JsonObject()); col = _comp.Columns - 1; } // grade cheia: uma coluna nova
+                if (Directory.Exists(path)) _comp.Layers[0].Clips[col] = new Clip { Kind = ClipKind.Presentation, Path = path, Name = PresentationName(path) };
+                else PlaceFiles(0, col, [path]);
+                _comp.StoreDeck();
+                string name = _comp.Layers[0].Clips[col]?.Name ?? Path.GetFileNameWithoutExtension(path);
+                item = new ServiceItem { Kind = "clip", Title = name, DeckId = _comp.Current.Id, Layer = 0, Column = col };
+            }
+            items.Add(item);
+        }
+        var list = _service.Active.Items;
+        int at = index is { } i && i >= 0 && i <= list.Count ? i : list.Count;
+        list.InsertRange(at, items);
+        SaveService();
+        SendService();
+        CompositionChanged();
+        Send(new { type = "notice", message = items.Count == 1 ? $"\"{items[0].Title}\" entrou no roteiro." : $"{items.Count} itens entraram no roteiro." });
+    }
 }

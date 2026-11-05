@@ -11,7 +11,7 @@ const ITEMS = [
 ] as const
 
 /** Menu "Projeto" no topo (Novo, Abrir, Salvar, Salvar como) com atalhos de teclado. */
-export function ProjectMenu({ project, onShortcuts, update, mappingOpen, onMapping, onCheck }: { project: string | null; onShortcuts: () => void; update: UpdateState | null; mappingOpen: boolean; onMapping: () => void; onCheck: () => void }) {
+export function ProjectMenu({ project, onShortcuts, update, mappingOpen, onMapping, onCheck, onConnections }: { project: string | null; onShortcuts: () => void; update: UpdateState | null; mappingOpen: boolean; onMapping: () => void; onCheck: () => void; onConnections: () => void }) {
   const [open, setOpen] = useState(false)
   const [perf, setPerf] = useState(false)
   const [, force] = useState(0)
@@ -57,6 +57,7 @@ export function ProjectMenu({ project, onShortcuts, update, mappingOpen, onMappi
           ))}
           <div className="dropdown-sep" />
           <button onClick={() => { onMapping(); setOpen(false) }}><span>Mapeamento{mappingOpen ? ' ●' : ''}</span><kbd /></button>
+          <button onClick={() => { onConnections(); setOpen(false) }}><span>Conexões (celular, MIDI, OSC, Spout, NDI)…</span><kbd /></button>
           <button onClick={() => { onShortcuts(); setOpen(false) }}><span>Atalhos de teclado…</span><kbd /></button>
           <button onClick={() => { onCheck(); setOpen(false) }}><span>Checar antes do culto…</span><kbd /></button>
           <button onClick={() => { setPerf(true); setOpen(false) }}><span>Desempenho do vídeo…</span><kbd /></button>

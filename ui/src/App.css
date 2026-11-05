@@ -901,3 +901,20 @@ button.onair-btn { background: #c93030; border-color: #c93030; color: #fff; font
 label { grid-template-columns: 110px 50px minmax(0, 1fr); }
 label > select, label > input[type=text], label > input:not([type]) { min-width: 0; max-width: 100%; }
 .warn-box.info { border-color: var(--line); background: transparent; color: var(--muted); }
+
+/* conexões no Menu e faixa do MIDI learn */
+.modal.conn-dialog { width: min(640px, 94vw); gap: 6px; overflow: auto; }
+.conn-dialog h3 { margin: 0 0 4px; }
+.conn-dialog section { border: none; padding: 6px 0; background: transparent; }
+.conn-dialog .modal-actions { display: flex; justify-content: flex-end; }
+.learn-banner { position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 45; display: flex; gap: 12px; align-items: center; background: #1f3b63; border: 1px solid #4fc3f7; border-radius: 8px; padding: 8px 14px; box-shadow: 0 8px 24px rgba(0,0,0,.5); max-width: 90vw; }
+.media-lib.compact { margin: 0; padding: 0; border: none; background: transparent; }
+.media-lib.compact .media-head { gap: 4px; }
+.media-lib.compact .media-search { min-width: 0; }
+.media-lib.compact .media-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); max-height: 520px; }
+.media-lib.compact .media-card { cursor: pointer; }
+.media-lib.compact .media-grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+.media-lib.compact .media-search { flex: 1 1 100%; order: -1; }
+.media-lib.compact .media-head select { flex: 1; }
+.media-lib.compact .media-name { font-size: 11px; }
+.media-lib.compact .media-meta .tag-btn { display: none; }

@@ -12,7 +12,7 @@ const SUGGESTED = ['louvor', 'ceia', 'batismo', 'pregação', 'abertura', 'fundo
  * Biblioteca de mídia: tudo das pastas escolhidas e da grade, com busca, filtro por tag e tipo,
  * prévia animada ao passar o mouse e arrastar para uma célula da grade.
  */
-export function MediaLibrary({ thumbs }: { thumbs: Record<string, string | null> }) {
+export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<string, string | null>; compact?: boolean; onPick?: (path: string) => void }) {
   const [items, setItems] = useState<LibraryItem[] | null>(null)
   const [folders, setFolders] = useState<string[]>([])
   const [scanning, setScanning] = useState(false)
@@ -23,7 +23,8 @@ export function MediaLibrary({ thumbs }: { thumbs: Record<string, string | null>
   const [editing, setEditing] = useState<string | null>(null)
   const asked = useRef(new Set<string>())
   // aberta ou fechada fica lembrado (fechada por padrão, para não ocupar a tela)
-  const [open, setOpen] = useState(() => { try { return localStorage.getItem('biblioteca.aberta') === '1' } catch { return false } })
+  const [openState, setOpen] = useState(() => { try { return localStorage.getItem('biblioteca.aberta') === '1' } catch { return false } })
+  const open = compact || openState
   const toggle = () => setOpen((o) => { try { localStorage.setItem('biblioteca.aberta', o ? '0' : '1') } catch { /* sem armazenamento */ } return !o })
 
   useEffect(() => {
@@ -63,12 +64,12 @@ export function MediaLibrary({ thumbs }: { thumbs: Record<string, string | null>
   }, [visible, thumbs, open])
 
   return (
-    <section className={`media-lib ${open ? 'open' : 'closed'}`}>
+    <section className={`media-lib ${open ? 'open' : 'closed'} ${compact ? 'compact' : ''}`}>
       <div className="media-head">
-        <button className="media-toggle" onClick={toggle} aria-expanded={open} title={open ? 'Recolher a biblioteca' : 'Abrir a biblioteca'}>
+        {!compact && <button className="media-toggle" onClick={toggle} aria-expanded={open} title={open ? 'Recolher a biblioteca' : 'Abrir a biblioteca'}>
           <span className="caret">{open ? '▾' : '▸'}</span> <h2>Biblioteca de mídia</h2>
           {items && <span className="meta">{items.length} itens</span>}
-        </button>
+        </button>}
         {open && <>
         <input className="media-search" placeholder="Buscar por nome, pasta ou tag…" value={q} onChange={(e) => setQ(e.target.value)} />
         <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
@@ -98,18 +99,18 @@ export function MediaLibrary({ thumbs }: { thumbs: Record<string, string | null>
         {items !== null && shown.length === 0 && <div className="meta">Nada encontrado.</div>}
         {visible.map((i) => (
           <MediaCard key={i.path} item={i} thumb={thumbs[i.path] ?? null} frames={previews[i.path]}
-            editing={editing === i.path} onEdit={(on) => setEditing(on ? i.path : null)} suggestions={[...new Set([...allTags, ...SUGGESTED])]} />
+            editing={editing === i.path} onEdit={(on) => setEditing(on ? i.path : null)} suggestions={[...new Set([...allTags, ...SUGGESTED])]} onPick={onPick} />
         ))}
       </div>
       {shown.length > visible.length && <div className="meta">Mostrando 200 de {shown.length}. Use a busca para achar o resto.</div>}
-      <p className="hint">Arraste da biblioteca para uma célula da grade · passe o mouse para ver o vídeo · # para marcar com tags</p>
+      <p className="hint">{onPick ? 'Clique para pôr no fim do roteiro ou arraste para a lista · passe o mouse para ver o vídeo' : 'Arraste da biblioteca para uma célula da grade · passe o mouse para ver o vídeo · # para marcar com tags'}</p>
       </>}
     </section>
   )
 }
 
-function MediaCard({ item, thumb, frames, editing, onEdit, suggestions }: {
-  item: LibraryItem; thumb: string | null; frames?: string[]; editing: boolean; onEdit: (on: boolean) => void; suggestions: string[]
+function MediaCard({ item, thumb, frames, editing, onEdit, suggestions, onPick }: {
+  item: LibraryItem; thumb: string | null; frames?: string[]; editing: boolean; onEdit: (on: boolean) => void; suggestions: string[]; onPick?: (path: string) => void
 }) {
   const [hover, setHover] = useState(false)
   const [frame, setFrame] = useState(0)
@@ -128,6 +129,7 @@ function MediaCard({ item, thumb, frames, editing, onEdit, suggestions }: {
     <div className={`media-card ${item.used ? 'used' : ''}`} draggable
       onDragStart={(e) => { e.dataTransfer.setData(MEDIA_MIME, JSON.stringify([item.path])); e.dataTransfer.effectAllowed = 'copy' }}
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      onClick={() => onPick?.(item.path)}
       title={`${item.path}\nArraste para uma célula da grade`}>
       <div className="media-thumb">
         {img ? <img src={img} alt="" draggable={false} /> : <div className="media-noimg">{KIND_LABEL[item.kind]}</div>}
@@ -139,11 +141,11 @@ function MediaCard({ item, thumb, frames, editing, onEdit, suggestions }: {
         {item.tags.map((t) => (
           <span key={t} className="tag">#{t}{editing && <button className="chip-x" onClick={() => setTags(item.tags.filter((x) => x !== t))}>×</button>}</span>
         ))}
-        <button className="small tag-btn" title="Marcar com tags" onClick={() => onEdit(!editing)}>#</button>
-        <button className="small tag-btn" title="Mostrar no Explorer" onClick={() => send({ type: 'libraryReveal', path: item.path })}>📂</button>
+        <button className="small tag-btn" title="Marcar com tags" onClick={(e) => { e.stopPropagation(); onEdit(!editing) }}>#</button>
+        <button className="small tag-btn" title="Mostrar no Explorer" onClick={(e) => { e.stopPropagation(); send({ type: 'libraryReveal', path: item.path }) }}>📂</button>
       </div>
       {editing && (
-        <div className="media-tag-edit" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="media-tag-edit" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
           <input autoFocus placeholder="nova tag + Enter" value={text} onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') add(text); if (e.key === 'Escape') onEdit(false) }} />
           <div className="media-sugg">

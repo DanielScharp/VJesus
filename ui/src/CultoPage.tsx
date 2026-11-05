@@ -5,6 +5,7 @@ import { normalize, splitSlides, stripTags } from './lyrics'
 import { formatTime, OverlayPanel } from './OverlayPanel'
 import { isTyping, matches } from './shortcuts'
 import { SlidePreview } from './SlidePreview'
+import { MediaLibrary, MEDIA_MIME } from './MediaLibrary'
 
 /** "Aba Principal", mas "Aba 2" (e não "Aba Aba 2") quando o nome já começa com Aba. */
 const deckLabel = (name: string) => (/^aba\b/i.test(name.trim()) ? name : `Aba ${name}`)
@@ -59,7 +60,7 @@ function itemPreview(item: ServiceItem | undefined): PreviewRequest | null {
 export function CultoPage({ service, songs, comp, state, preview, thumbs, overlay, timer, fonts }: Props) {
   const { items, current } = service
   const [view, setView] = useState<'roteiro' | 'telao'>('roteiro')
-  const [addTab, setAddTab] = useState<'songs' | 'bible' | 'clips' | 'other'>('songs')
+  const [addTab, setAddTab] = useState<'songs' | 'bible' | 'clips' | 'media' | 'other'>('songs')
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const [dragging, setDragging] = useState<string | null>(null)
@@ -207,7 +208,7 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
         <div className="culto-body">
           <section className="culto-add">
             <div className="row culto-tabs">
-              {([['songs', 'Músicas'], ['bible', 'Bíblia'], ['clips', 'Clips'], ['other', 'Outros']] as const).map(([k, l]) => (
+              {([['songs', 'Músicas'], ['bible', 'Bíblia'], ['clips', 'Clips'], ['media', 'Mídia'], ['other', 'Outros']] as const).map(([k, l]) => (
                 <button key={k} className={`small ${addTab === k ? 'active' : ''}`} onClick={() => setAddTab(k)}>{l}</button>
               ))}
             </div>
@@ -264,6 +265,7 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
                 </div>
               </>
             )}
+            {addTab === 'media' && <MediaLibrary thumbs={thumbs} compact onPick={(path) => send({ type: 'serviceAddMedia', paths: [path] })} />}
             {addTab === 'other' && (
               <>
                 <textarea rows={3} placeholder="Texto de um aviso ou de um slide" value={text} onChange={(e) => setText(e.target.value)} />
@@ -280,7 +282,9 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
             )}
           </section>
 
-          <section className="culto-list">
+          <section className="culto-list"
+            onDragOver={(e) => { if (e.dataTransfer.types.includes(MEDIA_MIME)) e.preventDefault() }}
+            onDrop={(e) => { const m = e.dataTransfer.getData(MEDIA_MIME); if (m) { e.preventDefault(); send({ type: 'serviceAddMedia', paths: JSON.parse(m) }) } }}>
             <div className="effects-head">
               <select className="plan-select" value={service.planId} title="Culto aberto" onChange={(e) => { setSelected(null); send({ type: 'servicePlanSelect', id: e.target.value }) }}>
                 {[...service.plans].sort((x, y) => (x.date ?? '9999').localeCompare(y.date ?? '9999') || x.name.localeCompare(y.name)).map((p) => (

@@ -143,7 +143,7 @@ sealed partial class MainForm
     void OnPreview(byte[] bgra, int width, int height, int pitch)
     {
         if (_minimized) return; // ninguém está vendo: não gasta processador convertendo imagem
-        EncodePreview(_mainGate, bgra, width, height, pitch, data => Send(new { type = "preview", data }));
+        EncodePreview(_mainGate, bgra, width, height, pitch, data => Send(new { type = "preview", data }), _previewWidth);
     }
 
     /// <summary>Janela principal minimizada (as prévias da tela param; telões e retorno continuam).</summary>
@@ -164,8 +164,16 @@ sealed partial class MainForm
             BeginInvoke(() => _stageWindow?.Post(JsonSerializer.Serialize(payload, Json)));
         });
 
+    /// <summary>
+    /// Largura que a maior prévia ocupa na tela agora (a interface avisa). A imagem é gerada nesse tamanho:
+    /// com as prévias pequenas, a conversão e a mensagem ficam até 4 vezes mais leves.
+    /// </summary>
+    volatile int _previewWidth = 960;
+
+    void SetPreviewWidth(int width) => _previewWidth = Math.Clamp(width, 240, 960);
+
     /// <summary>Converte BGRA em JPEG fora da thread de render (pula o quadro se ainda está codificando o anterior).</summary>
-    static void EncodePreview(EncodeGate gate, byte[] bgra, int width, int height, int pitch, Action<string> deliver)
+    static void EncodePreview(EncodeGate gate, byte[] bgra, int width, int height, int pitch, Action<string> deliver, int targetWidth = 0)
     {
         if (Interlocked.Exchange(ref gate.Busy, 1) == 1) return;
         Task.Run(() =>
@@ -178,11 +186,22 @@ sealed partial class MainForm
                     System.Runtime.InteropServices.Marshal.Copy(bgra, y * pitch, data.Scan0 + y * data.Stride, width * 4);
                 bmp.UnlockBits(data);
 
+                // menor quando as prévias da tela são pequenas
+                Bitmap image = bmp;
+                if (targetWidth > 0 && targetWidth < width)
+                {
+                    int th = Math.Max(2, height * targetWidth / width);
+                    image = new Bitmap(targetWidth, th, PixelFormat.Format32bppRgb);
+                    using var g = Graphics.FromImage(image);
+                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear;
+                    g.DrawImage(bmp, 0, 0, targetWidth, th);
+                }
                 using var ms = new MemoryStream();
                 var jpeg = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
                 using var ps = new EncoderParameters(1);
                 ps.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 75L);
-                bmp.Save(ms, jpeg, ps);
+                image.Save(ms, jpeg, ps);
+                if (image != bmp) image.Dispose();
                 deliver("data:image/jpeg;base64," + Convert.ToBase64String(ms.ToArray()));
             }
             finally

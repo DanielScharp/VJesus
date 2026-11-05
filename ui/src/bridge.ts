@@ -330,6 +330,8 @@ export type UiMessage =
   | { type: 'libraryTags'; path: string; tags: string[] }
   | { type: 'libraryThumbs'; paths: string[] }
   | { type: 'libraryPlace'; layer: number; column: number; paths: string[] }
+  | { type: 'serviceAddMedia'; paths: string[]; index?: number }
+  | { type: 'previewSize'; width: number }
   | { type: 'panicSet'; settings: PanicState['settings'] }
   | { type: 'performanceSet'; decode: DecodeMode }
   | ({ type: 'previewRender'; id: string } & PreviewRequest)

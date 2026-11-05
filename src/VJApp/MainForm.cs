@@ -203,6 +203,7 @@ sealed partial class MainForm : Form
             case var panicType when panicType?.StartsWith("panic") == true: OnPanicMessage(panicType, msg); break;
             case var perfType when perfType?.StartsWith("performance") == true: OnPerformanceMessage(perfType, msg); break;
             case "outputPreview": SetOutputPreview((string?)msg["screenId"]); break;
+            case "previewSize": SetPreviewWidth((int?)msg["width"] ?? 960); break;
             case var presType when presType?.StartsWith("presentation") == true: OnPresentationMessage(presType, msg); break;
             case var serviceType when serviceType?.StartsWith("service") == true: OnServiceMessage(serviceType, msg); break;
             case var updateType when updateType?.StartsWith("update") == true: OnUpdateMessage(updateType, msg); break;
