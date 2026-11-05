@@ -46,7 +46,7 @@ sealed partial class MainForm : Form
         ClientSize = new Size(1400, 900);
         Controls.Add(_web);
         _players = new VideoPlayer?[_comp.Layers.Count];
-        _playbackTimer.Tick += (_, _) => { CheckClipEnds(); SendPlayback(); SaveLiveState(); };
+        _playbackTimer.Tick += (_, _) => { CheckClipEnds(); SendPlayback(); SaveLiveState(); PublishLive(); };
         _saveTimer.Tick += (_, _) => { _saveTimer.Stop(); _comp.Save(Composition.DefaultPath); };
         _effectReloadTimer.Tick += (_, _) => { _effectReloadTimer.Stop(); LoadEffects(); };
 

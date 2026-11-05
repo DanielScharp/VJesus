@@ -918,3 +918,4 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .media-lib.compact .media-head select { flex: 1; }
 .media-lib.compact .media-name { font-size: 11px; }
 .media-lib.compact .media-meta .tag-btn { display: none; }
+.net-links { display: flex; gap: 12px; flex-wrap: wrap; }

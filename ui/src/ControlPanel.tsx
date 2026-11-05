@@ -23,6 +23,16 @@ export function ControlPanel({ info, learn, onLearn }: Props) {
         <span>{info.oscPort ? <>UDP porta <strong>{info.oscPort}</strong> (endereços no README)</> : 'desligado'}</span>
         <span>Celular</span>
         <span>{info.remoteUrl ? <a href={info.remoteUrl} target="_blank" rel="noreferrer">{info.remoteUrl}</a> : 'desligado'}</span>
+        {info.remoteUrl && <>
+          <span>Outros PCs</span>
+          <span className="net-links">
+            <a href={info.remoteUrl + 'telao'} target="_blank" rel="noreferrer" title="Imagem do telão ao vivo (monitor da mesa de som, outro telão, captura no OBS)">Telão ao vivo</a>
+            <a href={info.remoteUrl + 'roteiro'} target="_blank" rel="noreferrer" title="Ordem do culto, o que está no ar e o próximo slide (som, transmissão, pastor)">Roteiro</a>
+            <a href={info.remoteUrl + 'letra?ajuda'} target="_blank" rel="noreferrer" title="Letra com fundo transparente para a fonte Navegador do OBS (o link abre as instruções)">Letra para o OBS</a>
+          </span>
+          <span />
+          <span className="meta">Abra no navegador de qualquer computador da mesma rede: {info.remoteUrl}telao · /roteiro · /letra</span>
+        </>}
         <span>MIDI</span>
         <span>{info.midiDevices.length ? info.midiDevices.join(', ') : 'nenhum dispositivo encontrado'}</span>
       </div>

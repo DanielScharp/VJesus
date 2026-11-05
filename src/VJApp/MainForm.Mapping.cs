@@ -137,11 +137,14 @@ sealed partial class MainForm
 
     /// <summary>Marca "codificando" de um canal de preview (para pular quadros quando a CPU está ocupada).</summary>
     sealed class EncodeGate { public int Busy; }
-    readonly EncodeGate _mainGate = new(), _stageGate = new();
+    readonly EncodeGate _mainGate = new(), _stageGate = new(), _netGate = new();
 
     /// <summary>Preview do telão: JPEG para a UI.</summary>
     void OnPreview(byte[] bgra, int width, int height, int pitch)
     {
+        // outro computador vendo o telão pela rede: imagem inteira (960×540), com mais qualidade
+        if (_remote is { WantsFrames: true } remote)
+            EncodePreview(_netGate, bgra, width, height, pitch, null, 0, remote.PublishFrame, 82);
         if (_minimized) return; // ninguém está vendo: não gasta processador convertendo imagem
         EncodePreview(_mainGate, bgra, width, height, pitch, data => Send(new { type = "preview", data }), _previewWidth);
     }
@@ -173,7 +176,7 @@ sealed partial class MainForm
     void SetPreviewWidth(int width) => _previewWidth = Math.Clamp(width, 240, 960);
 
     /// <summary>Converte BGRA em JPEG fora da thread de render (pula o quadro se ainda está codificando o anterior).</summary>
-    static void EncodePreview(EncodeGate gate, byte[] bgra, int width, int height, int pitch, Action<string> deliver, int targetWidth = 0)
+    static void EncodePreview(EncodeGate gate, byte[] bgra, int width, int height, int pitch, Action<string>? deliver, int targetWidth = 0, Action<byte[]>? raw = null, long quality = 75)
     {
         if (Interlocked.Exchange(ref gate.Busy, 1) == 1) return;
         Task.Run(() =>
@@ -199,10 +202,12 @@ sealed partial class MainForm
                 using var ms = new MemoryStream();
                 var jpeg = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
                 using var ps = new EncoderParameters(1);
-                ps.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 75L);
+                ps.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, quality);
                 image.Save(ms, jpeg, ps);
                 if (image != bmp) image.Dispose();
-                deliver("data:image/jpeg;base64," + Convert.ToBase64String(ms.ToArray()));
+                var bytes = ms.ToArray();
+                raw?.Invoke(bytes);
+                deliver?.Invoke("data:image/jpeg;base64," + Convert.ToBase64String(bytes));
             }
             finally
             {

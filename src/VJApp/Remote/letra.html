@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VJesus · Letra para transmissão</title>
+<style>
+  /* fundo transparente: no OBS, adicione uma fonte "Navegador" com este endereço, 1920×1080 */
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  body { display: flex; justify-content: center; font-family: var(--fonte, "Segoe UI", system-ui, sans-serif); }
+  body.baixo { align-items: flex-end; }
+  body.meio { align-items: center; }
+  body.cima { align-items: flex-start; }
+  #caixa { margin: 4vh 6vw; padding: .35em .8em; border-radius: .25em; text-align: center; white-space: pre-line;
+    color: var(--cor, #fff); font-size: var(--tamanho, 5vh); font-weight: 700; line-height: 1.2;
+    text-shadow: 0 0 .12em #000, 0 0 .12em #000, 0 .05em .2em #000;
+    transition: opacity var(--esmaecer, .3s) ease; opacity: 0; }
+  body.fundo #caixa { background: rgba(0, 0, 0, var(--opacidade, .55)); text-shadow: none; }
+  #caixa.on { opacity: 1; }
+  #config { position: fixed; inset: 0; display: none; background: #15161a; color: #e8e8ea; font: 15px system-ui, sans-serif; padding: 24px; overflow: auto; }
+  body.ajuda #config { display: block; }
+  #config code { background: #000; padding: 2px 6px; border-radius: 4px; }
+  #config li { margin: 6px 0; }
+</style>
+</head>
+<body class="baixo">
+<div id="caixa"></div>
+<div id="config">
+  <h2>Letra do VJesus para a transmissão</h2>
+  <p>No OBS: <b>Fontes → + → Navegador</b>, cole este endereço, largura 1920 e altura 1080. O fundo fica transparente e a letra aparece por cima da câmera.</p>
+  <p>Ajustes no próprio endereço (junte com <code>&amp;</code>):</p>
+  <ul>
+    <li><code>?posicao=baixo</code> (ou <code>meio</code>, <code>cima</code>)</li>
+    <li><code>tamanho=6</code> (altura da letra em % da tela)</li>
+    <li><code>cor=ffffff</code> (cor do texto)</li>
+    <li><code>fundo=1</code> (faixa escura atrás) e <code>opacidade=0.6</code></li>
+    <li><code>fonte=Poppins</code></li>
+    <li><code>maiusculas=1</code></li>
+  </ul>
+  <p>Exemplo: <code id="exemplo"></code></p>
+  <p>Esta tela aparece porque o endereço tem <code>?ajuda</code>. Tire para ver a letra.</p>
+</div>
+<script>
+  const q = new URLSearchParams(location.search), root = document.documentElement.style, body = document.body
+  if (q.has('ajuda')) body.classList.add('ajuda')
+  document.getElementById('exemplo').textContent = location.origin + '/letra?posicao=baixo&tamanho=6&fundo=1'
+  body.className = (q.get('posicao') || 'baixo') + (q.get('fundo') === '1' ? ' fundo' : '') + (q.has('ajuda') ? ' ajuda' : '')
+  if (q.get('tamanho')) root.setProperty('--tamanho', q.get('tamanho') + 'vh')
+  if (q.get('cor')) root.setProperty('--cor', '#' + q.get('cor').replace('#', ''))
+  if (q.get('opacidade')) root.setProperty('--opacidade', q.get('opacidade'))
+  if (q.get('fonte')) root.setProperty('--fonte', `"${q.get('fonte')}", system-ui, sans-serif`)
+  const caixa = document.getElementById('caixa'), upper = q.get('maiusculas') === '1'
+  let atual = null
+  function mostrar(texto) {
+    if (texto === atual) return
+    atual = texto
+    // troca suave: some, troca o texto e aparece
+    caixa.classList.remove('on')
+    setTimeout(() => {
+      if (!texto) return
+      caixa.textContent = upper ? texto.toUpperCase() : texto
+      caixa.classList.add('on')
+    }, caixa.textContent ? 250 : 0)
+  }
+  function conectar() {
+    const ev = new EventSource('/eventos')
+    ev.onmessage = (e) => { const s = JSON.parse(e.data); mostrar(s.panic ? null : s.text || null) }
+  }
+  conectar()
+</script>
+</body>
+</html>

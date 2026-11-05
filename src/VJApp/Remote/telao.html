@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VJesus · Telão ao vivo</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: system-ui, sans-serif; }
+  img { width: 100vw; height: 100vh; object-fit: contain; display: block; }
+  #aviso { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #888; font-size: 18px; text-align: center; }
+  #dica { position: fixed; right: 12px; bottom: 10px; color: #fff; background: rgba(0,0,0,.6); padding: 6px 10px; border-radius: 6px; font-size: 13px; transition: opacity .6s; }
+  body.limpo #dica { opacity: 0; }
+</style>
+</head>
+<body>
+<div id="aviso">Conectando ao VJesus…</div>
+<img id="tela" alt="">
+<div id="dica">Clique duas vezes para tela cheia · imagem do telão do VJesus, ao vivo</div>
+<script>
+  // a imagem é um fluxo contínuo (MJPEG); se a conexão cair (VJesus fechou, rede), tenta de novo sozinho
+  const img = document.getElementById('tela'), aviso = document.getElementById('aviso')
+  function conectar() { img.src = '/telao.mjpg?t=' + Date.now() }
+  img.onload = () => { aviso.style.display = 'none' }
+  img.onerror = () => { aviso.style.display = ''; aviso.textContent = 'Sem conexão com o VJesus. Tentando de novo…'; setTimeout(conectar, 2000) }
+  conectar()
+  document.addEventListener('dblclick', () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen())
+  setTimeout(() => document.body.classList.add('limpo'), 4000)
+  // ?limpo=1 esconde a dica desde o começo (para captura no OBS)
+  if (new URLSearchParams(location.search).has('limpo')) document.body.classList.add('limpo')
+</script>
+</body>
+</html>

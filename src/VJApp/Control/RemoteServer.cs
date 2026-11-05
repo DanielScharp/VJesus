@@ -43,10 +43,16 @@ sealed class RemoteServer : IAsyncDisposable
         var app = builder.Build();
         var server = new RemoteServer(app, port, onMessage, snapshot);
 
-        string page = Path.Combine(AppContext.BaseDirectory, "Remote", "index.html");
+        string Page(string name) => Path.Combine(AppContext.BaseDirectory, "Remote", name);
         app.UseWebSockets();
-        app.MapGet("/", () => Results.File(page, "text/html; charset=utf-8"));
+        app.MapGet("/", () => Results.File(Page("index.html"), "text/html; charset=utf-8"));
         app.Map("/ws", server.HandleSocket);
+        // outros computadores da rede: o telão ao vivo, o roteiro e a letra (para o OBS)
+        app.MapGet("/telao", () => Results.File(Page("telao.html"), "text/html; charset=utf-8"));
+        app.MapGet("/roteiro", () => Results.File(Page("roteiro.html"), "text/html; charset=utf-8"));
+        app.MapGet("/letra", () => Results.File(Page("letra.html"), "text/html; charset=utf-8"));
+        app.MapGet("/telao.mjpg", server.HandleStream);
+        app.MapGet("/eventos", server.HandleEvents);
         await app.StartAsync();
         return server;
     }
@@ -92,6 +98,97 @@ sealed class RemoteServer : IAsyncDisposable
         }
         catch { }
         finally { gate.Release(); }
+    }
+
+    // ---------------- telão ao vivo (MJPEG: funciona em qualquer navegador e no OBS) ----------------
+
+    byte[]? _frame;
+    int _frameVersion, _viewers;
+
+    /// <summary>Alguém está vendo o telão pela rede (só então o app gera as imagens para isso).</summary>
+    public bool WantsFrames => Volatile.Read(ref _viewers) > 0;
+
+    public void PublishFrame(byte[] jpeg)
+    {
+        Volatile.Write(ref _frame, jpeg);
+        Interlocked.Increment(ref _frameVersion);
+    }
+
+    async Task HandleStream(HttpContext ctx)
+    {
+        const string boundary = "quadro";
+        ctx.Response.ContentType = $"multipart/x-mixed-replace; boundary={boundary}";
+        ctx.Response.Headers.CacheControl = "no-cache, no-store";
+        Interlocked.Increment(ref _viewers);
+        int sent = -1;
+        try
+        {
+            while (!ctx.RequestAborted.IsCancellationRequested)
+            {
+                int v = Volatile.Read(ref _frameVersion);
+                if (v != sent && Volatile.Read(ref _frame) is { } jpeg)
+                {
+                    sent = v;
+                    var head = Encoding.ASCII.GetBytes($"--{boundary}\r\nContent-Type: image/jpeg\r\nContent-Length: {jpeg.Length}\r\n\r\n");
+                    await ctx.Response.Body.WriteAsync(head, ctx.RequestAborted);
+                    await ctx.Response.Body.WriteAsync(jpeg, ctx.RequestAborted);
+                    await ctx.Response.Body.WriteAsync("\r\n"u8.ToArray(), ctx.RequestAborted);
+                    await ctx.Response.Body.FlushAsync(ctx.RequestAborted);
+                }
+                await Task.Delay(40, ctx.RequestAborted);
+            }
+        }
+        catch { /* o outro computador fechou a página */ }
+        finally { Interlocked.Decrement(ref _viewers); }
+    }
+
+    // ---------------- estado ao vivo (roteiro e letra), por Server-Sent Events ----------------
+
+    string _live = "{}";
+    readonly ConcurrentDictionary<HttpResponse, SemaphoreSlim> _listeners = new();
+
+    /// <summary>Alguém está com o roteiro ou a letra aberta pela rede.</summary>
+    public bool HasListeners => !_listeners.IsEmpty;
+
+    public void PublishLive(string json)
+    {
+        if (json == _live) return;
+        _live = json;
+        foreach (var (res, gate) in _listeners) _ = WriteEvent(res, gate, json);
+    }
+
+    static async Task WriteEvent(HttpResponse res, SemaphoreSlim gate, string json)
+    {
+        await gate.WaitAsync();
+        try
+        {
+            await res.WriteAsync($"data: {json}\n\n");
+            await res.Body.FlushAsync();
+        }
+        catch { }
+        finally { gate.Release(); }
+    }
+
+    async Task HandleEvents(HttpContext ctx)
+    {
+        ctx.Response.ContentType = "text/event-stream; charset=utf-8";
+        ctx.Response.Headers.CacheControl = "no-cache";
+        var gate = new SemaphoreSlim(1, 1);
+        _listeners[ctx.Response] = gate;
+        try
+        {
+            await WriteEvent(ctx.Response, gate, _live);
+            // mantém a conexão viva (alguns roteadores derrubam conexões paradas)
+            while (!ctx.RequestAborted.IsCancellationRequested)
+            {
+                await Task.Delay(15000, ctx.RequestAborted);
+                await gate.WaitAsync();
+                try { await ctx.Response.WriteAsync(": ping\n\n"); await ctx.Response.Body.FlushAsync(); }
+                finally { gate.Release(); }
+            }
+        }
+        catch { }
+        finally { _listeners.TryRemove(ctx.Response, out _); }
     }
 
     /// <summary>IP da máquina na rede local (para mostrar o endereço do remoto).</summary>

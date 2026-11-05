@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VJesus · Roteiro do culto</title>
+<style>
+  :root { --bg: #15161a; --panel: #1e2026; --line: #30333b; --text: #e8e8ea; --muted: #8b8f99; --accent: #ffb020; --red: #e53935; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 2; }
+  header h1 { font-size: 18px; margin: 0; flex: 1; }
+  #conexao { font-size: 12px; color: var(--muted); }
+  #conexao.on::before { content: "● "; color: #66bb6a; }
+  #conexao.off::before { content: "● "; color: var(--red); }
+  main { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(300px, 1.3fr); gap: 16px; padding: 16px; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+  ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  li { display: flex; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; align-items: baseline; }
+  li .n { color: var(--muted); width: 22px; text-align: right; font-variant-numeric: tabular-nums; }
+  li .tipo { font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: .05em; }
+  li .nota { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  li.atual { border-color: var(--accent); background: rgba(255, 176, 32, .12); }
+  li.atual .n { color: var(--accent); font-weight: 700; }
+  li.passou { opacity: .55; }
+  .ar { display: inline-block; background: var(--red); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 3px; margin-right: 6px; }
+  #titulo { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  #texto { font-size: clamp(22px, 3.2vw, 40px); line-height: 1.25; white-space: pre-line; min-height: 3em; }
+  #texto.vazio { color: var(--muted); font-size: 18px; }
+  #proximo { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--line); color: var(--muted); white-space: pre-line; font-size: clamp(16px, 2vw, 24px); }
+  #proximo b { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+  #extra { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .chip { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; font-size: 14px; }
+  .chip.panico { background: var(--red); border-color: var(--red); font-weight: 700; }
+</style>
+</head>
+<body>
+<header><h1 id="plano">Roteiro do culto</h1><span id="conexao">conectando…</span></header>
+<main>
+  <section><h2>Ordem do culto</h2><ol id="lista"></ol></section>
+  <section>
+    <h2><span class="ar">NO AR</span>no telão</h2>
+    <div id="titulo"></div>
+    <div id="texto" class="vazio">Nada no telão</div>
+    <div id="proximo" hidden><b>Próximo</b><span></span></div>
+    <div id="extra"></div>
+  </section>
+</main>
+<script>
+  // página só de leitura: acompanha o VJesus pela rede (mesa de som, transmissão, pastor)
+  const $ = (id) => document.getElementById(id)
+  const TIPOS = { song: 'música', bible: 'bíblia', text: 'texto', clip: 'clip', column: 'coluna', notice: 'aviso', timer: 'contagem', clear: 'encerrar' }
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+  let ultimaAtual = null
+  function mostrar(s) {
+    $('plano').textContent = (s.plan || 'Roteiro do culto') + (s.date ? ' · ' + s.date.split('-').reverse().join('/') : '')
+    const atual = (s.items || []).findIndex((i) => i.id === s.current)
+    $('lista').innerHTML = (s.items || []).map((i, k) =>
+      `<li class="${k === atual ? 'atual' : k < atual ? 'passou' : ''}" id="i${k}"><span class="n">${k + 1}</span><span><span class="tipo">${TIPOS[i.kind] || i.kind}</span> ${esc(i.title)}${i.note ? `<span class="nota">${esc(i.note)}</span>` : ''}</span></li>`).join('')
+      || '<li><span class="n"></span><span>O roteiro está vazio.</span></li>'
+    if (atual >= 0 && atual !== ultimaAtual) document.getElementById('i' + atual)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    ultimaAtual = atual
+    $('titulo').textContent = s.title ? s.title + (s.slides > 0 ? `  ·  ${s.slide + 1} de ${s.slides}` : '') : ''
+    const texto = $('texto')
+    if (s.text) { texto.textContent = s.text; texto.className = '' }
+    else { texto.textContent = s.blank ? 'Tela em branco' : 'Nada no telão'; texto.className = 'vazio' }
+    $('proximo').hidden = !s.next
+    $('proximo').querySelector('span').textContent = s.next || ''
+    $('extra').innerHTML = (s.panic ? '<span class="chip panico">TELA DE PÂNICO NO AR</span>' : '') + (s.timer ? `<span class="chip">⏱ ${esc(s.timer)}</span>` : '')
+  }
+  function conectar() {
+    const ev = new EventSource('/eventos')
+    ev.onopen = () => { $('conexao').textContent = 'ao vivo'; $('conexao').className = 'on' }
+    ev.onmessage = (e) => mostrar(JSON.parse(e.data))
+    ev.onerror = () => { $('conexao').textContent = 'sem conexão, tentando de novo…'; $('conexao').className = 'off' }
+  }
+  conectar()
+</script>
+</body>
+</html>

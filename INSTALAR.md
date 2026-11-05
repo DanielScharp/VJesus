@@ -144,6 +144,18 @@ Cria `artifacts\VJesus-vX.Y.Z-win-x64.zip` com tudo dentro (não exige .NET nem 
 
 ---
 
+## Outros computadores da rede (som, transmissão, pastor)
+
+Qualquer computador, tablet ou celular na mesma rede acompanha o culto pelo navegador, sem instalar nada. Os endereços aparecem em **Menu → Conexões** (troque o IP pelo que aparecer lá):
+
+- **`http://IP:8080/telao`**: a imagem do telão ao vivo. Clique duas vezes para tela cheia. Serve de monitor na mesa de som, de telão extra ou de captura no OBS (`/telao?limpo` esconde a dica).
+- **`http://IP:8080/roteiro`**: a ordem do culto com o item no ar marcado, o texto que está no telão e o próximo slide. Bom para quem opera o som, a transmissão ou para o pastor.
+- **`http://IP:8080/letra`**: só a letra, com fundo transparente, para a fonte **Navegador** do OBS (1920×1080) por cima da câmera. Ajustes no endereço: `posicao=baixo|meio|cima`, `tamanho=6`, `cor=ffffff`, `fundo=1`, `opacidade=0.6`, `fonte=Poppins`, `maiusculas=1`. Abra `/letra?ajuda` para ver as instruções.
+
+Se o outro computador não abrir, libere o VJesus no Firewall do Windows (Redes privadas), como no controle pelo celular. Para levar a imagem em alta qualidade para a transmissão, use o NDI (Menu → Conexões).
+
+---
+
 ## Tela de pânico e voltar onde estava
 
 - O botão vermelho **PÂNICO** no topo (ou a tecla **F9**) cobre o telão na hora com o logo da igreja ou uma cor, por cima de vídeos, letra e avisos. Aperte de novo para voltar exatamente ao que estava.
