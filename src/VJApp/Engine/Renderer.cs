@@ -173,12 +173,13 @@ sealed partial class Renderer : IDisposable
     public volatile int TriggerGroup;
 
     /// <summary>Troca a fonte de uma layer (null = limpar). O clip anterior sai com a transição da layer.</summary>
-    public void SetLayerSource(int layer, SourceKind? kind, VideoPlayer? player = null, string? spoutSender = null, LyricsFeed? lyrics = null, string? ndiSource = null)
+    public void SetLayerSource(int layer, SourceKind? kind, VideoPlayer? player = null, string? spoutSender = null, LyricsFeed? lyrics = null, string? ndiSource = null, ILiveSource? live = null)
     {
         var slot = Layers[layer];
         lock (slot.Lock)
         {
-            if (slot.HasPending) slot.PendingPlayer?.Dispose();
+            if (slot.HasPending) { slot.PendingPlayer?.Dispose(); slot.PendingLive?.Dispose(); }
+            slot.PendingLive = live;
             slot.PendingKind = kind;
             slot.PendingPlayer = player;
             slot.PendingSpout = spoutSender;
@@ -292,8 +293,9 @@ sealed partial class Renderer : IDisposable
             {
                 if (!slot.HasPending) continue;
                 slot.HasPending = false;
-                incoming = slot.PendingKind is { } kind ? new LayerSource(kind, slot.PendingPlayer, slot.PendingSpout, slot.PendingLyrics, slot.PendingNdi) : null;
+                incoming = slot.PendingKind is { } kind ? new LayerSource(kind, slot.PendingPlayer, slot.PendingSpout, slot.PendingLyrics, slot.PendingNdi, slot.PendingLive) : null;
                 slot.PendingPlayer = null;
+                slot.PendingLive = null;
                 slot.TransitionGroup = slot.PendingGroup;
             }
             incoming?.CreateGpu(_device!);

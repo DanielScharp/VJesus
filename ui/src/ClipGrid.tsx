@@ -4,10 +4,11 @@ import { EffectChips, type ToggleEffect } from './EffectChips'
 import { DEFAULT_GEN, GeneratorPanel, genThumbStyle } from './GeneratorPanel'
 import { ClipPropsPanel, fmtTime } from './ClipProps'
 import { CarouselPanel } from './CarouselPanel'
-import { BLEND_MODES, send, sendFiles, type CarouselRun, type EffectDef, type BlendMode, type Clip, type Composition, type GeneratorSettings, type LayerPlayback, type LiveSources } from './bridge'
+import { BLEND_MODES, send, sendFiles, type CarouselRun, type EffectDef, type BlendMode, type Clip, type Composition, type GeneratorSettings, type LayerPlayback, type LiveSources, type Display } from './bridge'
 
 type Props = {
   carousels: CarouselRun[]
+  displays: Display[]
   comp: Composition
   thumbs: Record<string, string>
   playback: LayerPlayback[]
@@ -65,12 +66,14 @@ function ClipThumb({ clip, thumb }: { clip: Clip; thumb?: string }) {
     return <>{thumb ? <img src={thumb} alt="" draggable={false} /> : <div className="thumb-placeholder" />}<span className="thumb-badge">SLIDES</span></>
   if (clip.kind === 'lyrics')
     return <div className="thumb-lyrics"><span>Aa</span><small>LETRAS</small></div>
+  if (clip.kind === 'web') return <div className="thumb-live thumb-web"><span>🌐 PÁGINA</span></div>
+  if (clip.kind === 'screen') return <div className="thumb-live thumb-screen"><span>🖥 ESPELHO</span></div>
   if (clip.kind === 'camera' || clip.kind === 'spout' || clip.kind === 'ndi')
     return <div className="thumb-live"><span>{clip.kind === 'camera' ? ['AO VIVO', clip.captureSize, clip.captureFps ? `${clip.captureFps} fps` : null].filter(Boolean).join(' · ') : clip.kind === 'ndi' ? 'NDI AO VIVO' : 'SPOUT AO VIVO'}</span></div>
   return <div className={clip.kind === 'plasma' ? 'thumb-plasma' : 'thumb-testcard'} style={clip.kind === 'plasma' ? genThumbStyle(clip.gen) : undefined} />
 }
 
-export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSelect, live, library, onToggleEffect, carousels }: Props) {
+export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSelect, live, library, onToggleEffect, carousels, displays }: Props) {
   const [carouselOpen, setCarouselOpen] = useState(false)
   const [menu, setMenu] = useState<Menu | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
@@ -277,6 +280,19 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
                 <button onClick={pick(() => { send({ type: 'setGenerator', kind: 'plasma', ...cell, gen: DEFAULT_GEN }); setGenEdit({ ...cell, gen: DEFAULT_GEN }) })}>Fundo animado (ajustável)…</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'testCard', ...cell }))}>Gerador: Test card</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'lyrics', ...cell }))}>Letras (aba Letras)</button>
+                <button onClick={pick(() => {
+                  const url = window.prompt('Endereço da página (ex.: youtube.com/..., placar, site da igreja):', current?.kind === 'web' ? current.path ?? '' : 'https://')
+                  if (url && url.trim() && url.trim() !== 'https://') send({ type: 'setWeb', ...cell, url: url.trim() })
+                })}>Página da internet (link)…</button>
+                {current?.kind === 'web' && (
+                  <button onClick={pick(() => send({ type: 'webShow', ...cell }))} title="Abre a página numa janela para fazer login, rolar ou clicar; o telão continua mostrando">Mostrar a página para mexer (login, rolar, clicar)</button>
+                )}
+                <div className="menu-label">Espelhar uma tela do computador</div>
+                {displays.map((d) => (
+                  <button key={'d' + d.index} onClick={pick(() => send({ type: 'setScreen', ...cell, display: d.index }))}>
+                    Tela {d.index + 1} · {d.width}×{d.height}{d.primary ? ' (principal)' : ''}
+                  </button>
+                ))}
                 {current?.kind === 'camera' && (
                   <>
                     <div className="menu-label">Captura: {current.name}</div>

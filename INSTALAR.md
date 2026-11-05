@@ -144,6 +144,15 @@ Cria `artifacts\VJesus-vX.Y.Z-win-x64.zip` com tudo dentro (não exige .NET nem 
 
 ---
 
+## Página da internet e espelho de tela na grade
+
+Botão direito numa célula da grade:
+
+- **Página da internet (link)…**: digite o endereço (site da igreja, placar, contagem, YouTube...). A página é aberta por um navegador escondido do tamanho do telão e atualiza cerca de 15 vezes por segundo (bom para páginas; vídeo dentro da página fica menos fluido que um vídeo da grade). Para fazer login, rolar ou clicar: botão direito na célula → **Mostrar a página para mexer**; feche a janela para escondê-la de novo (o telão continua mostrando).
+- **Espelhar uma tela do computador**: escolha o monitor. A imagem vem direto da placa de vídeo (leve, 60 qps); se o monitor estiver em outra placa de vídeo, o VJesus copia pela tela do Windows (~20 qps). Não espelhe o próprio monitor do telão (a imagem entra nela mesma).
+
+---
+
 ## Holyrics → VJesus (letras e Bíblia)
 
 Quem já usa o Holyrics pode continuar passando as letras e os versículos nele: o VJesus mostra no telão o slide que o Holyrics está projetando, por cima dos vídeos, com a aparência das Letras (versículo: a da Bíblia).

@@ -2,7 +2,7 @@
 
 export type Display = { index: number; name: string; width: number; height: number; primary: boolean }
 
-export type ClipKind = 'video' | 'plasma' | 'testCard' | 'camera' | 'spout' | 'lyrics' | 'ndi' | 'presentation'
+export type ClipKind = 'video' | 'plasma' | 'testCard' | 'camera' | 'spout' | 'lyrics' | 'ndi' | 'presentation' | 'web' | 'screen'
 export type PresentationState = { layer: number; layerName: string; name: string; slide: number; count: number; slides: number; labels: string[]; current: string; images: string[] }
 export type LiveSources = { cameras: string[]; spout: string[]; ndi?: string[]; ndiAvailable?: boolean }
 export type GeneratorSettings = { type: string; speed: number; intensity: number; scale: number; detail: number; angle: number; colors: string[] }
@@ -327,6 +327,9 @@ export type UiMessage =
   | { type: 'panicToggle'; on?: boolean }
   | { type: 'panicBrowse' }
   | { type: 'holyricsGet' }
+  | { type: 'setWeb'; layer: number; column: number; url: string; name?: string }
+  | { type: 'setScreen'; layer: number; column: number; display: number }
+  | { type: 'webShow'; layer: number; column: number }
   | { type: 'holyricsSet'; settings: HolyricsState['settings'] }
   | { type: 'checkRun' | 'checkSearchFolder' }
   | { type: 'checkRelink'; path: string }

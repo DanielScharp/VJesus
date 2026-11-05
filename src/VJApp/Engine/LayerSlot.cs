@@ -10,8 +10,10 @@ enum SourceKind { Video = 0, Plasma = 1, TestCard = 2 }
 enum TransitionKind { Cut = 0, Crossfade = 1, Dip = 2, Wipe = 3, Push = 4, Zoom = 5, Blur = 6 }
 
 /// <summary>Uma fonte tocando numa layer: vídeo/câmera (com textura), Spout, letra ou gerador. Só o render thread mexe.</summary>
-sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSender, LyricsFeed? lyrics = null, string? ndiSource = null)
+sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSender, LyricsFeed? lyrics = null, string? ndiSource = null, ILiveSource? live = null)
 {
+    /// <summary>Tela espelhada ou página da internet.</summary>
+    public readonly ILiveSource? Live = live;
     public readonly SourceKind Kind = kind;
     public readonly VideoPlayer? Player = player;
     public readonly LyricsFeed? Lyrics = lyrics;
@@ -38,13 +40,14 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
     public VideoFrame? ShownFrame => _video?.ShownFrame;
 
     /// <summary>Textura de entrada para o shader (do vídeo ou do Spout).</summary>
-    public ID3D11ShaderResourceView? InputSrv => LyricsGpu?.Target?.Srv ?? Spout?.Srv ?? Ndi?.Srv ?? _video?.Srv;
+    public ID3D11ShaderResourceView? InputSrv => LyricsGpu?.Target?.Srv ?? Spout?.Srv ?? Ndi?.Srv ?? Live?.Srv ?? _video?.Srv;
 
     /// <summary>Pronta para desenhar? (vídeo precisa do primeiro quadro, Spout precisa do sender)</summary>
-    public bool Ready => Kind != SourceKind.Video || ShownFrame != null || Spout?.Srv != null || Ndi?.Srv != null || LyricsGpu?.Drawn == true;
+    public bool Ready => Kind != SourceKind.Video || ShownFrame != null || Spout?.Srv != null || Ndi?.Srv != null || Live?.Srv != null || LyricsGpu?.Drawn == true;
 
     public float Aspect => Spout is { Srv: not null } s ? (float)s.Width / s.Height
         : Ndi is { Srv: not null } n ? (float)n.Width / n.Height
+        : Live is { Srv: not null, Height: > 0 } lv ? (float)lv.Width / lv.Height
         : Player != null ? (float)Player.Width / Player.Height : 16f / 9;
 
     public void CreateGpu(ID3D11Device device) => _video?.CreateGpu(device);
@@ -54,6 +57,7 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
     {
         Spout?.Update(device);
         Ndi?.Update(device, ctx);
+        Live?.Update(device, ctx);
         _video?.Update(ctx);
     }
 
@@ -67,6 +71,7 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
         Spout?.Dispose();
         if (Ndi is { } ndi) Task.Run(ndi.Dispose); // desconectar da rede pode demorar
         LyricsGpu?.Dispose();
+        Live?.Dispose();
         _video?.Release();
     }
 }
@@ -174,6 +179,7 @@ sealed class LayerSlot
     public string? PendingSpout;
     public string? PendingNdi;
     public LyricsFeed? PendingLyrics;
+    public ILiveSource? PendingLive;
 
     // estado do render thread (o mixer de áudio só lê as referências)
     public volatile LayerSource? Current;

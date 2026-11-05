@@ -928,3 +928,5 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .hr-status.ok { color: #66bb6a; } .hr-status.ok::before { content: "● "; }
 .hr-status.erro { color: #ff8a80; } .hr-status.erro::before { content: "● "; }
 .hr-fields label { grid-template-columns: 60px 0 minmax(0, 1fr); }
+.thumb-web { background: linear-gradient(135deg, #1a3a5c, #0d1b2a) !important; }
+.thumb-screen { background: linear-gradient(135deg, #2d2d44, #111122) !important; }

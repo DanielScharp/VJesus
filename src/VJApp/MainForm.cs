@@ -350,6 +350,32 @@ sealed partial class MainForm : Form
                 break;
             }
 
+            case "setWeb":
+            {
+                // página da internet: o link vira o caminho do clip
+                var url = ((string?)msg["url"])?.Trim();
+                if (string.IsNullOrEmpty(url)) break;
+                if (!url.Contains("://")) url = "https://" + url;
+                string name = (string?)msg["name"] is { Length: > 0 } n ? n : Uri.TryCreate(url, UriKind.Absolute, out var u) ? u.Host.Replace("www.", "") : "Página";
+                _comp.Layers[L()].Clips[C()] = new Clip { Kind = ClipKind.Web, Path = url, Name = name };
+                if (_comp.ActiveHere(_comp.Layers[L()]) == C()) Trigger(L(), C());
+                CompositionChanged();
+                break;
+            }
+            case "setScreen":
+            {
+                int display = (int?)msg["display"] ?? 0;
+                var screens = Screen.AllScreens;
+                string name = display < screens.Length ? $"Tela {display + 1}{(screens[display].Primary ? " (principal)" : "")}" : $"Tela {display + 1}";
+                _comp.Layers[L()].Clips[C()] = new Clip { Kind = ClipKind.Screen, Path = display.ToString(), Name = name };
+                if (_comp.ActiveHere(_comp.Layers[L()]) == C()) Trigger(L(), C());
+                CompositionChanged();
+                break;
+            }
+            case "webShow":
+                if (_webPages.TryGetValue(L(), out var page)) page.Show();
+                break;
+
             case "setGenerator":
                 _comp.Layers[L()].Clips[C()] = (string?)msg["kind"] switch
                 {
@@ -476,6 +502,7 @@ sealed partial class MainForm : Form
         if (clip == null) return;
         deckId ??= _comp.Current.Id;
         _endFired.Remove(layer);
+        _webPages.Remove(layer);
 
         switch (clip.Kind)
         {
@@ -580,6 +607,19 @@ sealed partial class MainForm : Form
                 _players[layer] = null;
                 _renderer!.SetLayerSource(layer, SourceKind.TestCard);
                 break;
+            case ClipKind.Web:
+            {
+                _players[layer] = null;
+                if (_web.CoreWebView2?.Environment is not { } env) return;
+                var page = new WebPageSource(clip.Path!, env);
+                _webPages[layer] = page;
+                _renderer!.SetLayerSource(layer, SourceKind.Video, live: page);
+                break;
+            }
+            case ClipKind.Screen:
+                _players[layer] = null;
+                _renderer!.SetLayerSource(layer, SourceKind.Video, live: new ScreenSource(int.TryParse(clip.Path, out var d) ? d : 0));
+                break;
         }
         _comp.Layers[layer].Active = column;
         _comp.Layers[layer].ActiveDeck = deckId;
@@ -590,6 +630,9 @@ sealed partial class MainForm : Form
     int _triggerGroupSeq;
 
     /// <summary>As trocas até EndTriggerGroup começam a transição juntas (quando todos os clips novos tiverem imagem).</summary>
+    /// <summary>Páginas da internet tocando, por layer (para o "Mostrar para mexer").</summary>
+    readonly Dictionary<int, WebPageSource> _webPages = [];
+
     void BeginTriggerGroup() { _groupShare.Clear(); if (_renderer != null) _renderer.TriggerGroup = ++_triggerGroupSeq; }
 
     /// <summary>Vídeos abertos nesta troca em grupo (coluna, carrossel), para layers com o mesmo arquivo usarem o mesmo.</summary>
@@ -599,6 +642,7 @@ sealed partial class MainForm : Form
     void ClearLayer(int layer)
     {
         _presSlide.Remove(layer);
+        _webPages.Remove(layer);
         _players[layer] = null;
         _renderer?.SetLayerSource(layer, null);
         _comp.Layers[layer].Active = -1;
