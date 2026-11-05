@@ -484,7 +484,15 @@ sealed partial class MainForm : Form
                 VideoPlayer player;
                 try
                 {
-                    player = TakePreloaded(clip) ?? new VideoPlayer(clip.Path!);
+                    // mesmo arquivo (com o mesmo trecho e velocidade) em várias layers da coluna: um player só,
+                    // as layers mostram exatamente o mesmo quadro e o vídeo é decodificado uma vez
+                    string shareKey = $"{clip.Path}|{clip.Props?.Speed ?? 1}|{clip.Props?.InPoint ?? 0}|{clip.Props?.OutPoint ?? 0}|{clip.Props?.End}";
+                    if (_renderer!.TriggerGroup != 0 && _groupShare.TryGetValue(shareKey, out var same)) player = same;
+                    else
+                    {
+                        player = TakePreloaded(clip) ?? new VideoPlayer(clip.Path!);
+                        if (_renderer.TriggerGroup != 0) _groupShare[shareKey] = player;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -579,8 +587,11 @@ sealed partial class MainForm : Form
     int _triggerGroupSeq;
 
     /// <summary>As trocas até EndTriggerGroup começam a transição juntas (quando todos os clips novos tiverem imagem).</summary>
-    void BeginTriggerGroup() { if (_renderer != null) _renderer.TriggerGroup = ++_triggerGroupSeq; }
-    void EndTriggerGroup() { if (_renderer != null) _renderer.TriggerGroup = 0; }
+    void BeginTriggerGroup() { _groupShare.Clear(); if (_renderer != null) _renderer.TriggerGroup = ++_triggerGroupSeq; }
+
+    /// <summary>Vídeos abertos nesta troca em grupo (coluna, carrossel), para layers com o mesmo arquivo usarem o mesmo.</summary>
+    readonly Dictionary<string, VideoPlayer> _groupShare = [];
+    void EndTriggerGroup() { _groupShare.Clear(); if (_renderer != null) _renderer.TriggerGroup = 0; }
 
     void ClearLayer(int layer)
     {

@@ -30,12 +30,15 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
     public ClipLook? Look;
     /// <summary>Ajustes do fundo gerado no último quadro (o que sai numa transição continua com eles).</summary>
     public GenParams? Gen;
-    public VideoFrame? ShownFrame;
-    public ID3D11Texture2D? Texture;
-    public ID3D11ShaderResourceView? Srv;
+    /// <summary>
+    /// O vídeo (decoder + textura). Duas layers tocando o mesmo arquivo disparadas juntas (coluna, carrossel)
+    /// recebem o mesmo player: o vídeo é aberto e decodificado uma vez só e as duas mostram o mesmo quadro.
+    /// </summary>
+    readonly SharedVideo? _video = player != null ? SharedVideo.Acquire(player) : null;
+    public VideoFrame? ShownFrame => _video?.ShownFrame;
 
     /// <summary>Textura de entrada para o shader (do vídeo ou do Spout).</summary>
-    public ID3D11ShaderResourceView? InputSrv => LyricsGpu?.Target?.Srv ?? Spout?.Srv ?? Ndi?.Srv ?? Srv;
+    public ID3D11ShaderResourceView? InputSrv => LyricsGpu?.Target?.Srv ?? Spout?.Srv ?? Ndi?.Srv ?? _video?.Srv;
 
     /// <summary>Pronta para desenhar? (vídeo precisa do primeiro quadro, Spout precisa do sender)</summary>
     public bool Ready => Kind != SourceKind.Video || ShownFrame != null || Spout?.Srv != null || Ndi?.Srv != null || LyricsGpu?.Drawn == true;
@@ -44,34 +47,19 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
         : Ndi is { Srv: not null } n ? (float)n.Width / n.Height
         : Player != null ? (float)Player.Width / Player.Height : 16f / 9;
 
-    public void CreateGpu(ID3D11Device device)
-    {
-        if (Player is not { } p) return;
-        Texture = device.CreateTexture2D(new Texture2DDescription(
-            p.TextureFormat, (uint)p.TextureWidth, (uint)p.TextureHeight, 1, 1,
-            BindFlags.ShaderResource, ResourceUsage.Default, CpuAccessFlags.None));
-        Srv = device.CreateShaderResourceView(Texture);
-    }
+    public void CreateGpu(ID3D11Device device) => _video?.CreateGpu(device);
 
-    /// <summary>Sobe o quadro de vídeo novo (BGRA ou blocos HAP) e confere o sender Spout.</summary>
-    public unsafe void Update(ID3D11Device device, ID3D11DeviceContext ctx)
+    /// <summary>Sobe o quadro de vídeo novo (uma vez por quadro, mesmo com várias layers no mesmo vídeo) e confere o sender Spout.</summary>
+    public void Update(ID3D11Device device, ID3D11DeviceContext ctx)
     {
         Spout?.Update(device);
         Ndi?.Update(device, ctx);
-        if (Player is not { } player || Texture == null) return;
-        var frame = player.TakeFrame(ShownFrame);
-        if (frame == null) return;
-        ShownFrame = frame;
-
-        // UpdateSubresource deixa o driver copiar quando a placa estiver livre: com Map(WriteDiscard) o
-        // processador esperava a placa a cada quadro de cada layer, e com várias layers isso somava.
-        fixed (byte* src = frame.Pixels)
-            ctx.UpdateSubresource(Texture, 0, null, (IntPtr)src, (uint)frame.Stride, 0);
+        _video?.Update(ctx);
     }
 
-    /// <summary>Libera a GPU agora e o player em segundo plano (fechar o decoder pode demorar).</summary>
     bool _disposed;
 
+    /// <summary>Libera a GPU agora e o player em segundo plano (quando nenhuma outra layer usa o mesmo vídeo).</summary>
     public void Dispose()
     {
         if (_disposed) return; // a troca de clips pode pedir para liberar a mesma fonte por dois caminhos
@@ -79,12 +67,64 @@ sealed class LayerSource(SourceKind kind, VideoPlayer? player, string? spoutSend
         Spout?.Dispose();
         if (Ndi is { } ndi) Task.Run(ndi.Dispose); // desconectar da rede pode demorar
         LyricsGpu?.Dispose();
-        Srv?.Dispose();
-        Texture?.Dispose();
-        if (Player is { } p) Task.Run(p.Dispose);
+        _video?.Release();
     }
 }
 
+/// <summary>Um vídeo aberto, com a textura dele, que uma ou mais layers mostram. Só o render thread mexe.</summary>
+sealed class SharedVideo
+{
+    static readonly Dictionary<VideoPlayer, SharedVideo> Open = [];
+    /// <summary>Número do quadro do motor (para subir a imagem uma vez por quadro).</summary>
+    public static long Frame;
+
+    readonly VideoPlayer _player;
+    int _refs;
+    long _updated = -1;
+    public VideoFrame? ShownFrame;
+    ID3D11Texture2D? _texture;
+    public ID3D11ShaderResourceView? Srv;
+
+    SharedVideo(VideoPlayer player) => _player = player;
+
+    public static SharedVideo Acquire(VideoPlayer player)
+    {
+        if (!Open.TryGetValue(player, out var v)) Open[player] = v = new SharedVideo(player);
+        v._refs++;
+        return v;
+    }
+
+    public void CreateGpu(ID3D11Device device)
+    {
+        if (_texture != null) return;
+        _texture = device.CreateTexture2D(new Texture2DDescription(
+            _player.TextureFormat, (uint)_player.TextureWidth, (uint)_player.TextureHeight, 1, 1,
+            BindFlags.ShaderResource, ResourceUsage.Default, CpuAccessFlags.None));
+        Srv = device.CreateShaderResourceView(_texture);
+    }
+
+    public unsafe void Update(ID3D11DeviceContext ctx)
+    {
+        if (_texture == null || _updated == Frame) return;
+        _updated = Frame;
+        var frame = _player.TakeFrame(ShownFrame);
+        if (frame == null) return;
+        ShownFrame = frame;
+        // UpdateSubresource deixa o driver copiar quando a placa estiver livre: com Map(WriteDiscard) o
+        // processador esperava a placa a cada quadro de cada layer, e com várias layers isso somava.
+        fixed (byte* src = frame.Pixels)
+            ctx.UpdateSubresource(_texture, 0, null, (IntPtr)src, (uint)frame.Stride, 0);
+    }
+
+    public void Release()
+    {
+        if (--_refs > 0) return;
+        Open.Remove(_player);
+        Srv?.Dispose();
+        _texture?.Dispose();
+        Task.Run(_player.Dispose);
+    }
+}
 /// <summary>Posição, tamanho, giro e cantos de um clip ou de uma layer, pronto para o shader.</summary>
 sealed record Shape(float X, float Y, float ScaleX, float ScaleY, float Rotation, float TopLeft, float TopRight, float BottomRight, float BottomLeft)
 {

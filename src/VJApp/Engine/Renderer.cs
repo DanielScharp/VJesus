@@ -630,6 +630,7 @@ sealed partial class Renderer : IDisposable
 
             float time = (float)now;
             long p0 = Stopwatch.GetTimestamp();
+            SharedVideo.Frame++;
             UpdateSources(now);
             long p1 = Stopwatch.GetTimestamp();
             int result = Compose(time, _comp, _ => true, main: true);
