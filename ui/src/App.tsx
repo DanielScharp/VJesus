@@ -1,3 +1,4 @@
+import { HolyricsPanel } from './HolyricsPanel'
 import { MediaLibrary } from './MediaLibrary'
 import { PreflightDialog } from './PreflightDialog'
 import { PanicButton } from './PanicButton'
@@ -205,8 +206,9 @@ function App() {
       {connOpen && createPortal(
         <div className="modal-back" onMouseDown={() => setConnOpen(false)}>
           <div className="modal conn-dialog" onMouseDown={(e) => e.stopPropagation()}>
-            <h3>Conexões: celular, MIDI, OSC, Spout e NDI</h3>
+            <h3>Conexões: celular, MIDI, OSC, Holyrics, Spout e NDI</h3>
             <ControlPanel info={control} learn={learn} onLearn={startLearn} />
+            <HolyricsPanel />
             {streaming && <StreamingPanel info={streaming} />}
             <div className="modal-actions"><button onClick={() => setConnOpen(false)}>Fechar</button></div>
           </div>

@@ -22,7 +22,9 @@ sealed partial class MainForm
     {
         string? title = null, next = null;
         int slide = -1, slides = 0;
-        if (_liveBible is { } b)
+        if (_holyricsText != null && _liveText == _holyricsText && _liveSongId == null && _liveBible == null)
+            title = _holyricsName != null ? $"{_holyricsName} (Holyrics)" : "Holyrics";
+        else if (_liveBible is { } b)
             title = RefText(BookName(b.Book), b);
         else if (_liveSongId != null && _lyrics.Songs.FirstOrDefault(s => s.Id == _liveSongId) is { } song)
         {

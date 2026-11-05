@@ -924,3 +924,7 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .midi-help ol { margin: 6px 0 6px 18px; padding: 0; display: flex; flex-direction: column; gap: 3px; }
 .midi-help p { margin: 6px 0; color: var(--muted); }
 .midi-help p b { color: var(--text); }
+.hr-status { margin-left: 10px; font-size: 12px; color: var(--muted); }
+.hr-status.ok { color: #66bb6a; } .hr-status.ok::before { content: "● "; }
+.hr-status.erro { color: #ff8a80; } .hr-status.erro::before { content: "● "; }
+.hr-fields label { grid-template-columns: 60px 0 minmax(0, 1fr); }

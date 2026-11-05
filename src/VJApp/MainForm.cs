@@ -124,6 +124,7 @@ sealed partial class MainForm : Form
             core.Navigate($"https://{UiHost}/index.html");
         }
         LoadPerformance();
+        StartHolyrics();
         _playbackTimer.Start();
         StartAutosave();
         EnsureDesktopShortcut();
@@ -187,6 +188,7 @@ sealed partial class MainForm : Form
                 Send(new { type = "ledTest", mode = _ledTest });
                 SendPerformance();
                 SendPanic();
+                SendHolyrics();
                 RecoverLiveState();
                 break;
 
@@ -198,6 +200,7 @@ sealed partial class MainForm : Form
             case var overlayType when overlayType?.StartsWith("overlay") == true: OnOverlayMessage(overlayType, msg); break;
             case var carouselType when carouselType?.StartsWith("carousel") == true: OnCarouselMessage(carouselType, msg); break;
             case "ledTest": OnLedTestMessage(msg); break;
+            case var hrType when hrType?.StartsWith("holyrics") == true: OnHolyricsMessage(hrType, msg); break;
             case var checkType when checkType?.StartsWith("check") == true: OnCheckMessage(checkType, msg); break;
             case var libType when libType?.StartsWith("library") == true: OnLibraryMessage(libType, msg); break;
             case var panicType when panicType?.StartsWith("panic") == true: OnPanicMessage(panicType, msg); break;

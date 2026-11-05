@@ -147,7 +147,7 @@ sealed partial class MainForm
     /// <summary>Estilo do que está no telão: cena da música, cena e ajustes do slide.</summary>
     LyricStyle LiveStyle()
     {
-        if (_liveBible != null) return BibleStyle();
+        if (_liveBible != null || LiveIsHolyricsVerse) return BibleStyle();
         if (_liveSongId == null) return _lyrics.Style;
         var song = _lyrics.Songs.FirstOrDefault(s => s.Id == _liveSongId);
         var slides = song != null ? LyricsLibrary.Slides(song.Text) : [];

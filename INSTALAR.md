@@ -144,6 +144,18 @@ Cria `artifacts\VJesus-vX.Y.Z-win-x64.zip` com tudo dentro (não exige .NET nem 
 
 ---
 
+## Holyrics → VJesus (letras e Bíblia)
+
+Quem já usa o Holyrics pode continuar passando as letras e os versículos nele: o VJesus mostra no telão o slide que o Holyrics está projetando, por cima dos vídeos, com a aparência das Letras (versículo: a da Bíblia).
+
+1. No Holyrics: **Arquivo → Configurações → API Server**, ative o servidor e anote a porta (normalmente 8091).
+2. Em **Gerenciar permissões**, crie um token com a permissão **GetCurrentPresentation**.
+3. No VJesus: **Menu → Conexões → Holyrics**, coloque o IP do computador do Holyrics (127.0.0.1 se for o mesmo), a porta e o token, e marque **Receber do Holyrics**. Aparece **conectado**.
+
+Tela em branco, papel de parede ou fim da música no Holyrics tiram o texto do telão do VJesus. Se o Holyrics estiver em outro computador, libere a porta dele no Firewall do Windows daquele computador.
+
+---
+
 ## Outros computadores da rede (som, transmissão, pastor)
 
 Qualquer computador, tablet ou celular na mesma rede acompanha o culto pelo navegador, sem instalar nada. Os endereços aparecem em **Menu → Conexões** (troque o IP pelo que aparecer lá):

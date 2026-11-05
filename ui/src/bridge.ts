@@ -147,6 +147,8 @@ export type CheckItem = { level: 'erro' | 'aviso' | 'info' | 'ok'; area: string;
 export type CheckState = { running: boolean; when?: string; errors?: number; warnings?: number; items: CheckItem[] }
 export type LibraryItem = { path: string; name: string; kind: 'video' | 'image' | 'presentation' | 'presentationFile'; folder: string; size: number; modified: string; tags: string[]; used: boolean }
 
+export type HolyricsState = { settings: { enabled: boolean; host: string; port: number; token: string }; ok: boolean; status: string }
+
 export type PanicState = {
   on: boolean
   settings: { image: string | null; color: string; fade: number; size: number }
@@ -217,6 +219,7 @@ export type EngineMessage =
   | { type: 'ledTest'; mode: 'off' | 'regua' | 'partes' }
   | ({ type: 'performance' } & PerformanceState)
   | ({ type: 'panic' } & PanicState)
+  | ({ type: 'holyrics' } & HolyricsState)
   | ({ type: 'check' } & CheckState)
   | { type: 'library'; scanning: boolean; folders: string[]; items: LibraryItem[] | null }
   | { type: 'libraryPreview'; path: string; frames: string[] }
@@ -323,6 +326,8 @@ export type UiMessage =
   | { type: 'performanceGet' | 'performanceTest' }
   | { type: 'panicToggle'; on?: boolean }
   | { type: 'panicBrowse' }
+  | { type: 'holyricsGet' }
+  | { type: 'holyricsSet'; settings: HolyricsState['settings'] }
   | { type: 'checkRun' | 'checkSearchFolder' }
   | { type: 'checkRelink'; path: string }
   | { type: 'libraryGet' | 'libraryAddFolder' }

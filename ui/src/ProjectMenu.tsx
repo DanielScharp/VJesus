@@ -57,7 +57,7 @@ export function ProjectMenu({ project, onShortcuts, update, mappingOpen, onMappi
           ))}
           <div className="dropdown-sep" />
           <button onClick={() => { onMapping(); setOpen(false) }}><span>Mapeamento{mappingOpen ? ' ●' : ''}</span><kbd /></button>
-          <button onClick={() => { onConnections(); setOpen(false) }}><span>Conexões (celular, MIDI, OSC, Spout, NDI)…</span><kbd /></button>
+          <button onClick={() => { onConnections(); setOpen(false) }}><span>Conexões (celular, MIDI, Holyrics, Spout, NDI)…</span><kbd /></button>
           <button onClick={() => { onShortcuts(); setOpen(false) }}><span>Atalhos de teclado…</span><kbd /></button>
           <button onClick={() => { onCheck(); setOpen(false) }}><span>Checar antes do culto…</span><kbd /></button>
           <button onClick={() => { setPerf(true); setOpen(false) }}><span>Desempenho do vídeo…</span><kbd /></button>
