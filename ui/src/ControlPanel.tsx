@@ -44,7 +44,20 @@ export function ControlPanel({ info, learn, onLearn }: Props) {
           if (window.confirm('Apagar todos os mapeamentos MIDI?')) send({ type: 'midiClear' })
         }}>Limpar MIDI ({info.midiBindings.length})</button>
       </div>
-      {learn && (
+      <details className="midi-help">
+        <summary>Como usar o MIDI (controlador, pad, teclado)</summary>
+        <ol>
+          <li>Ligue o controlador no USB <b>antes</b> de abrir o VJesus. Ele aparece acima, em "MIDI".</li>
+          <li>Clique em <b>MIDI learn</b>. Esta janela fecha e aparece uma faixa azul embaixo da tela.</li>
+          <li>Clique no que quer controlar na tela; ele fica piscando.</li>
+          <li>Aperte ou mexa no botão, pad, tecla ou fader do controlador. Pronto: ficou ligado e aparece marcado na tela.</li>
+          <li>Repita para os outros controles e clique em <b>Concluir</b> na faixa azul.</li>
+        </ol>
+        <p><b>Dá para ligar:</b> clips da grade, número da coluna (dispara a coluna inteira), ✕ da layer (para a layer),
+          opacidade e volume das layers, brilho, velocidade e volume do master, test card, TAP e ressincronizar do BPM, e os ataques.</p>
+        <p><b>Dica:</b> pads e teclas servem para disparar (clips, colunas, ataques, TAP); faders e knobs para valores (opacidade, volume, brilho).
+          Para trocar um controle, faça o learn de novo nele. "Limpar MIDI" apaga todas as ligações. Elas ficam salvas neste computador.</p>
+      </details>      {learn && (
         <p className="meta">
           {info.learning
             ? <>Mexa no controle MIDI para ligar a <code>{info.learning}</code>…</>
