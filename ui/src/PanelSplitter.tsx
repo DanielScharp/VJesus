@@ -2,6 +2,8 @@ import { useState } from 'react'
 
 type Orient = 'h' | 'v' | 'livre'
 type Part = { name: string; frac: string; orient: Orient }
+/** Uma parte calculada, pronta para virar parte do mapa de LED (pixels da saída). */
+export type SplitPart = { name: string; x: number; y: number; w: number; h: number }
 
 const ORIENT: Record<Orient, { label: string; ratio: number | null; hint: string }> = {
   h: { label: 'Horizontal (16:9)', ratio: 16 / 9, hint: 'conteúdo deitado, como TV' },
@@ -28,15 +30,19 @@ const fmt = (n: number) => { const r = Math.round(n * 100) / 100; return Number.
  * do conteúdo. Diz o tamanho exato de cada parte em pixels, onde ela começa, e o tamanho ideal da imagem
  * 16:9 ou 9:16 que cabe nela.
  */
-export function PanelSplitter() {
-  const [W, setW] = useState('1920')
-  const [H, setH] = useState('1080')
+export function PanelSplitter({ initialW = 1920, initialH = 1080, initialParts, onApply, applyLabel }: {
+  initialW?: number; initialH?: number; initialParts?: { name: string; frac: string; orient?: Orient }[]
+  onApply?: (parts: SplitPart[]) => void; applyLabel?: string
+}) {
+  const [W, setW] = useState(String(initialW))
+  const [H, setH] = useState(String(initialH))
   const [dir, setDir] = useState<'lado' | 'pilha'>('lado')
-  const [parts, setParts] = useState<Part[]>([
+  const [parts, setParts] = useState<Part[]>(initialParts?.length ? initialParts.map((p) => ({ name: p.name, frac: p.frac, orient: p.orient ?? 'livre' })) : [
     { name: 'Esquerda', frac: '1/5', orient: 'v' },
     { name: 'Centro', frac: '3/5', orient: 'h' },
     { name: 'Direita', frac: '1/5', orient: 'v' },
   ])
+  const [applied, setApplied] = useState(false)
   const set = (i: number, p: Partial<Part>) => setParts(parts.map((x, k) => (k === i ? { ...x, ...p } : x)))
 
   const w = num(W), h = num(H)
@@ -132,6 +138,12 @@ export function PanelSplitter() {
               ))}
             </tbody>
           </table>
+          {onApply && (
+            <div className="split-apply">
+              <button className="primary" onClick={() => { onApply(rows.map((r) => ({ name: r.name, x: r.x, y: r.y, w: r.pw, h: r.ph }))); setApplied(true) }}>{applyLabel ?? 'Aplicar'}</button>
+              <span className="meta">{applied ? '✔ Aplicado. Confira o mapa de painéis e a saída abaixo.' : 'Troca as partes do mapa de LED desta tela por estas (as imagens escolhidas para cada parte continuam, na mesma ordem).'}</span>
+            </div>
+          )}
           <p className="meta">Pontilhado/colorido claro = onde a imagem {`16:9`} ou {`9:16`} inteira cabe dentro da parte. Os valores de "Começa em" e "Tamanho da parte" são os que vão na processadora (ou no mapa de LED do VJesus).</p>
         </>
       )}

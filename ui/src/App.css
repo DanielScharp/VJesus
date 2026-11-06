@@ -981,3 +981,4 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .split-table { border-collapse: collapse; width: 100%; font-size: 13px; }
 .split-table th, .split-table td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .split-table th { font-size: 11px; color: var(--muted); font-weight: 500; }
+.split-apply { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 6px; }

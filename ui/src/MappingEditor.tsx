@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { onMessage, send, type Composition, type Display, type LayerGroup, type MappingSetup, type Mask, type OutputScreen, type Pt, type Slice } from './bridge'
 import { applyLed } from './led'
+import { AspectCalculator } from './AspectCalculator'
+import type { SplitPart } from './PanelSplitter'
 import { matches } from './shortcuts'
 import { LedMap, type SourceOption } from './LedMap'
 import {
@@ -71,6 +73,7 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
   const [ledTest, setLedTest] = useState<'off' | 'regua' | 'partes'>('off')
   useEffect(() => onMessage((msg) => { if (msg.type === 'ledTest') setLedTest(msg.mode) }), [])
   const [preset, setPreset] = useState('')
+  const [calcOpen, setCalcOpen] = useState(false)
   const [screenId, setScreenId] = useState<string | undefined>(mapping.screens[0]?.id)
   const [sel, setSel] = useState<Sel>(null)
   const [point, setPoint] = useState<number | null>(null)
@@ -270,6 +273,7 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
           <input type="checkbox" checked={screen.fullscreen} onChange={(e) => setScreen({ fullscreen: e.target.checked })} />
           Tela cheia
         </label>
+        <button className="small" onClick={() => setCalcOpen(true)} title="Calculadora de proporção e de divisão do painel em partes, com opção de aplicar no mapa de LED desta tela">🧮 Calculadora de proporção</button>
         <span className="spacer" />
         {mapping.screens.length > 1 && (
           <button className="small danger-text" onClick={() => {
@@ -280,6 +284,25 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
         )}
       </section>
 
+      {calcOpen && (
+        <AspectCalculator startTab="dividir" onClose={() => setCalcOpen(false)} split={{
+          w: pxW, h: pxH, label: `Aplicar no mapa de LED de "${screen.name}"`,
+          parts: screen.led?.parts.map((p) => ({ name: p.name, frac: `${Math.round((p.w / pxW) * 10000) / 100}%` })),
+          onApply: (parts: SplitPart[]) => {
+            // mantém imagem, giro e posição no palco das partes que já existiam (na mesma ordem)
+            const old = screen.led?.parts ?? []
+            let mapX = 0
+            const ledParts = parts.map((p, i) => {
+              const o = old[i]
+              const part = { id: o?.id ?? newId(), name: p.name, x: p.x, y: p.y, w: p.w, h: p.h,
+                mapX: o?.mapX ?? mapX, mapY: o?.mapY ?? 0, rotation: o?.rotation ?? 0, source: o?.source ?? null }
+              mapX += p.w + 40
+              return part
+            })
+            replaceScreen(applyLed(screen, { layout: screen.led?.layout ?? 'separado', source: screen.led?.source ?? null, parts: ledParts }, pxW, pxH))
+          },
+        }} />
+      )}
       <LedMap screen={screen} outW={pxW} outH={pxH} sources={sources} magnet={magnet} onScreen={replaceScreen} image={outImage} />
 
       <div className="mapping-body">

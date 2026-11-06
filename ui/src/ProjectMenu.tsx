@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { send, type UpdateState } from './bridge'
 import { comboLabel, keysOf, matches, subscribe } from './shortcuts'
 import { PerformanceDialog } from './PerformanceDialog'
-import { AspectCalculator } from './AspectCalculator'
 
 const ITEMS = [
   { label: 'Novo', action: 'projeto.novo', type: 'projectNew' },
@@ -15,7 +14,6 @@ const ITEMS = [
 export function ProjectMenu({ project, onShortcuts, update, mappingOpen, onMapping, onCheck, onConnections }: { project: string | null; onShortcuts: () => void; update: UpdateState | null; mappingOpen: boolean; onMapping: () => void; onCheck: () => void; onConnections: () => void }) {
   const [open, setOpen] = useState(false)
   const [perf, setPerf] = useState(false)
-  const [calc, setCalc] = useState(false)
   const [, force] = useState(0)
   useEffect(() => subscribe(() => force((n) => n + 1)), [])
   const ref = useRef<HTMLDivElement>(null)
@@ -62,7 +60,6 @@ export function ProjectMenu({ project, onShortcuts, update, mappingOpen, onMappi
           <button onClick={() => { onConnections(); setOpen(false) }}><span>Conexões (celular, MIDI, Holyrics, Spout, NDI)…</span><kbd /></button>
           <button onClick={() => { onShortcuts(); setOpen(false) }}><span>Atalhos de teclado…</span><kbd /></button>
           <button onClick={() => { onCheck(); setOpen(false) }}><span>Checar antes do culto…</span><kbd /></button>
-          <button onClick={() => { setCalc(true); setOpen(false) }}><span>Calculadora de proporção (pixels)…</span><kbd /></button>
           <button onClick={() => { setPerf(true); setOpen(false) }}><span>Desempenho do vídeo…</span><kbd /></button>
           <button disabled={update?.status === 'checking' || update?.status === 'downloading'} onClick={() => send({ type: 'updateCheck' })}>
             <span>{update?.status === 'checking' ? 'Conferindo…' : 'Verificar atualizações'}</span><kbd />
@@ -79,7 +76,6 @@ export function ProjectMenu({ project, onShortcuts, update, mappingOpen, onMappi
         </div>
       )}
       {perf && <PerformanceDialog onClose={() => setPerf(false)} />}
-      {calc && <AspectCalculator onClose={() => setCalc(false)} />}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { PanelSplitter } from './PanelSplitter'
+import { PanelSplitter, type SplitPart } from './PanelSplitter'
 
 type Field = 'rw' | 'rh' | 'pw' | 'ph'
 /** O que foi digitado: a proporção (R), a largura (W) ou a altura (H) em pixels. */
@@ -37,8 +37,13 @@ function ratioOf(w: number, h: number) {
  * Calculadora de proporção (aspect ratio): preencha dois campos e ela completa o resto.
  * Proporção + largura → altura; proporção + altura → largura; largura + altura → proporção.
  */
-export function AspectCalculator({ onClose }: { onClose: () => void }) {
-  const [tab, setTab] = useState<'proporcao' | 'dividir'>('proporcao')
+export function AspectCalculator({ onClose, startTab = 'proporcao', split }: {
+  onClose: () => void
+  startTab?: 'proporcao' | 'dividir'
+  /** No Mapeamento: tamanho da saída, partes atuais do LED e como aplicar o resultado. */
+  split?: { w: number; h: number; parts?: { name: string; frac: string }[]; onApply: (parts: SplitPart[]) => void; label: string }
+}) {
+  const [tab, setTab] = useState<'proporcao' | 'dividir'>(startTab)
   const [v, setV] = useState<Values>({ rw: '16', rh: '9', pw: '', ph: '' })
   // travada: os pixels seguem a proporção (muda um, calcula o outro); destravada: largura + altura dão a proporção
   const [lock, setLock] = useState(true)
@@ -90,7 +95,7 @@ export function AspectCalculator({ onClose }: { onClose: () => void }) {
           <button className={tab === 'proporcao' ? 'active' : ''} onClick={() => setTab('proporcao')}>Proporção e pixels</button>
           <button className={tab === 'dividir' ? 'active' : ''} onClick={() => setTab('dividir')}>Dividir painel em partes</button>
         </div>
-        {tab === 'dividir' && <PanelSplitter />}
+        {tab === 'dividir' && <PanelSplitter initialW={split?.w} initialH={split?.h} initialParts={split?.parts} onApply={split?.onApply} applyLabel={split?.label} />}
         {tab === 'proporcao' && <>
         <p className="meta">Com a proporção travada, digite a largura ou a altura em pixels e a outra é calculada. Para descobrir a proporção, clique em 🔒 (ou apague a proporção) e digite largura e altura. O campo calculado fica em destaque.</p>
         <div className="calc-row">
