@@ -949,3 +949,11 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .calc-dialog .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .calc-lock { align-self: flex-start; margin-top: 2px; }
 .calc-lock.on { border-color: var(--accent); }
+.calc-visual { display: flex; gap: 14px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #0f1013; }
+.calc-visual.empty { justify-content: center; min-height: 60px; }
+.calc-canvas { position: relative; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.calc-ref { position: absolute; border: 1px dashed rgba(255, 255, 255, .25); border-radius: 3px; }
+.calc-ref span { position: absolute; right: 4px; bottom: 2px; font-size: 10px; color: rgba(255, 255, 255, .35); }
+.calc-shape { position: relative; background: rgba(255, 176, 32, .22); border: 2px solid var(--accent); border-radius: 3px; display: grid; place-items: center; transition: width .2s ease, height .2s ease; }
+.calc-shape span { font-weight: 700; color: var(--accent); font-size: 14px; }
+.calc-visual-info { display: flex; flex-direction: column; gap: 3px; font-size: 13px; min-width: 0; }

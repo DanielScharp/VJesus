@@ -105,7 +105,7 @@ export function AspectCalculator({ onClose }: { onClose: () => void }) {
             <button key={`${w}:${h}`} className={`small ${num(v.rw) === w && num(v.rh) === h ? 'active' : ''}`} title={hint} onClick={() => preset(w, h)}>{w}:{h}</button>
           ))}
         </div>
-        <div className="calc-result">
+        <AspectPreview w={pw && ph ? pw : num(v.rw)} h={pw && ph ? ph : num(v.rh)} label={pw && ph ? `${fmt(pw)} × ${fmt(ph)} px` : num(v.rw) && num(v.rh) ? `${v.rw} : ${v.rh}` : ''} ratio={num(v.rw) && num(v.rh) ? `${v.rw} : ${v.rh}` : ''} />        <div className="calc-result">
           {pw && ph
             ? <>
                 <b>{fmt(pw)} × {fmt(ph)} px</b>
@@ -122,5 +122,35 @@ export function AspectCalculator({ onClose }: { onClose: () => void }) {
       </div>
     </div>,
     document.body,
+  )
+}
+
+/**
+ * Desenho da proporção: o retângulo no tamanho certo dentro de um quadro fixo, com a tela 16:9
+ * pontilhada atrás para comparar (ex.: um 9:16 aparece em pé, bem mais estreito que a TV).
+ */
+function AspectPreview({ w, h, label, ratio }: { w: number | null; h: number | null; label: string; ratio: string }) {
+  const BOX_W = 300, BOX_H = 170
+  if (!w || !h) return <div className="calc-visual empty"><span className="meta">Digite uma proporção ou as medidas para ver o desenho.</span></div>
+  const a = w / h
+  // cabe no quadro mantendo a proporção (bem largo ou bem alto não some: mínimo de 4 px)
+  const fw = Math.max(4, Math.min(BOX_W, BOX_H * a)), fh = Math.max(4, Math.min(BOX_H, BOX_W / a))
+  const rw = Math.min(BOX_W, BOX_H * 16 / 9), rh = rw * 9 / 16
+  const shape = Math.abs(a - 1) < 0.02 ? 'quadrado' : a > 1 ? 'deitado (horizontal)' : 'em pé (vertical)'
+  return (
+    <div className="calc-visual">
+      <div className="calc-canvas" style={{ width: BOX_W, height: BOX_H }}>
+        <div className="calc-ref" style={{ width: rw, height: rh }} title="Referência: tela 16:9"><span>16:9</span></div>
+        <div className="calc-shape" style={{ width: fw, height: fh }}>
+          {fw > 70 && fh > 34 && <span>{ratio || label}</span>}
+        </div>
+      </div>
+      <div className="calc-visual-info">
+        <b>{label}</b>
+        <span>{shape}</span>
+        <span>{(a).toFixed(3).replace('.', ',')} : 1</span>
+        <span className="meta">pontilhado = tela 16:9, para comparar</span>
+      </div>
+    </div>
   )
 }
