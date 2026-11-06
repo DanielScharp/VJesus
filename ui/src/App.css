@@ -930,3 +930,22 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .hr-fields label { grid-template-columns: 60px 0 minmax(0, 1fr); }
 .thumb-web { background: linear-gradient(135deg, #1a3a5c, #0d1b2a) !important; }
 .thumb-screen { background: linear-gradient(135deg, #2d2d44, #111122) !important; }
+
+/* calculadora de proporção */
+.modal.calc-dialog { width: min(640px, 94vw); gap: 10px; }
+.calc-dialog h3 { margin: 0; }
+.calc-row { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.calc-group { display: flex; flex-direction: column; gap: 4px; }
+.calc-title { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.calc-pair { display: flex; align-items: flex-end; gap: 6px; }
+.calc-pair b { padding-bottom: 8px; color: var(--muted); }
+.calc-field { display: flex; flex-direction: column; gap: 2px; margin: 0; }
+.calc-field span { font-size: 11px; color: var(--muted); }
+.calc-field input { width: 110px; font-size: 18px; padding: 6px 8px; font-variant-numeric: tabular-nums; }
+.calc-field.auto input { border-color: var(--accent); color: var(--accent); }
+.calc-swap { margin-bottom: 6px; font-size: 16px; }
+.calc-presets { display: flex; gap: 4px; flex-wrap: wrap; }
+.calc-result { padding: 8px 10px; background: var(--bg, #15161a); border: 1px solid var(--line); border-radius: 6px; }
+.calc-dialog .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.calc-lock { align-self: flex-start; margin-top: 2px; }
+.calc-lock.on { border-color: var(--accent); }
