@@ -121,7 +121,7 @@ export function PanelSplitter({ initialW = 1920, initialH = 1080, initialParts, 
             ))}
           </div>
           <table className="split-table">
-            <thead><tr><th>Parte</th><th>Fração</th><th>Tamanho da parte</th><th>Começa em</th><th>Imagem ideal</th></tr></thead>
+            <thead><tr><th>Parte</th><th>Fração</th><th>Espaço da parte</th><th>Começa em</th><th>Imagem ideal (vai para o mapa)</th></tr></thead>
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i}>
@@ -132,7 +132,7 @@ export function PanelSplitter({ initialW = 1920, initialH = 1080, initialParts, 
                   <td>
                     {r.orient === 'livre'
                       ? <>arte com <b>{r.pw} × {r.ph} px</b></>
-                      : <><b>{r.fw} × {r.fh} px</b>{(r.fw < r.pw || r.fh < r.ph) && <span className="meta"> (sobra {r.pw - r.fw > 0 ? `${r.pw - r.fw} px na largura` : `${r.ph - r.fh} px na altura`}; para preencher tudo, faça a arte com {r.pw} × {r.ph})</span>}</>}
+                      : <><b>{r.fw} × {r.fh} px</b> em X {r.fx} · Y {r.fy}{(r.fw < r.pw || r.fh < r.ph) && <span className="meta"> (sobra {r.pw - r.fw > 0 ? `${r.pw - r.fw} px na largura` : `${r.ph - r.fh} px na altura`}; para usar o espaço todo, escolha "Livre" e faça a arte com {r.pw} × {r.ph})</span>}</>}
                   </td>
                 </tr>
               ))}
@@ -140,8 +140,11 @@ export function PanelSplitter({ initialW = 1920, initialH = 1080, initialParts, 
           </table>
           {onApply && (
             <div className="split-apply">
-              <button className="primary" onClick={() => { onApply(rows.map((r) => ({ name: r.name, x: r.x, y: r.y, w: r.pw, h: r.ph }))); setApplied(true) }}>{applyLabel ?? 'Aplicar'}</button>
-              <span className="meta">{applied ? '✔ Aplicado. Confira o mapa de painéis e a saída abaixo.' : 'Troca as partes do mapa de LED desta tela por estas (as imagens escolhidas para cada parte continuam, na mesma ordem).'}</span>
+              <button className="primary" onClick={() => { onApply(rows.map((r) => (r.orient === 'livre'
+                ? { name: r.name, x: r.x, y: r.y, w: r.pw, h: r.ph }
+                // horizontal/vertical: a parte do LED fica do tamanho da imagem (16:9 ou 9:16) inteira, centralizada no seu espaço
+                : { name: r.name, x: r.fx, y: r.fy, w: r.fw, h: r.fh }))); setApplied(true) }}>{applyLabel ?? 'Aplicar'}</button>
+              <span className="meta">{applied ? '✔ Aplicado. Confira o mapa de painéis e a saída abaixo.' : 'Troca as partes do mapa de LED desta tela por estas. Partes horizontais e verticais entram com o tamanho da imagem ideal (16:9 ou 9:16 inteira, sem cortar); partes livres, com o espaço todo. As imagens escolhidas para cada parte continuam, na mesma ordem.'}</span>
             </div>
           )}
           <p className="meta">Pontilhado/colorido claro = onde a imagem {`16:9`} ou {`9:16`} inteira cabe dentro da parte. Os valores de "Começa em" e "Tamanho da parte" são os que vão na processadora (ou no mapa de LED do VJesus).</p>
