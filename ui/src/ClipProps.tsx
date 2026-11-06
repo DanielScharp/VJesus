@@ -137,7 +137,8 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
   const [chain, setChain] = useState<EffectInstance[]>(clip.props?.effects ?? [])
   useEffect(() => { setChain(clip.props?.effects ?? []) }, [clip.props?.effects])
 
-  const isVideo = clip.kind === 'video'
+  // imagem parada (png, jpg...) também é do tipo vídeo, mas não tem tempo: sem linha do tempo nem "no fim"
+  const isVideo = clip.kind === 'video' && !/\.(png|jpe?g|bmp|webp|gif|tiff?)$/i.test(clip.path ?? '')
   const hasPicture = clip.kind === 'video' || clip.kind === 'camera' || clip.kind === 'spout' || clip.kind === 'ndi'
   const update = (patch: Partial<ClipProps>, newName = name) => {
     const next = { ...p, ...patch }

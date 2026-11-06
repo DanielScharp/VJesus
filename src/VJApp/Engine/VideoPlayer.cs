@@ -513,7 +513,7 @@ sealed unsafe class VideoPlayer : IDisposable
                 int ret = av_read_frame(_fmt, pkt);
                 if (ret < 0 && IsLive) { Thread.Sleep(5); continue; } // câmera sem quadro novo ainda
                 if (_hitOut && ret >= 0) { av_packet_unref(pkt); ret = AVERROR_EOF; } // ponto de saída = fim do trecho
-                if (ret == AVERROR_EOF && IsStill && _stillShown) { Thread.Sleep(20); continue; } // imagem parada: segura o quadro
+                if (ret == AVERROR_EOF && IsStill && _stillShown) { Thread.Sleep(100); continue; } // imagem parada: segura o quadro (só acorda para um seek)
                 if (ret == AVERROR_EOF)
                 {
                     // fim do arquivo: drena o decoder e volta para o início (loop)

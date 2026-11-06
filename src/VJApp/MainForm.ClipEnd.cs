@@ -34,7 +34,7 @@ sealed partial class MainForm
         {
             var player = _players[layer];
             var clip = _comp.Layers[layer].PlayingClip;
-            if (player == null || clip?.Props is not { End: "seguir" } props || player.Duration <= 0)
+            if (player == null || player.IsStill || clip?.Props is not { End: "seguir" } props || player.Duration <= 0)
             {
                 _endFired.Remove(layer);
                 DropPreload(layer);

@@ -822,7 +822,8 @@ sealed partial class MainForm : Form
             type = "playback",
             beat = _renderer?.Beat ?? 0,
             bpm = _renderer?.Bpm ?? 120,
-            layers = _players.Select(p => p == null ? null : new { position = p.Position, duration = p.Duration, playing = p.Playing, inPoint = p.InPoint, outPoint = p.OutPoint }),
+            // imagem parada não tem linha do tempo (nada anda; a barra só confundia)
+            layers = _players.Select(p => p == null || p.IsStill ? null : new { position = p.Position, duration = p.Duration, playing = p.Playing, inPoint = p.InPoint, outPoint = p.OutPoint }),
         });
     }
 
