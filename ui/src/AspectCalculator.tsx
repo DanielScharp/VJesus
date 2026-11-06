@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
+import { PanelSplitter } from './PanelSplitter'
 
 type Field = 'rw' | 'rh' | 'pw' | 'ph'
 /** O que foi digitado: a proporção (R), a largura (W) ou a altura (H) em pixels. */
@@ -37,6 +38,7 @@ function ratioOf(w: number, h: number) {
  * Proporção + largura → altura; proporção + altura → largura; largura + altura → proporção.
  */
 export function AspectCalculator({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<'proporcao' | 'dividir'>('proporcao')
   const [v, setV] = useState<Values>({ rw: '16', rh: '9', pw: '', ph: '' })
   // travada: os pixels seguem a proporção (muda um, calcula o outro); destravada: largura + altura dão a proporção
   const [lock, setLock] = useState(true)
@@ -84,6 +86,12 @@ export function AspectCalculator({ onClose }: { onClose: () => void }) {
     <div className="modal-back" onMouseDown={onClose}>
       <div className="modal calc-dialog" onMouseDown={(e) => e.stopPropagation()}>
         <h3>Calculadora de proporção</h3>
+        <div className="calc-tabs">
+          <button className={tab === 'proporcao' ? 'active' : ''} onClick={() => setTab('proporcao')}>Proporção e pixels</button>
+          <button className={tab === 'dividir' ? 'active' : ''} onClick={() => setTab('dividir')}>Dividir painel em partes</button>
+        </div>
+        {tab === 'dividir' && <PanelSplitter />}
+        {tab === 'proporcao' && <>
         <p className="meta">Com a proporção travada, digite a largura ou a altura em pixels e a outra é calculada. Para descobrir a proporção, clique em 🔒 (ou apague a proporção) e digite largura e altura. O campo calculado fica em destaque.</p>
         <div className="calc-row">
           <div className="calc-group">
@@ -105,7 +113,8 @@ export function AspectCalculator({ onClose }: { onClose: () => void }) {
             <button key={`${w}:${h}`} className={`small ${num(v.rw) === w && num(v.rh) === h ? 'active' : ''}`} title={hint} onClick={() => preset(w, h)}>{w}:{h}</button>
           ))}
         </div>
-        <AspectPreview w={pw && ph ? pw : num(v.rw)} h={pw && ph ? ph : num(v.rh)} label={pw && ph ? `${fmt(pw)} × ${fmt(ph)} px` : num(v.rw) && num(v.rh) ? `${v.rw} : ${v.rh}` : ''} ratio={num(v.rw) && num(v.rh) ? `${v.rw} : ${v.rh}` : ''} />        <div className="calc-result">
+        <AspectPreview w={pw && ph ? pw : num(v.rw)} h={pw && ph ? ph : num(v.rh)} label={pw && ph ? `${fmt(pw)} × ${fmt(ph)} px` : num(v.rw) && num(v.rh) ? `${v.rw} : ${v.rh}` : ''} ratio={num(v.rw) && num(v.rh) ? `${v.rw} : ${v.rh}` : ''} />
+        <div className="calc-result">
           {pw && ph
             ? <>
                 <b>{fmt(pw)} × {fmt(ph)} px</b>
@@ -115,6 +124,7 @@ export function AspectCalculator({ onClose }: { onClose: () => void }) {
               </>
             : <span className="meta">Ex.: 9 : 16 com largura 3000 → altura 5333,33.</span>}
         </div>
+        </>}
         <div className="modal-actions">
           <button onClick={clear}>Limpar</button>
           <button onClick={onClose}>Fechar</button>
