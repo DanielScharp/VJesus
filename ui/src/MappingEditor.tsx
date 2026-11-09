@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { onMessage, send, type Composition, type Display, type LayerGroup, type MappingSetup, type Mask, type OutputScreen, type Pt, type Slice } from './bridge'
 import { applyLed } from './led'
 import { AspectCalculator } from './AspectCalculator'
+import { EdgeBlendDialog } from './EdgeBlendDialog'
 import type { SplitPart } from './PanelSplitter'
 import { matches } from './shortcuts'
 import { LedMap, type SourceOption } from './LedMap'
@@ -74,6 +75,7 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
   useEffect(() => onMessage((msg) => { if (msg.type === 'ledTest') setLedTest(msg.mode) }), [])
   const [preset, setPreset] = useState('')
   const [calcOpen, setCalcOpen] = useState(false)
+  const [blendOpen, setBlendOpen] = useState(false)
   const [screenId, setScreenId] = useState<string | undefined>(mapping.screens[0]?.id)
   const [sel, setSel] = useState<Sel>(null)
   const [point, setPoint] = useState<number | null>(null)
@@ -208,6 +210,7 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
           </button>
         ))}
         <button onClick={addScreen}>+ Tela</button>
+        <button onClick={() => setBlendOpen(true)} title="Juntar 2 a 4 projetores numa imagem só, com a emenda invisível">◫ Edge blending (vários projetores)</button>
         <span className="spacer" />
         <button className={`magnet ${magnet ? 'active' : ''}`} onClick={() => setMagnet(!magnet)}
           title="Ímã: ao arrastar, gruda as pontas nas bordas e cantos da tela e nos outros slices e máscaras. Segure Alt para inverter.">
@@ -284,6 +287,7 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
         )}
       </section>
 
+      {blendOpen && <EdgeBlendDialog mapping={mapping} displays={displays} onChange={onChange} sources={sources} onClose={() => setBlendOpen(false)} />}
       {calcOpen && (
         <AspectCalculator startTab="dividir" onClose={() => setCalcOpen(false)} split={{
           w: pxW, h: pxH, label: `Aplicar no mapa de LED de "${screen.name}"`,
@@ -497,6 +501,15 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
                 <input type="range" min={0.2} max={3} step={0.01} value={slice.softEdge.gamma}
                   onChange={(e) => setSlice(slice.id, { softEdge: { ...slice.softEdge, gamma: Number(e.target.value) } })} />
               </label>
+              <label title="Compensa o gamma do projetor (2,2 na maioria) para a emenda não ficar escura entre dois projetores. 1 = sem compensação.">Gamma do projetor <output>{(slice.softEdge.projectorGamma ?? 1).toFixed(2)}</output>
+                <input type="range" min={1} max={3} step={0.05} value={slice.softEdge.projectorGamma ?? 1}
+                  onChange={(e) => setSlice(slice.id, { softEdge: { ...slice.softEdge, projectorGamma: Number(e.target.value) } })} />
+              </label>
+              <label title="Sobe o preto fora da emenda para igualar ao preto mais claro onde dois projetores se somam">Nivelar o preto <output>{Math.round((slice.softEdge.blackLift ?? 0) * 100)}%</output>
+                <input type="range" min={0} max={0.15} step={0.005} value={slice.softEdge.blackLift ?? 0}
+                  onChange={(e) => setSlice(slice.id, { softEdge: { ...slice.softEdge, blackLift: Number(e.target.value) } })} />
+              </label>
+              <p className="meta">Para vários projetores, o jeito fácil é o botão ◫ Edge blending, no topo.</p>
               {!slice.ledPart && (
                 <div className="row">
                   <button className="small" onClick={() => setSlice(slice.id, { points: defaultPoints(slice.cols, slice.rows) })}>Tela inteira</button>

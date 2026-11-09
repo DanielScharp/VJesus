@@ -982,3 +982,24 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .split-table th, .split-table td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .split-table th { font-size: 11px; color: var(--muted); font-weight: 500; }
 .split-apply { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 6px; }
+
+/* edge blending */
+.modal.blend-dialog { width: min(980px, 96vw); max-height: 92vh; overflow: auto; gap: 10px; }
+.blend-dialog h3 { margin: 0; }
+.blend-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .blend-grid { grid-template-columns: 1fr; } }
+.blend-step { border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.blend-step label { grid-template-columns: 1fr 50px; }
+.blend-step label input[type=range], .blend-step label select { grid-column: 1 / -1; }
+.blend-step .row { gap: 4px; flex-wrap: wrap; }
+.blend-step button.active, .blend-tests button.active { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
+.blend-proj { display: flex !important; flex-direction: column; gap: 3px; }
+.blend-proj span { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.blend-proj i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.blend-canvas { position: relative; align-self: center; background: #0f1013; border: 1px solid var(--line); margin: 4px auto; }
+.blend-proj-box { position: absolute; border: 2px solid; box-sizing: border-box; display: grid; place-items: center; }
+.blend-proj-box span { font-weight: 800; font-size: 22px; opacity: .8; }
+.blend-zone { position: absolute; background: repeating-linear-gradient(45deg, rgba(255,255,255,.25) 0 4px, transparent 4px 9px); pointer-events: none; }
+.blend-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.blend-tests { display: flex; gap: 4px; align-items: center; margin-left: auto; }
+.ok-text { color: #66bb6a; }

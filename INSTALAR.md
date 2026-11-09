@@ -144,6 +144,20 @@ Cria `artifacts\VJesus-vX.Y.Z-win-x64.zip` com tudo dentro (não exige .NET nem 
 
 ---
 
+## Edge blending (vários projetores numa imagem só)
+
+Em **Menu → Mapeamento → ◫ Edge blending**:
+
+1. Escolha quantos projetores (2 a 4), se ficam **lado a lado** ou **um em cima do outro**, e em qual saída do computador está cada um.
+2. Clique em **Montar nos projetores**. Uma tela por projetor é criada, cada uma com o seu pedaço da imagem e a faixa de emenda.
+3. Ligue o teste **Grade** e ajuste os projetores (posição, zoom, foco) até as linhas se encontrarem; ajuste a **sobreposição** até as linhas baterem dentro da emenda. A perspectiva de cada projetor pode ser corrigida arrastando os cantos do slice dele; esses ajustes são mantidos quando você mexe no blending.
+4. Ligue o teste **Cinza**: se a emenda aparecer mais clara, aumente o **gamma do projetor**; mais escura, diminua (2,2 serve para a maioria).
+5. Com a sala escura e imagem preta, use **Nivelar o preto** até o preto fora da emenda igualar o de dentro.
+
+A rampa da emenda é calculada para que a luz dos dois projetores some sempre 100% (com a correção de gamma do projetor). Projetores iguais, com o mesmo brilho e modo de cor, dão o melhor resultado.
+
+---
+
 ## Página da internet e espelho de tela na grade
 
 Botão direito numa célula da grade:

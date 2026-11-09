@@ -284,7 +284,16 @@ float4 PSSource(VSOut i) : SV_Target
     float t = Time * Speed;
     if (SourceKind < 0.5) return videoSource(i.uv);
     if (SourceKind < 1.5) return float4(generator(i.uv, Resolution, Time * Speed * GenSpeed), 1);
-    return float4(testCard(i.uv, Resolution, t), 1);
+    if (SourceKind < 2.5) return float4(testCard(i.uv, Resolution, t), 1);
+    // testes do edge blending: branco, cinza 50% e grade para alinhar os projetores
+    if (SourceKind < 3.5) return float4(1, 1, 1, 1);
+    if (SourceKind < 4.5) return float4(0.5, 0.5, 0.5, 1);
+    float2 px = i.uv * Resolution;
+    float2 g = abs(frac(px / 60 + 0.5) - 0.5) * 60;
+    float lines = (min(g.x, g.y) < 1.2) ? 1 : 0;
+    float2 c = abs(px - Resolution * 0.5);
+    float cross = (min(c.x, c.y) < 2.5) ? 1 : 0;
+    return float4(lerp(float3(0, 0, 0), float3(1, 1, 1), max(lines * 0.8, cross)), 1);
 }
 
 // ---------- transição entre o clip que entra (Tex0) e o que sai (Tex1) ----------
@@ -407,6 +416,7 @@ struct SliceIn
     float2 st    : TEXCOORD1;  // 0..1 dentro do slice
     float4 edges : TEXCOORD2;  // soft-edge: esquerda, direita, cima, baixo
     float2 extra : TEXCOORD3;  // gamma do soft-edge, opacidade
+    float3 blend : TEXCOORD4;  // edge blending: forma da curva, gamma do projetor, subida do preto
 };
 
 struct SliceOut
@@ -416,6 +426,7 @@ struct SliceOut
     float2 st    : TEXCOORD1;
     float4 edges : TEXCOORD2;
     float2 extra : TEXCOORD3;
+    float3 blend : TEXCOORD4;
 };
 
 SliceOut VSSlice(SliceIn v)
@@ -426,23 +437,31 @@ SliceOut VSSlice(SliceIn v)
     o.st = v.st;
     o.edges = v.edges;
     o.extra = v.extra;
+    o.blend = v.blend;
     return o;
 }
 
-float ramp(float x, float width)
+// rampa do edge blending (curva de Paul Bourke): f(x) + f(1-x) = 1 para qualquer forma p,
+// então os dois projetores somam sempre 100% de luz no meio da emenda
+float ramp(float x, float width, float p)
 {
     if (width <= 0) return 1;
     float r = saturate(x / width);
-    return r * r * (3 - 2 * r);
+    return r < 0.5 ? 0.5 * pow(2 * r, p) : 1 - 0.5 * pow(2 * (1 - r), p);
 }
 
 float4 PSSlice(SliceOut i) : SV_Target
 {
     float3 col = Tex0.SampleLevel(LinearClamp, i.uv, 0).rgb;
-    float edge = ramp(i.st.x, i.edges.x) * ramp(1 - i.st.x, i.edges.y)
-               * ramp(i.st.y, i.edges.z) * ramp(1 - i.st.y, i.edges.w);
-    float k = pow(edge, i.extra.x) * i.extra.y * Brightness;
-    return float4(col * k, 1);
+    float p = max(i.blend.x, 1);
+    float edge = ramp(i.st.x, i.edges.x, p) * ramp(1 - i.st.x, i.edges.y, p)
+               * ramp(i.st.y, i.edges.z, p) * ramp(1 - i.st.y, i.edges.w, p);
+    // o projetor transforma o valor do pixel em luz com gamma (~2,2): a rampa é em luz, o pixel vai com 1/gamma
+    float k = pow(edge, 1 / max(i.blend.y, 1)) ;
+    k = pow(k, i.extra.x) * i.extra.y * Brightness;
+    // preto: onde dois projetores se somam, o preto fica mais claro; sobe o preto do resto para igualar
+    float outside = edge >= 0.9999 ? 1 : 0;
+    return float4(saturate(col * k + i.blend.z * outside), 1);
 }
 
 float4 PSMask(SliceOut i) : SV_Target

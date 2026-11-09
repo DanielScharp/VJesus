@@ -60,7 +60,9 @@ export type Slice = {
   cols: number
   rows: number
   points: Pt[]
-  softEdge: { left: number; right: number; top: number; bottom: number; gamma: number }
+  softEdge: { left: number; right: number; top: number; bottom: number; gamma: number; curve?: number; projectorGamma?: number; blackLift?: number }
+  /** criado pelo assistente de edge blending (é refeito quando ele muda) */
+  blend?: string | null
   /** null = composição inteira; id de grupo; ou "layer:N" (uma layer só) */
   source?: string | null
   /** criado pelo mapa de painéis de LED */
@@ -340,6 +342,7 @@ export type UiMessage =
   | { type: 'libraryPlace'; layer: number; column: number; paths: string[] }
   | { type: 'serviceAddMedia'; paths: string[]; index?: number }
   | { type: 'previewSize'; width: number }
+  | { type: 'blendTest'; mode: 0 | 1 | 2 | 3 }
   | { type: 'panicSet'; settings: PanicState['settings'] }
   | { type: 'performanceSet'; decode: DecodeMode }
   | ({ type: 'previewRender'; id: string } & PreviewRequest)

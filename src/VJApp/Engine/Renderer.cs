@@ -101,6 +101,8 @@ sealed partial class Renderer : IDisposable
     public volatile float Brightness = 1f;
     public volatile float Speed = 1f;
     public volatile bool ShowTestCard;
+    /// <summary>Teste do edge blending no lugar da imagem: 0 = desligado, 1 = branco, 2 = cinza 50%, 3 = grade.</summary>
+    public volatile int BlendTest;
     public volatile EffectRun[] MasterEffects = [];
 
     // BPM: batidas contadas a partir de uma origem (o tap tempo realinha a origem)
@@ -591,9 +593,9 @@ sealed partial class Renderer : IDisposable
         cur = ApplyEffects(MasterEffects, pair, cur);
 
         // test card no lugar da composição, para alinhar os slices nos projetores
-        if (ShowTestCard)
+        if (ShowTestCard || BlendTest > 0)
         {
-            var lp = new LayerParams { Opacity = 1, SourceKind = (float)SourceKind.TestCard };
+            var lp = new LayerParams { Opacity = 1, SourceKind = BlendTest > 0 ? 2 + BlendTest : (float)SourceKind.TestCard };
             ctx.UpdateSubresource(in lp, _layerCb!);
             cur = 1 - cur;
             Pass(_psSource!, pair[cur]!.Rtv, null);

@@ -30,6 +30,12 @@ sealed class SoftEdge
     public float Top { get; set; }
     public float Bottom { get; set; }
     public float Gamma { get; set; } = 1;
+    /// <summary>Forma da rampa (2 = curva S suave; maior = meio mais "duro"). Edge blending entre projetores.</summary>
+    public float Curve { get; set; } = 2;
+    /// <summary>Gamma do projetor (2,2 na maioria). Compensa a luz: no meio da emenda a soma dos dois fica igual ao resto. 1 = sem compensação.</summary>
+    public float ProjectorGamma { get; set; } = 1;
+    /// <summary>Sobe o preto fora da emenda (0..0,2) para igualar ao preto mais claro onde dois projetores se somam.</summary>
+    public float BlackLift { get; set; }
 }
 
 /// <summary>

@@ -138,6 +138,7 @@ partial class Renderer
             new InputElementDescription("TEXCOORD", 1, Format.R32G32_Float, 16, 0),
             new InputElementDescription("TEXCOORD", 2, Format.R32G32B32A32_Float, 24, 0),
             new InputElementDescription("TEXCOORD", 3, Format.R32G32_Float, 40, 0),
+            new InputElementDescription("TEXCOORD", 4, Format.R32G32B32_Float, 48, 0),
         ], sliceVsCode);
 
         _mainPreview = new PreviewChannel(_device);

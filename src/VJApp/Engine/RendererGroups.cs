@@ -25,9 +25,9 @@ partial class Renderer
                     _groupComp[source] = pair = [new RenderTexture(_device!, CompWidth, CompHeight), new RenderTexture(_device!, CompWidth, CompHeight)];
                 var layers = groups[source];
                 int r = Compose(time, pair, s => layers.Contains(Array.IndexOf(Layers, s)), main: false);
-                if (ShowTestCard)
+                if (ShowTestCard || BlendTest > 0)
                 {
-                    var lp = new LayerParams { Opacity = 1, SourceKind = (float)SourceKind.TestCard };
+                    var lp = new LayerParams { Opacity = 1, SourceKind = BlendTest > 0 ? 2 + BlendTest : (float)SourceKind.TestCard };
                     _ctx!.UpdateSubresource(in lp, _layerCb!);
                     r = 1 - r;
                     Pass(_psSource!, pair[r]!.Rtv, null);

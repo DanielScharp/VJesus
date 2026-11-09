@@ -10,7 +10,7 @@ namespace VJApp.Engine;
 /// </summary>
 static class MappingMesh
 {
-    public const int FloatsPerVertex = 12;
+    public const int FloatsPerVertex = 15;
     const int Tess = 24; // subdivisões por eixo de cada slice
 
     /// <summary>Triângulos dos slices separados pela fonte (-1 = composição inteira; n = grupo n de layers).</summary>
@@ -43,7 +43,8 @@ static class MappingMesh
                 var p = grid[i, j];
                 v.AddRange([p.X, p.Y,
                     slice.Input.X + s * slice.Input.W, slice.Input.Y + t * slice.Input.H,
-                    s, t, e.Left, e.Right, e.Top, e.Bottom, Math.Max(0.01f, e.Gamma), slice.Opacity]);
+                    s, t, e.Left, e.Right, e.Top, e.Bottom, Math.Max(0.01f, e.Gamma), slice.Opacity,
+                    Math.Clamp(e.Curve, 1, 6), Math.Clamp(e.ProjectorGamma, 1, 3), Math.Clamp(e.BlackLift, 0, 0.3f)]);
             }
             for (int j = 0; j < Tess; j++)
                 for (int i = 0; i < Tess; i++)
@@ -65,7 +66,7 @@ static class MappingMesh
             var pts = mask.Points.Select(p => new Vector2(p.X, p.Y)).ToList();
             foreach (var (a, b, c) in Triangulate(pts))
                 foreach (var p in new[] { a, b, c })
-                    v.AddRange([p.X, p.Y, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]);
+                    v.AddRange([p.X, p.Y, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 1, 0]);
         }
         return [.. v];
     }
