@@ -38,6 +38,8 @@ sealed partial class MainForm
         slot.ClipVolume = Math.Clamp(p.Volume, 0, 2);
         slot.ClipShape = new Engine.Shape(0, 0, Math.Clamp(p.Width, 0.01f, 10), Math.Clamp(p.Height, 0.01f, 10), p.Rotation,
             Corner(p.Radius, 0), Corner(p.Radius, 1), Corner(p.Radius, 2), Corner(p.Radius, 3));
+        slot.ClipExtra = new Engine.ClipExtra(Math.Clamp(p.Opacity, 0, 1), Math.Clamp(p.RotationX, -89, 89), Math.Clamp(p.RotationY, -89, 89), Math.Clamp(p.AnchorX, -8000, 8000), Math.Clamp(p.AnchorY, -8000, 8000));
+        slot.ClipBlend = p.BlendMode != null && Enum.TryParse<BlendMode>(p.BlendMode, true, out var bm) ? (int)bm : -1;
         slot.ClipEffects = [.. p.Effects.Select(GetRun)];
         if (_players[layer] is { } player)
         {
@@ -46,6 +48,8 @@ sealed partial class MainForm
             if (clip.Kind == ClipKind.Video) player.SetRange(p.InPoint, p.OutPoint);
             // a duração fica guardada no clip, para marcar os pontos de corte mesmo sem ele tocar
             if (clip.Kind == ClipKind.Video && !player.IsStill && player.Duration > 0 && clip.Duration != player.Duration) { clip.Duration = player.Duration; ScheduleSave(); }
+            // tamanho original (as propriedades mostram largura e altura em pixels)
+            if (clip.SourceWidth != player.SourceWidth || clip.SourceHeight != player.SourceHeight) { clip.SourceWidth = player.SourceWidth; clip.SourceHeight = player.SourceHeight; ScheduleSave(); }
         }
     }
 

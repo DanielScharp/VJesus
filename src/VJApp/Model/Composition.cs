@@ -51,6 +51,9 @@ sealed class Clip
     public int? CaptureFps { get; set; }
     /// <summary>Duração do vídeo em segundos (anotada quando ele toca pela primeira vez; para os pontos de corte).</summary>
     public double? Duration { get; set; }
+    /// <summary>Tamanho original da imagem (para mostrar largura e altura em pixels nas propriedades).</summary>
+    public int? SourceWidth { get; set; }
+    public int? SourceHeight { get; set; }
 
     public static Clip FromFile(string path) =>
         new() { Kind = ClipKind.Video, Path = path, Name = System.IO.Path.GetFileNameWithoutExtension(path) };
@@ -85,6 +88,16 @@ sealed class ClipProps
     public float Width { get; set; } = 1;
     public float Height { get; set; } = 1;
     public float[] Radius { get; set; } = [0, 0, 0, 0];
+    /// <summary>Opacidade do clip (0..1), somada à da layer.</summary>
+    public float Opacity { get; set; } = 1;
+    /// <summary>Mistura do clip (nome do BlendMode); null = a da layer.</summary>
+    public string? BlendMode { get; set; }
+    /// <summary>Giro em 3D (graus): X inclina para frente/trás, Y vira para os lados (com perspectiva).</summary>
+    public float RotationX { get; set; }
+    public float RotationY { get; set; }
+    /// <summary>Âncora (pixels da composição, a partir do centro do clip): o ponto em volta do qual o clip gira e cresce.</summary>
+    public float AnchorX { get; set; }
+    public float AnchorY { get; set; }
     public List<EffectInstance> Effects { get; set; } = [];
 }
 

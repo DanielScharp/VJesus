@@ -41,8 +41,12 @@ cbuffer LayerParams : register(b1)
     float LayerScaleX;   // largura e altura da layer (1 = 100%)
     float LayerScaleY;
     float LayerRotation; // giro da layer (radianos)
-    float3 _layerPad;
+    float ClipOpacity;   // opacidade do clip (0..1)
+    float ClipRotX;      // giro 3D do clip (radianos): inclina para frente/trás
+    float ClipRotY;      // vira para os lados
     float4 LayerRadius;  // cantos da layer em pixels: ↖ ↗ ↘ ↙
+    float2 ClipAnchor;   // âncora do clip (pixels a partir do centro dele)
+    float2 _clipPad;
 };
 
 float2 rotate2(float2 v, float a)
@@ -69,6 +73,35 @@ float2 untransform(float2 uv, float2 offset, float rotation, float2 scale)
 {
     float2 px = uv * Resolution - Resolution * (0.5 + float2(offset.x, -offset.y) * 0.5);
     px = rotate2(px, -rotation) / scale;
+    return px / Resolution + 0.5;
+}
+
+// giro 3D com perspectiva: de um ponto da tela, acha o ponto do plano girado (X inclina, Y vira) que aparece ali.
+// Câmera a 1,5 alturas de tela. Devolve (1e6, 1e6) quando o raio não acerta o plano (fica transparente).
+float2 unproject(float2 p, float rx, float ry)
+{
+    float f = Resolution.y * 1.5;
+    float sx = sin(rx), cx = cos(rx), sy = sin(ry), cy = cos(ry);
+    // eixos do plano girado (R = Ry * Rx): u = R(1,0,0), v = R(0,1,0), n = R(0,0,1)
+    float3 u = float3(cy, 0, -sy);
+    float3 v = float3(sy * sx, cx, cy * sx);
+    float3 n = float3(sy * cx, -sx, cy * cx);
+    float3 e = float3(0, 0, -f);
+    float3 d = float3(p, 0) - e;
+    float dn = dot(n, d);
+    if (abs(dn) < 1e-4) return float2(1e6, 1e6);
+    float t = dot(n, -e) / dn;
+    if (t <= 0) return float2(1e6, 1e6);
+    float3 q = e + d * t;
+    return float2(dot(q, u), dot(q, v));
+}
+
+// o clip inteiro: posição, âncora, giro 3D (X, Y), giro Z e tamanho
+float2 untransformClip(float2 uv, float2 offset, float rotation, float2 scale)
+{
+    float2 px = uv * Resolution - Resolution * (0.5 + float2(offset.x, -offset.y) * 0.5) - ClipAnchor;
+    if (ClipRotX != 0 || ClipRotY != 0) px = unproject(px, ClipRotX, ClipRotY);
+    px = rotate2(px, -rotation) / scale + ClipAnchor;
     return px / Resolution + 0.5;
 }
 
@@ -267,7 +300,7 @@ float4 videoSource(float2 uv)
         : float2(dstAspect / VideoAspect, 1);
     // zoom, largura/altura, giro e posição do clip
     float2 size = max(Zoom, 0.01) * (ClipScaleX == 0 && ClipScaleY == 0 ? float2(1, 1) : max(abs(float2(ClipScaleX, ClipScaleY)), 0.01));
-    uv = untransform(uv, float2(OffsetX, OffsetY), ClipRotation, size);
+    uv = untransformClip(uv, float2(OffsetX, OffsetY), ClipRotation, size);
     float2 v = (uv - 0.5) * scale + 0.5;
     if (any(v < 0) || any(v > 1)) return float4(0, 0, 0, 0);
     float2 shown = Resolution / scale * size; // tamanho da imagem na tela, em pixels
@@ -282,7 +315,7 @@ float4 videoSource(float2 uv)
 float4 PSSource(VSOut i) : SV_Target
 {
     float t = Time * Speed;
-    if (SourceKind < 0.5) return videoSource(i.uv);
+    if (SourceKind < 0.5) { float4 vs = videoSource(i.uv); vs.a *= ClipOpacity; return vs; }
     if (SourceKind < 1.5) return float4(generator(i.uv, Resolution, Time * Speed * GenSpeed), 1);
     if (SourceKind < 2.5) return float4(testCard(i.uv, Resolution, t), 1);
     // testes do edge blending: branco, cinza 50% e grade para alinhar os projetores

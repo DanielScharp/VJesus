@@ -40,8 +40,9 @@ struct LayerParams
     public float ClipRotation, ClipScaleX, ClipScaleY; // giro (rad), largura e altura do clip
     public float ClipRadiusTL, ClipRadiusTR, ClipRadiusBR, ClipRadiusBL; // cantos (px)
     public float LayerX, LayerY, LayerScaleX, LayerScaleY;
-    public float LayerRotation, Pad0, Pad1, Pad2;
+    public float LayerRotation, ClipOpacity, ClipRotX, ClipRotY;
     public float LayerRadiusTL, LayerRadiusTR, LayerRadiusBR, LayerRadiusBL;
+    public float ClipAnchorX, ClipAnchorY, Pad3, Pad4;
 }
 
 /// <summary>Fundo gerado (antigo Plasma): tipo, cores, velocidade, intensidade, escala. Igual ao cbuffer GenParams.</summary>
@@ -420,12 +421,12 @@ sealed partial class Renderer : IDisposable
         bool fromPlayer = p != null && source.Spout == null && source.Ndi == null;
         // o clip tocando usa o ajuste atual da layer (e guarda); o que está saindo usa o último dele
         var look = source == slot.Current || source.Look == null
-            ? source.Look = new ClipLook(slot.ClipFit, slot.ClipZoom, slot.ClipOffsetX, slot.ClipOffsetY, slot.ClipShape)
+            ? source.Look = new ClipLook(slot.ClipFit, slot.ClipZoom, slot.ClipOffsetX, slot.ClipOffsetY, slot.ClipShape, slot.ClipExtra)
             : source.Look;
         var lp = new LayerParams
         {
             Opacity = slot.Opacity,
-            Blend = slot.Blend,
+            Blend = slot.ClipBlend >= 0 ? slot.ClipBlend : slot.Blend,
             SourceKind = (float)source.Kind,
             VideoAspect = source.Lyrics != null ? (float)LyricsFeed.Width / LyricsFeed.Height : source.Aspect,
             ColorMode = source.Lyrics != null ? 3 : fromPlayer ? (float)p!.Color : 0,
@@ -441,6 +442,12 @@ sealed partial class Renderer : IDisposable
         lp.ClipRotation = cs.Rotation * MathF.PI / 180;
         lp.ClipScaleX = cs.ScaleX;
         lp.ClipScaleY = cs.ScaleY;
+        var ex = source.Lyrics != null ? ClipExtra.Identity : look.Extra;
+        lp.ClipOpacity = Math.Clamp(ex.Opacity, 0, 1);
+        lp.ClipRotX = ex.RotationX * MathF.PI / 180;
+        lp.ClipRotY = ex.RotationY * MathF.PI / 180;
+        lp.ClipAnchorX = ex.AnchorX;
+        lp.ClipAnchorY = ex.AnchorY;
         (lp.ClipRadiusTL, lp.ClipRadiusTR, lp.ClipRadiusBR, lp.ClipRadiusBL) = (cs.TopLeft, cs.TopRight, cs.BottomRight, cs.BottomLeft);
         _ctx!.UpdateSubresource(in lp, _layerCb!);
         if (source.Kind == SourceKind.Plasma)
@@ -578,7 +585,7 @@ sealed partial class Renderer : IDisposable
             var ls = slot.LayerShape;
             var blend = new LayerParams
             {
-                Opacity = slot.Opacity, Blend = slot.Blend,
+                Opacity = slot.Opacity, Blend = slot.ClipBlend >= 0 ? slot.ClipBlend : slot.Blend,
                 LayerX = ls.X, LayerY = ls.Y, LayerScaleX = ls.ScaleX, LayerScaleY = ls.ScaleY,
                 LayerRotation = ls.Rotation * MathF.PI / 180,
                 LayerRadiusTL = ls.TopLeft, LayerRadiusTR = ls.TopRight, LayerRadiusBR = ls.BottomRight, LayerRadiusBL = ls.BottomLeft,

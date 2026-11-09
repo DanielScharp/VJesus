@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { onMessage, send, type Composition, type Display, type LayerGroup, type MappingSetup, type Mask, type OutputScreen, type Pt, type Slice } from './bridge'
+import { onMessage, send, type Composition, type Display, type LayerGroup, type LedPart, type MappingSetup, type Mask, type OutputScreen, type Pt, type Slice } from './bridge'
 import { applyLed } from './led'
 import { AspectCalculator } from './AspectCalculator'
 import { EdgeBlendDialog } from './EdgeBlendDialog'
@@ -118,6 +118,24 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
   const setMask = (id: string, patch: Partial<Mask>) =>
     setScreen({ masks: screen.masks.map((m) => (m.id === id ? { ...m, ...patch } : m)) })
   const setGroups = (g: LayerGroup[]) => onChange({ ...mapping, groups: g })
+
+  // ---- partes do LED: mexer no slice delas (Entrada ou Saída) muda a parte, e os números do mapa acompanham ----
+  const setLedPart = (partId: string, patch: Partial<LedPart>) => {
+    const led = screen.led
+    if (!led) return
+    replaceScreen(applyLed(screen, { ...led, parts: led.parts.map((p) => (p.id === partId ? { ...p, ...patch } : p)) }, pxW, pxH))
+  }
+  const setInput = (s: Slice, input: Slice['input']) => (s.ledPart ? setLedPart(s.ledPart, { input }) : setSlice(s.id, { input }))
+  /** Retângulo na saída (0..1) → posição e tamanho da parte em pixels da processadora. */
+  const setLedRect = (s: Slice, r: { x: number; y: number; w: number; h: number }) => {
+    if (!s.ledPart) return
+    setLedPart(s.ledPart, { x: Math.round(r.x * pxW), y: Math.round(r.y * pxH), w: Math.max(1, Math.round(r.w * pxW)), h: Math.max(1, Math.round(r.h * pxH)) })
+  }
+  const bbox = (s: Slice) => {
+    const c = sliceCorners(s), xs = c.map((p) => p.x), ys = c.map((p) => p.y)
+    const x = Math.min(...xs), y = Math.min(...ys)
+    return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }
+  }
 
   // de onde cada slice ou parte do LED pega a imagem
   const sources: SourceOption[] = [
@@ -354,7 +372,6 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
                     <rect x={r.x * W} y={r.y * inH} width={r.w * W} height={r.h * inH}
                       onPointerDown={(e) => {
                         select({ kind: 'slice', id: s.id })
-                        if (s.ledPart) return
                         const start = { ...r }
                         drag.begin(e, inSvg.current, (d, _, ev) => {
                           let x = clamp01(Math.min(start.x + d.x, 1 - start.w)), y = clamp01(Math.min(start.y + d.y, 1 - start.h))
@@ -366,11 +383,11 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
                             if (a !== null) x = a; else if (b !== null) x = b - start.w
                             if (c !== null) y = c; else if (dd !== null) y = dd - start.h
                           }
-                          setSlice(s.id, { input: { ...start, x, y } })
+                          setInput(s, { ...start, x, y })
                         })
                       }} />
                     <text x={r.x * W + 8} y={r.y * inH + 22}>{s.name}{s.source ? ` (${sourceName(s.source)})` : ''}</text>
-                    {active && !s.ledPart && [[0, 0], [1, 0], [0, 1], [1, 1]].map(([cx, cy]) => (
+                    {active && [[0, 0], [1, 0], [0, 1], [1, 1]].map(([cx, cy]) => (
                       <circle key={`${cx}${cy}`} className="handle" r={9} cx={(r.x + cx * r.w) * W} cy={(r.y + cy * r.h) * inH}
                         onPointerDown={(e) => {
                           const start = { ...r }
@@ -384,7 +401,7 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
                               py = snapValue(py, ys, SNAP / inH) ?? py
                               setSnapHint({ where: 'in', p: { x: px, y: py } })
                             }
-                            setSlice(s.id, { input: { x: Math.min(ox, px), y: Math.min(oy, py), w: Math.max(0.01, Math.abs(px - ox)), h: Math.max(0.01, Math.abs(py - oy)) } })
+                            setInput(s, { x: Math.min(ox, px), y: Math.min(oy, py), w: Math.max(0.01, Math.abs(px - ox)), h: Math.max(0.01, Math.abs(py - oy)) })
                           })
                         }} />
                     ))}
@@ -407,7 +424,15 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
                     <path className="fill" d={path(warpOutline(s), outH)}
                       onPointerDown={(e) => {
                         select({ kind: 'slice', id: s.id })
-                        if (s.ledPart) return
+                        if (s.ledPart) {
+                          // parte do LED: arrasta o retângulo inteiro (a posição em pixels acompanha)
+                          const b0 = bbox(s), corners = sliceCorners(s)
+                          drag.begin(e, outSvg.current, (d, _, ev) => {
+                            const snap = snapOutShape(corners.map((c) => ({ x: c.x + d.x, y: c.y + d.y })), s.id, ev)
+                            setLedRect(s, { ...b0, x: b0.x + d.x + snap.x, y: b0.y + d.y + snap.y })
+                          })
+                          return
+                        }
                         const start = s.points
                         const corners = sliceCorners(s)
                         drag.begin(e, outSvg.current, (d, _, ev) => {
@@ -419,6 +444,20 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
                       <polyline key={i} className="wire" points={line.map((p) => `${p.x * W},${p.y * outH}`).join(' ')} />
                     ))}
                     <text x={sliceCorners(s).reduce((a, p) => Math.min(a, p.x), 1) * W + 8} y={sliceCorners(s).reduce((a, p) => Math.min(a, p.y), 1) * outH + 22}>{s.name}</text>
+                    {active && s.ledPart && (() => {
+                      // parte do LED: os 4 cantos mudam o tamanho, mantendo o canto oposto parado
+                      const b0 = bbox(s)
+                      return [[0, 0], [1, 0], [0, 1], [1, 1]].map(([cx, cy]) => (
+                        <circle key={`led${cx}${cy}`} className="handle" r={10} cx={(b0.x + cx * b0.w) * W} cy={(b0.y + cy * b0.h) * outH}
+                          onPointerDown={(e) => {
+                            const ox = b0.x + (1 - cx) * b0.w, oy = b0.y + (1 - cy) * b0.h
+                            drag.begin(e, outSvg.current, (_, np, ev) => {
+                              const p = snapOut(np, s.id, ev)
+                              setLedRect(s, { x: Math.min(ox, p.x), y: Math.min(oy, p.y), w: Math.max(0.002, Math.abs(p.x - ox)), h: Math.max(0.002, Math.abs(p.y - oy)) })
+                            })
+                          }} />
+                      ))
+                    })()}
                     {active && !s.ledPart && s.points.map((p, i) => (
                       <circle key={i} className={`handle ${point === i ? 'picked' : ''}`} r={10} cx={p.x * W} cy={p.y * outH}
                         onPointerDown={(e) => {
@@ -463,7 +502,10 @@ export function MappingEditor({ mapping, onChange, displays, preview, testCard, 
           {slice && (
             <>
               <h2>Slice</h2>
-              {slice.ledPart && <p className="warn-text">Slice do painel de LED: posição, entrada e imagem vêm do mapa de painéis acima.</p>}
+              {slice.ledPart && <p className="warn-text">Parte do painel de LED: arraste e redimensione na Entrada e na Saída, ou digite no mapa de painéis acima; os dois lados ficam sempre iguais.</p>}
+              {slice.ledPart && screen.led?.parts.find((p) => p.id === slice.ledPart)?.input && (
+                <button className="small" onClick={() => setLedPart(slice.ledPart!, { input: null })} title="Volta a pegar a imagem inteira da fonte, sem distorcer">Entrada automática</button>
+              )}
               <input className="name" value={slice.name} disabled={!!slice.ledPart} onChange={(e) => setSlice(slice.id, { name: e.target.value })} />
               <label className="check">
                 <input type="checkbox" checked={slice.enabled} onChange={(e) => setSlice(slice.id, { enabled: e.target.checked })} /> Ativo

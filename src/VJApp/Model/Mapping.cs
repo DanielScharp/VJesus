@@ -124,6 +124,8 @@ sealed class LedPart
     public float MapY { get; set; }
     public int Rotation { get; set; }
     public string? Source { get; set; }
+    /// <summary>Recorte da imagem escolhido à mão na Entrada (null = automático, preenchendo a parte sem distorcer).</summary>
+    public Rect01? Input { get; set; }
 }
 
 sealed class MappingSetup

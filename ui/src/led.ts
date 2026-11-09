@@ -45,7 +45,7 @@ export function ledSlices(led: LedWall, outW: number, outH: number): Slice[] {
   const whole = coverRect(b.w / b.h)
   return led.parts.map((p) => {
     const ps = physSize(p)
-    const input = led.layout === 'unido'
+    const input = p.input ? { ...p.input } : led.layout === 'unido'
       ? { x: whole.x + ((p.mapX - b.x) / b.w) * whole.w, y: whole.y + ((p.mapY - b.y) / b.h) * whole.h, w: (ps.w / b.w) * whole.w, h: (ps.h / b.h) * whole.h }
       : coverRect(ps.w / ps.h)
     return {

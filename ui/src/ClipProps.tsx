@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { send, type Clip, type ClipNext, type ClipProps, type Composition, type EffectDef, type EffectInstance, type LayerPlayback } from './bridge'
+import { BLEND_MODES, send, type BlendMode, type Clip, type ClipNext, type ClipProps, type Composition, type EffectDef, type EffectInstance, type LayerPlayback } from './bridge'
+import { BLEND_LABELS } from './ClipGrid'
 import { EffectsPanel } from './EffectsPanel'
-import { CornerControls, RotationControl } from './ShapeControls'
+import { CornerControls } from './ShapeControls'
 
 export const DEFAULT_PROPS: ClipProps = { speed: 1, fit: 'encaixar', zoom: 1, offsetX: 0, offsetY: 0, volume: 1, end: 'repetir', rotation: 0, width: 1, height: 1, radius: [0, 0, 0, 0], effects: [] }
 
@@ -139,7 +140,7 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
 
   // imagem parada (png, jpg...) também é do tipo vídeo, mas não tem tempo: sem linha do tempo nem "no fim"
   const isVideo = clip.kind === 'video' && !/\.(png|jpe?g|bmp|webp|gif|tiff?)$/i.test(clip.path ?? '')
-  const hasPicture = clip.kind === 'video' || clip.kind === 'camera' || clip.kind === 'spout' || clip.kind === 'ndi'
+  const hasPicture = clip.kind === 'video' || clip.kind === 'camera' || clip.kind === 'spout' || clip.kind === 'ndi' || clip.kind === 'web' || clip.kind === 'screen'
   const update = (patch: Partial<ClipProps>, newName = name) => {
     const next = { ...p, ...patch }
     setP(next)
@@ -204,15 +205,11 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
                     <button key={v} className={`small ${p.fit === v ? 'active' : ''}`} onClick={() => update({ fit: v })}>{l}</button>
                   ))}
                 </div>
-                {slider('Escala', 'zoom', 0.1, 4, 0.01, (v) => Math.round(v * 100) + '%')}
-                {slider('Largura', 'width', 0.05, 3, 0.01, (v) => Math.round(v * 100) + '%')}
-                {slider('Altura', 'height', 0.05, 3, 0.01, (v) => Math.round(v * 100) + '%')}
-                {slider('Posição horizontal', 'offsetX', -1, 1, 0.005, (v) => (v * 50).toFixed(0) + '%')}
-                {slider('Posição vertical', 'offsetY', -1, 1, 0.005, (v) => (v * 50).toFixed(0) + '%')}
-                <RotationControl value={p.rotation ?? 0} onChange={(v) => update({ rotation: v })} />
+                <TransformSection p={p} clip={clip} update={update} />
+                <h4 className="xform-h">Cantos arredondados</h4>
                 <CornerControls radius={p.radius ?? [0, 0, 0, 0]} onChange={(r) => update({ radius: r })} />
                 <div className="row chips">
-                  <button className="small" onClick={() => update({ zoom: 1, offsetX: 0, offsetY: 0, width: 1, height: 1, rotation: 0, radius: [0, 0, 0, 0] })}>Voltar ao normal</button>
+                  <button className="small" onClick={() => update({ zoom: 1, offsetX: 0, offsetY: 0, width: 1, height: 1, rotation: 0, radius: [0, 0, 0, 0], opacity: 1, blendMode: null, rotationX: 0, rotationY: 0, anchorX: 0, anchorY: 0 })}>Voltar ao normal</button>
                 </div>
               </>
             )}
@@ -224,5 +221,93 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
         </div>
       </div>
     </section>
+  )
+}
+
+const COMP_W = 1920, COMP_H = 1080
+
+/** Campo numérico com − e + (como no Resolume); Shift no botão anda 10 vezes mais. */
+function Num({ label, value, step = 1, min, max, unit, onChange, title }: {
+  label: string; value: number; step?: number; min?: number; max?: number; unit?: string; onChange: (v: number) => void; title?: string
+}) {
+  const [text, setText] = useState<string | null>(null)
+  const clampV = (v: number) => Math.min(max ?? Infinity, Math.max(min ?? -Infinity, v))
+  const shown = Math.round(value * 100) / 100
+  const commit = () => { if (text !== null) { const v = parseFloat(text.replace(',', '.')); if (isFinite(v)) onChange(clampV(v)); setText(null) } }
+  return (
+    <div className="num-field" title={title}>
+      <span>{label}</span>
+      <input inputMode="decimal" value={text ?? String(shown).replace('.', ',')} onFocus={(e) => { setText(String(shown)); e.target.select() }}
+        onChange={(e) => setText(e.target.value)} onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setText(null) }} />
+      {unit && <em>{unit}</em>}
+      <button className="small" onClick={(e) => onChange(clampV(value - step * (e.shiftKey ? 10 : 1)))}>−</button>
+      <button className="small" onClick={(e) => onChange(clampV(value + step * (e.shiftKey ? 10 : 1)))}>+</button>
+    </div>
+  )
+}
+
+/**
+ * Transformação do clip no estilo do Resolume: opacidade, mistura, largura e altura em pixels, posição em pixels,
+ * escala (geral, largura, altura), giro X/Y/Z e âncora. Tudo em cima dos mesmos ajustes salvos do clip.
+ */
+function TransformSection({ p, clip, update }: { p: ClipProps; clip: Clip; update: (patch: Partial<ClipProps>) => void }) {
+  const zoom = p.zoom ?? 1, sw = p.width ?? 1, sh = p.height ?? 1
+  // tamanho do clip na composição com 100%: depende do encaixe e do tamanho original
+  const srcW = clip.sourceWidth ?? 0, srcH = clip.sourceHeight ?? 0
+  const nat = srcW > 0 && srcH > 0
+    ? p.fit === 'esticar' ? { w: COMP_W, h: COMP_H }
+      : (() => { const s = p.fit === 'preencher' ? Math.max(COMP_W / srcW, COMP_H / srcH) : Math.min(COMP_W / srcW, COMP_H / srcH); return { w: srcW * s, h: srcH * s } })()
+    : null
+  const pct = (v: number) => Math.round(v * 1000) / 10
+  return (
+    <div className="xform">
+      <div className="xform-row">
+        <label>Opacidade <output>{Math.round((p.opacity ?? 1) * 100)}%</output>
+          <input type="range" min={0} max={1} step={0.01} value={p.opacity ?? 1} onChange={(e) => update({ opacity: Number(e.target.value) })} />
+        </label>
+        <label>Mistura <output />
+          <select value={p.blendMode ?? ''} onChange={(e) => update({ blendMode: (e.target.value || null) as BlendMode | null })}>
+            <option value="">Da layer</option>
+            {BLEND_MODES.map((b) => <option key={b} value={b}>{BLEND_LABELS[b] ?? b}</option>)}
+          </select>
+        </label>
+      </div>
+
+      <h4>Tamanho {nat && <span className="meta">· original {srcW}×{srcH}</span>}</h4>
+      {nat ? (
+        <div className="num-grid">
+          <Num label="Largura" unit="px" value={nat.w * zoom * sw} min={1} onChange={(v) => update({ width: v / (nat.w * zoom) })} />
+          <Num label="Altura" unit="px" value={nat.h * zoom * sh} min={1} onChange={(v) => update({ height: v / (nat.h * zoom) })} />
+        </div>
+      ) : <p className="meta">Largura e altura em pixels aparecem depois que o clip tocar uma vez.</p>}
+      <div className="num-grid">
+        <Num label="Escala" unit="%" value={pct(zoom)} step={1} min={1} onChange={(v) => update({ zoom: v / 100 })} />
+        <Num label="Escala L" unit="%" value={pct(sw)} step={1} min={1} onChange={(v) => update({ width: v / 100 })} title="Largura (só na horizontal)" />
+        <Num label="Escala A" unit="%" value={pct(sh)} step={1} min={1} onChange={(v) => update({ height: v / 100 })} title="Altura (só na vertical)" />
+      </div>
+
+      <h4>Posição</h4>
+      <div className="num-grid">
+        <Num label="X" unit="px" value={(p.offsetX ?? 0) * COMP_W / 2} onChange={(v) => update({ offsetX: v / (COMP_W / 2) })} title="0 = centro; positivo = para a direita" />
+        <Num label="Y" unit="px" value={-(p.offsetY ?? 0) * COMP_H / 2} onChange={(v) => update({ offsetY: -v / (COMP_H / 2) })} title="0 = centro; positivo = para baixo" />
+      </div>
+
+      <h4>Rotação</h4>
+      <div className="num-grid">
+        <Num label="X" unit="°" value={p.rotationX ?? 0} min={-89} max={89} onChange={(v) => update({ rotationX: v })} title="Inclina para frente e para trás (com perspectiva)" />
+        <Num label="Y" unit="°" value={p.rotationY ?? 0} min={-89} max={89} onChange={(v) => update({ rotationY: v })} title="Vira para os lados (com perspectiva)" />
+        <Num label="Z" unit="°" value={p.rotation ?? 0} min={-360} max={360} onChange={(v) => update({ rotation: v })} title="Gira no plano da tela" />
+      </div>
+      <input className="xform-slider" type="range" min={-89} max={89} step={0.5} value={p.rotationX ?? 0} title="Rotação X" onChange={(e) => update({ rotationX: Number(e.target.value) })} />
+      <input className="xform-slider" type="range" min={-89} max={89} step={0.5} value={p.rotationY ?? 0} title="Rotação Y" onChange={(e) => update({ rotationY: Number(e.target.value) })} />
+      <input className="xform-slider" type="range" min={-180} max={180} step={0.5} value={p.rotation ?? 0} title="Rotação Z" onChange={(e) => update({ rotation: Number(e.target.value) })} />
+
+      <h4>Âncora <span className="meta">· ponto em volta do qual o clip gira e cresce (a partir do centro dele)</span></h4>
+      <div className="num-grid">
+        <Num label="X" unit="px" value={p.anchorX ?? 0} onChange={(v) => update({ anchorX: v })} />
+        <Num label="Y" unit="px" value={p.anchorY ?? 0} onChange={(v) => update({ anchorY: v })} />
+      </div>
+    </div>
   )
 }

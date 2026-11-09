@@ -6,12 +6,13 @@ export type ClipKind = 'video' | 'plasma' | 'testCard' | 'camera' | 'spout' | 'l
 export type PresentationState = { layer: number; layerName: string; name: string; slide: number; count: number; slides: number; labels: string[]; current: string; images: string[] }
 export type LiveSources = { cameras: string[]; spout: string[]; ndi?: string[]; ndiAvailable?: boolean }
 export type GeneratorSettings = { type: string; speed: number; intensity: number; scale: number; detail: number; angle: number; colors: string[] }
-export type ClipProps = { speed: number; fit: 'encaixar' | 'preencher' | 'esticar'; zoom: number; offsetX: number; offsetY: number; volume: number; end: 'repetir' | 'parar' | 'seguir'; next?: ClipNext | null; inPoint?: number; outPoint?: number; rotation?: number; width?: number; height?: number; radius?: number[]; effects: EffectInstance[] }
+export type ClipProps = { speed: number; fit: 'encaixar' | 'preencher' | 'esticar'; zoom: number; offsetX: number; offsetY: number; volume: number; end: 'repetir' | 'parar' | 'seguir'; next?: ClipNext | null; inPoint?: number; outPoint?: number; rotation?: number; width?: number; height?: number; radius?: number[]; effects: EffectInstance[]
+  opacity?: number; blendMode?: BlendMode | null; rotationX?: number; rotationY?: number; anchorX?: number; anchorY?: number }
 /** O que entra quando o vídeo acaba: outro clip (aba, layer, coluna), a próxima coluna ou limpar a layer. */
 export type ClipNext = { action: 'clip' | 'proxima' | 'limpar'; deckId?: string | null; layer: number; column: number }
 /** Posição, tamanho, giro e cantos (px: ↖ ↗ ↘ ↙) da layer inteira. */
 export type LayerTransform = { x: number; y: number; scale: number; width: number; height: number; rotation: number; radius: number[] }
-export type Clip = { kind: ClipKind; path: string | null; name: string; captureSize?: string | null; captureFps?: number | null; gen?: GeneratorSettings | null; props?: ClipProps | null; duration?: number | null }
+export type Clip = { kind: ClipKind; path: string | null; name: string; captureSize?: string | null; captureFps?: number | null; gen?: GeneratorSettings | null; props?: ClipProps | null; duration?: number | null; sourceWidth?: number | null; sourceHeight?: number | null }
 
 export const BLEND_MODES = ['normal', 'add', 'multiply', 'screen', 'overlay', 'difference', 'lighten', 'darken', 'subtract', 'exclusion', 'hardLight', 'softLight', 'colorDodge', 'colorBurn', 'linearLight', 'divide', 'hue', 'saturation', 'color', 'luminosity'] as const
 export type BlendMode = (typeof BLEND_MODES)[number]
@@ -71,7 +72,9 @@ export type Slice = {
 export type Mask = { id: string; name: string; enabled: boolean; points: Pt[] }
 export type OutputScreen = { id: string; name: string; display: number; fullscreen: boolean; slices: Slice[]; masks: Mask[]; led?: LedWall | null }
 export type LayerGroup = { id: string; name: string; layers: number[] }
-export type LedPart = { id: string; name: string; x: number; y: number; w: number; h: number; mapX: number; mapY: number; rotation: number; source: string | null }
+export type LedPart = { id: string; name: string; x: number; y: number; w: number; h: number; mapX: number; mapY: number; rotation: number; source: string | null
+  /** recorte escolhido à mão na Entrada (null = automático) */
+  input?: { x: number; y: number; w: number; h: number } | null }
 export type LedWall = { layout: 'separado' | 'unido'; source: string | null; parts: LedPart[] }
 export type MappingSetup = { screens: OutputScreen[]; groups?: LayerGroup[] }
 

@@ -137,7 +137,13 @@ sealed record Shape(float X, float Y, float ScaleX, float ScaleY, float Rotation
 }
 
 /// <summary>Ajuste de tela de um clip (encaixe, zoom, posição e forma) num instante.</summary>
-sealed record ClipLook(int Fit, float Zoom, float OffsetX, float OffsetY, Shape Shape);
+sealed record ClipLook(int Fit, float Zoom, float OffsetX, float OffsetY, Shape Shape, ClipExtra Extra);
+
+/// <summary>Opacidade, giro 3D e âncora do clip.</summary>
+sealed record ClipExtra(float Opacity, float RotationX, float RotationY, float AnchorX, float AnchorY)
+{
+    public static readonly ClipExtra Identity = new(1, 0, 0, 0, 0);
+}
 
 /// <summary>Estado de uma layer do lado do motor.</summary>
 sealed class LayerSlot
@@ -169,6 +175,9 @@ sealed class LayerSlot
     public volatile EffectRun[] ClipEffects = [];
     /// <summary>Giro, largura/altura e cantos do clip tocando; e a forma da layer inteira.</summary>
     public volatile Shape ClipShape = Shape.Identity;
+    public volatile ClipExtra ClipExtra = ClipExtra.Identity;
+    /// <summary>Mistura do clip tocando (-1 = a da layer).</summary>
+    public volatile int ClipBlend = -1;
     public volatile Shape LayerShape = Shape.Identity;
 
     // troca de fonte pedida pela UI, adotada pelo render thread
