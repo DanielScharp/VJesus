@@ -17,7 +17,10 @@ static class AppInfo
     /// </summary>
     public static Task<Microsoft.Web.WebView2.Core.CoreWebView2Environment> WebViewEnvironment() =>
         _webEnv ??= Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null,
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), Name, "WebView2"));
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), Name, "WebView2"),
+            // a animação de letra roda numa janela fora da tela: sem isto o navegador a "pausa" por não estar visível
+            new Microsoft.Web.WebView2.Core.CoreWebView2EnvironmentOptions(
+                "--disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling"));
 
     /// <summary>%AppData%\VJesus: composição, mapeamento, letras, Bíblias, fontes, atalhos…</summary>
     public static string DataDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Name);

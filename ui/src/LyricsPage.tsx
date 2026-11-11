@@ -6,6 +6,7 @@ import { matches } from './shortcuts'
 import { FontsBox } from './FontsBox'
 import { OnlineLyrics } from './OnlineLyrics'
 import { SlidePreview } from './SlidePreview'
+import { KineticEditor } from './KineticEditor'
 
 type Props = {
   songs: Song[]
@@ -35,6 +36,7 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
   const [editingSlide, setEditingSlide] = useState<number | null>(null)
   const [quickText, setQuickText] = useState('')
   const [webOpen, setWebOpen] = useState(false)
+  const [kineticOpen, setKineticOpen] = useState(false)
   // desfazer a última reorganização de slides (por música)
   const [undo, setUndo] = useState<{ id: string; text: string } | null>(null)
   const [gridLayer, setGridLayer] = useState(3)
@@ -176,6 +178,18 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
               </select>
               <span className="meta">vale para todos os slides; cada slide pode ter a sua (✎)</span>
             </div>
+            <div className={`song-kinetic ${song.kinetic?.enabled ? 'on' : ''}`}>
+              <span>✨ Animação de letra:</span>
+              {song.kinetic ? (
+                <label className="row" title="Ligada: cada slide entra animado (tipografia cinética) quando você passa para ele">
+                  <input type="checkbox" checked={song.kinetic.enabled} onChange={(e) => saveSong({ ...song, kinetic: { ...song.kinetic!, enabled: e.target.checked } })} />
+                  {song.kinetic.enabled ? 'ligada' : 'desligada'}
+                </label>
+              ) : <span className="meta">desligada</span>}
+              <button className="small" onClick={() => setKineticOpen(true)}>{song.kinetic ? 'Editar animação…' : 'Criar animação…'}</button>
+              <span className="meta">cada slide entra com efeito, fonte e cores próprios, no estilo clipe de letra</span>
+            </div>
+            {kineticOpen && <KineticEditor song={song} fonts={fonts} onClose={() => setKineticOpen(false)} onSave={(k) => saveSong({ ...song, kinetic: k })} />}
             <div className="slide-tools">
               <span>Organizar slides:</span>
               {[1, 2, 3, 4].map((n) => (

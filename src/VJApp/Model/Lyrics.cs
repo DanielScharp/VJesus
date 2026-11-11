@@ -21,6 +21,11 @@ sealed class Song
     public string Text { get; set; } = "";
     /// <summary>Cena aplicada à música inteira (null = estilo padrão).</summary>
     public string? SceneId { get; set; }
+    /// <summary>
+    /// Animação de letra (tipografia cinética): { enabled, transparent, styles: [estilo de cada slide] }.
+    /// Guardado como veio da interface; quem desenha é a página da animação.
+    /// </summary>
+    public System.Text.Json.Nodes.JsonNode? Kinetic { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
 }
 

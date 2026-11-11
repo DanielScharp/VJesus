@@ -179,6 +179,7 @@ sealed partial class MainForm : Form
                 SendLyricsLibrary();
                 SendLyricsState();
                 SendFonts();
+                WarmUpKinetic();
                 SendStage();
                 SendAttacks();
                 SendOverlay();
@@ -201,7 +202,6 @@ sealed partial class MainForm : Form
             case var carouselType when carouselType?.StartsWith("carousel") == true: OnCarouselMessage(carouselType, msg); break;
             case "ledTest": OnLedTestMessage(msg); break;
             case var hrType when hrType?.StartsWith("holyrics") == true: OnHolyricsMessage(hrType, msg); break;
-            case var kinType when kinType?.StartsWith("kinetic") == true: OnKineticMessage(kinType, msg); break;
             case var checkType when checkType?.StartsWith("check") == true: OnCheckMessage(checkType, msg); break;
             case var libType when libType?.StartsWith("library") == true: OnLibraryMessage(libType, msg); break;
             case var panicType when panicType?.StartsWith("panic") == true: OnPanicMessage(panicType, msg); break;

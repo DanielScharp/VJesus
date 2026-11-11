@@ -46,6 +46,9 @@ sealed class LyricsFeed
     const int Bytes = Width * Height * 4;
 
     readonly object _lock = new();
+
+    /// <summary>Animação de letra ao vivo (tipografia cinética): enquanto estiver ligada, a layer mostra ela no lugar dos slides.</summary>
+    public volatile ILiveSource? Kinetic;
     LyricsFrame _frame = EmptyFrame("fade", 0.3f);
     int _version;
     int _renderSeq;

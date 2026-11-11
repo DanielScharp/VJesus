@@ -257,7 +257,7 @@ function App() {
           {comp ? (
             <ClipGrid comp={comp} thumbs={thumbs} playback={playback} onLayerChange={changeLayer}
               selected={target} onSelect={setTarget} live={live}
-              library={library} onToggleEffect={toggleEffect} carousels={carousels} displays={displays} fonts={fonts} />
+              library={library} onToggleEffect={toggleEffect} carousels={carousels} displays={displays} />
           ) : (
             <div className="meta">Conectando ao motor…</div>
           )}

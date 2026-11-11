@@ -162,6 +162,30 @@ partial class Renderer
         }
 
         var ctx = _ctx!;
+        if (feed.Kinetic is { } kinetic)
+        {
+            // animação de letra ao vivo: a imagem inteira vem da página que desenha a animação
+            foreach (var old in gpu.Leaving) old.Dispose();
+            gpu.Leaving.Clear();
+            kinetic.Update(_device!, ctx);
+            if (kinetic.Srv == null) return;
+            ctx.PSSetShaderResource(0, null!);
+            ctx.OMSetRenderTargets(target);
+            ctx.RSSetViewport(new Viewport(LyricsFeed.Width, LyricsFeed.Height));
+            ctx.OMSetBlendState(_alphaBlend);
+            SetFrameParams(LyricsFeed.Width, LyricsFeed.Height, time);
+            ctx.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
+            ctx.VSSetShader(_vsSprite);
+            ctx.PSSetShader(_psSprite);
+            ctx.VSSetConstantBuffer(0, _frameCb);
+            ctx.VSSetConstantBuffer(4, _spriteCb);
+            ctx.PSSetConstantBuffer(4, _spriteCb);
+            ctx.PSSetSampler(0, _sampler);
+            DrawSprite(kinetic.Srv, new RectangleF(0, 0, LyricsFeed.Width, LyricsFeed.Height), 0, 0, 0, 1, 1, 1);
+            ctx.OMSetBlendState(null);
+            ctx.PSSetShaderResource(0, null!);
+            return;
+        }
         if (gpu.Current is not { Frame.Empty: false } && gpu.Leaving.Count == 0) return; // nada para desenhar
         ctx.PSSetShaderResource(0, null!);
         ctx.OMSetRenderTargets(target);

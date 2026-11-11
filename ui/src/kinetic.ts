@@ -43,7 +43,41 @@ export type KProject = {
   includeAudio?: boolean
 }
 
-export const EFFECTS: { id: KEffect; label: string; hint: string }[] = [
+/** O visual de um slide (sem o texto, que vem do slide da música). */
+export type KStyle = Omit<KScene, 'id' | 'text' | 'duration'>
+
+/** Animação ligada a uma música: um estilo por slide (null = automático). */
+export type SongKinetic = {
+  enabled: boolean
+  /** sem cor de fundo: a animação fica por cima do vídeo da layer de baixo */
+  transparent?: boolean
+  /** desenha em 1280×720 (mais leve para computadores fracos) */
+  light?: boolean
+  styles: (KStyle | null)[]
+}
+
+export const styleOf = (s: KScene): KStyle => {
+  const { id: _i, text: _t, duration: _d, ...rest } = s
+  return rest
+}
+
+/** Texto do slide sem as marcações de formatação (<b>, <cor ...>, {estilo: ...}, [Refrão]). */
+export function plainSlideText(text: string) {
+  return text
+    .replace(/<\/?[a-z0-9]+[^>]*>/gi, '')
+    .split('\n')
+    .filter((l) => !/^\s*(\[[^\]]*\]|\{[^}]*\})\s*$/.test(l))
+    .join('\n')
+    .trim()
+}
+
+/** A cena de um slide: o estilo escolhido (ou o automático) com o texto do slide. */
+export function slideScene(text: string, index: number, style: KStyle | null | undefined): KScene {
+  const auto = autoStyle(plainSlideText(text), index, false)
+  return { ...auto, ...(style ?? {}), id: `slide${index}`, text: plainSlideText(text) }
+}
+
+export const EFFECTS:{ id: KEffect; label: string; hint: string }[] = [
   { id: 'esticar', label: 'Esticar (letras altas)', hint: 'letras grandes e estreitas que crescem e ondulam na altura' },
   { id: 'onda', label: 'Onda com rastro', hint: 'as letras chegam em onda, deixando um rastro' },
   { id: 'eco', label: 'Eco', hint: 'cópias da frase se juntam até formar o texto' },
@@ -116,14 +150,14 @@ function balance(line: string) {
 }
 
 /** Escolhe efeito, fonte e cores para uma frase (variando de uma para a outra). */
-export function autoStyle(text: string, i: number): KScene {
+export function autoStyle(text: string, i: number, allowCounter = true): KScene {
   const words = text.split(/\s+/).filter(Boolean)
   const [bg, color, accent] = PALETTES[i % PALETTES.length]
   const plain = text.replace(/\n/g, ' ')
   let effect: KEffect
   let font = 'Montserrat'
   let bgFx: KBgFx = 'liso'
-  if (/\d/.test(plain)) { effect = 'contador'; font = 'Anton'; bgFx = 'estrelas' }
+  if (allowCounter && /\d/.test(plain)) { effect = 'contador'; font = 'Anton'; bgFx = 'estrelas' }
   else if (words.length <= 2 && plain.length <= 14) { effect = i % 2 ? 'fatias' : 'esticar'; font = 'Anton' }
   else effect = (['onda', 'digitar', 'eco', 'caos', 'subir', 'pular', 'zoom'] as KEffect[])[i % 7]
   if (effect === 'digitar' || effect === 'zoom') bgFx = i % 2 ? 'barras' : 'liso'
@@ -216,6 +250,13 @@ function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
   ctx.fill()
 }
 
+/** Luminância aproximada (0 = preto, 1 = branco). */
+const lum = (hex: string) => {
+  const h = hex.replace('#', '')
+  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h.slice(0, 6), 16)
+  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255
+}
+
 const withAlpha = (hex: string, a: number) => {
   const h = hex.replace('#', '')
   const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h.slice(0, 6), 16)
@@ -243,12 +284,14 @@ export function sceneStart(p: KProject, index: number) {
 }
 
 /** Desenha o quadro do tempo t (segundos) no canvas (qualquer tamanho; o desenho é em 1920×1080). */
-export function drawFrame(ctx: CanvasRenderingContext2D, p: KProject, t: number) {
+export function drawFrame(ctx: CanvasRenderingContext2D, p: KProject, t: number, transparent = false) {
   const cw = ctx.canvas.width, ch = ctx.canvas.height
   ctx.setTransform(cw / KW, 0, 0, ch / KH, 0, 0)
   ctx.globalAlpha = 1
+  if (transparent) ctx.clearRect(0, 0, KW, KH)
   const { index, local } = sceneAt(p, t)
   if (index < 0) {
+    if (transparent) return
     // introdução: o fundo da primeira cena, sem texto
     ctx.fillStyle = p.scenes[0]?.bg ?? '#000'
     ctx.fillRect(0, 0, KW, KH)
@@ -257,7 +300,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, p: KProject, t: number)
   const s = p.scenes[index]
   const TR = 0.45
   const prev = index > 0 ? p.scenes[index - 1] : null
-  if (prev && s.transition !== 'corte' && local < TR) {
+  if (prev && s.transition !== 'corte' && local < TR && !transparent) {
     // o fundo da cena anterior e a nova entrando por cima, recortada pela forma da transição
     ctx.fillStyle = prev.bg
     ctx.fillRect(0, 0, KW, KH)
@@ -278,13 +321,20 @@ export function drawFrame(ctx: CanvasRenderingContext2D, p: KProject, t: number)
     ctx.restore()
     return
   }
-  drawScene(ctx, s, local)
+  drawScene(ctx, s, local, transparent)
 }
 
-function drawScene(ctx: CanvasRenderingContext2D, s: KScene, t: number) {
+function drawScene(ctx: CanvasRenderingContext2D, s: KScene, t: number, transparent = false) {
   const D = Math.max(0.2, s.duration)
-  ctx.fillStyle = s.bg
-  ctx.fillRect(0, 0, KW, KH)
+  if (!transparent) {
+    ctx.fillStyle = s.bg
+    ctx.fillRect(0, 0, KW, KH)
+  } else {
+    // sem fundo: texto escuro sumiria em cima do vídeo; usa a cor clara do par (ou branco)
+    const light = (c: string) => lum(c) >= 0.3
+    const pick = (c: string) => (light(c) ? c : light(s.bg) ? s.bg : '#ffffff')
+    s = { ...s, color: pick(s.color), accent: pick(s.accent) }
+  }
   const text = (s.upper ? s.text.toLocaleUpperCase('pt-BR') : s.text).trim()
   const seed = hashStr(s.id)
   const outDur = Math.min(0.35, D * 0.2)
@@ -368,7 +418,7 @@ function setFont(ctx: CanvasRenderingContext2D, s: KScene, px: number) { ctx.fon
 // ---------------------------------------------------------------- efeitos
 
 function fxStretch(ctx: CanvasRenderingContext2D, s: KScene, text: string, t: number, pOut: number) {
-  const L = layoutFor(s, text, KW * 0.94, KH * 0.72)
+  const L = layoutFor(s, text, KW * 0.94, KH * 0.58)
   setFont(ctx, s, L.size)
   const hold = clamp((t - 0.6) / 0.6) * (1 - pOut)
   for (const line of L.lines) {
@@ -516,7 +566,7 @@ function fxSlices(ctx: CanvasRenderingContext2D, s: KScene, text: string, t: num
 function fxType(ctx: CanvasRenderingContext2D, s: KScene, text: string, t: number, D: number, pOut: number) {
   const L = layoutFor(s, text)
   setFont(ctx, s, L.size)
-  const typeDur = Math.min(L.n * 0.06, D * 0.55)
+  const typeDur = Math.min(L.n * 0.06, D * 0.55, 3)
   const shown = Math.floor(clamp(t / Math.max(0.01, typeDur)) * L.n)
   // saída: apaga de trás para a frente
   const kept = pOut > 0 ? Math.floor(L.n * (1 - pOut)) : shown
@@ -538,7 +588,7 @@ function fxCounter(ctx: CanvasRenderingContext2D, s: KScene, text: string, t: nu
   const digits = first.replace(/[^\d]/g, '')
   if (!digits) return fxWords(ctx, s, text, t, pOut)
   const target = Number(digits)
-  const q = easeOutQuart(clamp(t / Math.max(0.5, D * 0.6)))
+  const q = easeOutQuart(clamp(t / Math.min(2.5, Math.max(0.5, D * 0.6))))
   const value = Math.round(target * q)
   const label = first.replace(/[\d.,]+/, value.toLocaleString('pt-BR'))
   // o número no tamanho do valor final (não muda de tamanho enquanto conta)

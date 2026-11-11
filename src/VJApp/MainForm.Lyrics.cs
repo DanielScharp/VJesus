@@ -158,6 +158,7 @@ sealed partial class MainForm
     void UpdateLyricsOutput(bool quiet = false)
     {
         _lyricsFeed.Show(_blank ? null : _liveText, LiveStyle());
+        UpdateKinetic();
         SendLyricsState();
         if (!_blank && _liveText != null) EnsureLyricsClip(quiet);
     }
@@ -219,6 +220,7 @@ sealed partial class MainForm
     {
         _lyrics.Save(LyricsLibrary.DefaultPath);
         if (sendLibrary) SendLyricsLibrary();
+        WarmUpKinetic();
     }
 
     void SendLyricsLibrary() => Send(new

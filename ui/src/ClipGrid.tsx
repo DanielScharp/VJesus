@@ -1,12 +1,10 @@
 import { MEDIA_MIME } from './MediaLibrary'
-import { useEffect, useState } from 'react'
-import { KineticEditor } from './KineticEditor'
-import type { KProject } from './kinetic'
+import { useState } from 'react'
 import { EffectChips, type ToggleEffect } from './EffectChips'
 import { DEFAULT_GEN, GeneratorPanel, genThumbStyle } from './GeneratorPanel'
 import { ClipPropsPanel, fmtTime } from './ClipProps'
 import { CarouselPanel } from './CarouselPanel'
-import { BLEND_MODES, onMessage, send, sendFiles, type CarouselRun, type EffectDef, type BlendMode, type Clip, type Composition, type GeneratorSettings, type LayerPlayback, type LiveSources, type Display } from './bridge'
+import { BLEND_MODES, send, sendFiles, type CarouselRun, type EffectDef, type BlendMode, type Clip, type Composition, type GeneratorSettings, type LayerPlayback, type LiveSources, type Display } from './bridge'
 
 type Props = {
   carousels: CarouselRun[]
@@ -20,7 +18,6 @@ type Props = {
   live: LiveSources | null
   library: EffectDef[]
   onToggleEffect: ToggleEffect
-  fonts: string[]
 }
 
 type Menu = { layer: number; column: number; x: number; y: number; filled: boolean }
@@ -76,10 +73,7 @@ function ClipThumb({ clip, thumb }: { clip: Clip; thumb?: string }) {
   return <div className={clip.kind === 'plasma' ? 'thumb-plasma' : 'thumb-testcard'} style={clip.kind === 'plasma' ? genThumbStyle(clip.gen) : undefined} />
 }
 
-export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSelect, live, library, onToggleEffect, carousels, displays, fonts }: Props) {
-  const [kinetic, setKinetic] = useState<{ layer: number; column: number; project: KProject | null } | null>(null)
-  // "Editar animação": o projeto salvo ao lado do vídeo chega daqui
-  useEffect(() => onMessage((m) => { if (m.type === 'kineticProject') setKinetic({ layer: m.layer, column: m.column, project: m.project as KProject }) }), [])
+export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSelect, live, library, onToggleEffect, carousels, displays }: Props) {
   const [carouselOpen, setCarouselOpen] = useState(false)
   const [menu, setMenu] = useState<Menu | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
@@ -286,10 +280,6 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
                 <button onClick={pick(() => { send({ type: 'setGenerator', kind: 'plasma', ...cell, gen: DEFAULT_GEN }); setGenEdit({ ...cell, gen: DEFAULT_GEN }) })}>Fundo animado (ajustável)…</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'testCard', ...cell }))}>Gerador: Test card</button>
                 <button onClick={pick(() => send({ type: 'setGenerator', kind: 'lyrics', ...cell }))}>Letras (aba Letras)</button>
-                <button onClick={pick(() => setKinetic({ ...cell, project: null }))} title="Frases animadas no estilo clipe de letra (tipografia cinética), geradas como vídeo">✨ Animação de letra (tipografia cinética)…</button>
-                {current?.path && /[\\/]animacoes[\\/]/i.test(current.path) && (
-                  <button onClick={pick(() => send({ type: 'kineticOpen', ...cell }))}>✏️ Editar esta animação de letra…</button>
-                )}
                 <button onClick={pick(() => {
                   const url = window.prompt('Endereço da página (ex.: youtube.com/..., placar, site da igreja):', current?.kind === 'web' ? current.path ?? '' : 'https://')
                   if (url && url.trim() && url.trim() !== 'https://') send({ type: 'setWeb', ...cell, url: url.trim() })
@@ -348,9 +338,6 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
           muted={!!comp.layers[propsEdit.layer].muted} onMute={(m) => onLayerChange(propsEdit.layer, { muted: m })} comp={comp} />
       )}
 
-      {kinetic && (
-        <KineticEditor key={kinetic.layer + ':' + kinetic.column} layer={kinetic.layer} column={kinetic.column} initial={kinetic.project} fonts={fonts} onClose={() => setKinetic(null)} />
-      )}
       {genEdit && (
         <GeneratorPanel key={genEdit.layer + ':' + genEdit.column} layer={genEdit.layer} column={genEdit.column} initial={genEdit.gen}
           playing={comp.layers[genEdit.layer]?.active === genEdit.column} onClose={() => setGenEdit(null)} />

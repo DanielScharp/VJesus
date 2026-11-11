@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { StageApp } from './StageApp.tsx'
+import { KineticLiveApp } from './KineticLiveApp.tsx'
 import './App.css'
 import './numberEdit'
 
@@ -11,6 +12,6 @@ const isStage = location.hash === '#stage'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isStage ? <StageApp /> : <App />}
+    {isStage ? <StageApp /> : location.hash === '#kinetic' ? <KineticLiveApp /> : <App />}
   </StrictMode>,
 )

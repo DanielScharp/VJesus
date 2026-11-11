@@ -1075,3 +1075,10 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .modal.kin-paste { width: min(640px, 92vw); }
 .kin-paste textarea { width: 100%; box-sizing: border-box; font-family: inherit; font-size: 14px; margin: 8px 0; }
 .kin-paste .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+.song-kinetic { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; font-size: 13px; }
+.song-kinetic label { display: flex; align-items: center; gap: 4px; margin: 0; }
+.song-kinetic.on > span:first-child { color: var(--accent); font-weight: 600; }
+.kin-check { display: flex !important; align-items: center; gap: 5px; margin: 0 !important; font-size: 12px; white-space: nowrap; }
+.kin-all { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 8px; }
+.kin-canvas-wrap.checker { background: repeating-conic-gradient(#2a2a2a 0% 25%, #1a1a1a 0% 50%) 50% / 24px 24px; }

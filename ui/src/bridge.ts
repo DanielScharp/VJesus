@@ -1,3 +1,4 @@
+import type { SongKinetic } from './kinetic'
 // Ponte UI <-> motor C#. Dentro do app usa o WebView2; no navegador comum só registra no console.
 
 export type Display = { index: number; name: string; width: number; height: number; primary: boolean }
@@ -89,7 +90,7 @@ export type ControlInfo = {
 
 export type StreamingInfo = { spout: string | null; ndi: string | null; ndiAvailable: boolean }
 
-export type Song = { id: string; title: string; artist: string; text: string; sceneId?: string | null; updatedAt?: string }
+export type Song = { id: string; title: string; artist: string; text: string; sceneId?: string | null; updatedAt?: string; kinetic?: SongKinetic | null }
 export type LyricScene = { id: string; name: string; style: LyricStyle }
 export type LyricStyle = {
   fontFamily: string; fontSize: number; bold: boolean; italic: boolean; uppercase: boolean; align: 'left' | 'center' | 'right'
@@ -182,8 +183,6 @@ export type PreviewRequest =
   | { kind: 'timer'; seconds: number }
 
 export type EngineMessage =
-  | { type: 'kineticProject'; layer: number; column: number; project: unknown }
-  | { type: 'kineticSaved'; path: string; placed: boolean }
   | { type: 'displays'; list: Display[] }
   | { type: 'stats'; fps: number }
   | { type: 'mapping'; mapping: MappingSetup }
@@ -348,10 +347,8 @@ export type UiMessage =
   | { type: 'serviceAddMedia'; paths: string[]; index?: number }
   | { type: 'previewSize'; width: number }
   | { type: 'blendTest'; mode: 0 | 1 | 2 | 3 }
-  | { type: 'kineticBegin'; id: string; layer: number; column: number; name: string; project: unknown }
-  | { type: 'kineticChunk'; id: string; pos: number; data: string }
-  | { type: 'kineticEnd'; id: string; ok: boolean }
-  | { type: 'kineticOpen'; layer: number; column: number }
+  | { type: 'kineticHello' }
+  | { type: 'kineticFrame'; w: number; h: number }
   | { type: 'panicSet'; settings: PanicState['settings'] }
   | { type: 'performanceSet'; decode: DecodeMode }
   | ({ type: 'previewRender'; id: string } & PreviewRequest)
