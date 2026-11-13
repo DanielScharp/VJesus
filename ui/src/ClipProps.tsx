@@ -140,7 +140,9 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
 
   // imagem parada (png, jpg...) também é do tipo vídeo, mas não tem tempo: sem linha do tempo nem "no fim"
   const isVideo = clip.kind === 'video' && !/\.(png|jpe?g|bmp|webp|gif|tiff?)$/i.test(clip.path ?? '')
-  const hasPicture = clip.kind === 'video' || clip.kind === 'camera' || clip.kind === 'spout' || clip.kind === 'ndi' || clip.kind === 'web' || clip.kind === 'screen'
+  // todo clip com imagem (inclusive Letras, apresentação e fundos) tem posição, escala, giro... próprios
+  const hasPicture = clip.kind !== null
+  const fitMatters = clip.kind !== 'lyrics' && clip.kind !== 'plasma' && clip.kind !== 'testCard'
   const update = (patch: Partial<ClipProps>, newName = name) => {
     const next = { ...p, ...patch }
     setP(next)
@@ -200,11 +202,12 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
             {hasPicture && (
               <>
                 <h3>Na tela</h3>
-                <div className="row chips">
+                {clip.kind === 'lyrics' && <p className="meta">Vale só para este clip Letras: outro clip Letras no grid (em outra layer ou coluna) pode ter posição, escala e giro diferentes.</p>}
+                {fitMatters && <div className="row chips">
                   {([['encaixar', 'Encaixar (inteiro)'], ['preencher', 'Preencher (sem bordas)'], ['esticar', 'Esticar']] as const).map(([v, l]) => (
                     <button key={v} className={`small ${p.fit === v ? 'active' : ''}`} onClick={() => update({ fit: v })}>{l}</button>
                   ))}
-                </div>
+                </div>}
                 <TransformSection p={p} clip={clip} update={update} />
                 <h4 className="xform-h">Cantos arredondados</h4>
                 <CornerControls radius={p.radius ?? [0, 0, 0, 0]} onChange={(r) => update({ radius: r })} />

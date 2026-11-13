@@ -432,17 +432,17 @@ sealed partial class Renderer : IDisposable
             ColorMode = source.Lyrics != null ? 3 : fromPlayer ? (float)p!.Color : 0,
             UvScaleX = fromPlayer ? (float)p!.Width / p.TextureWidth : 1,
             UvScaleY = fromPlayer ? (float)p!.Height / p.TextureHeight : 1,
-            // ajuste do clip (letras ficam sempre no padrão)
-            FitMode = source.Lyrics != null ? 0 : look.Fit,
-            Zoom = source.Lyrics != null ? 1 : look.Zoom,
-            OffsetX = source.Lyrics != null ? 0 : look.OffsetX,
-            OffsetY = source.Lyrics != null ? 0 : look.OffsetY,
+            // ajuste do clip (cada clip Letras do grid pode ter posição, escala e giro próprios) // padrão)
+            FitMode = look.Fit,
+            Zoom = look.Zoom,
+            OffsetX = look.OffsetX,
+            OffsetY = look.OffsetY,
         };
-        var cs = source.Lyrics != null ? Shape.Identity : look.Shape;
+        var cs = look.Shape;
         lp.ClipRotation = cs.Rotation * MathF.PI / 180;
         lp.ClipScaleX = cs.ScaleX;
         lp.ClipScaleY = cs.ScaleY;
-        var ex = source.Lyrics != null ? ClipExtra.Identity : look.Extra;
+        var ex = look.Extra;
         lp.ClipOpacity = Math.Clamp(ex.Opacity, 0, 1);
         lp.ClipRotX = ex.RotationX * MathF.PI / 180;
         lp.ClipRotY = ex.RotationY * MathF.PI / 180;
