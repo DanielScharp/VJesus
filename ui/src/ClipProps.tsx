@@ -148,11 +148,6 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
     setP(next)
     send({ type: 'setClipProps', layer, column, props: { ...next, name: newName } })
   }
-  const slider = (label: string, key: 'speed' | 'zoom' | 'offsetX' | 'offsetY' | 'volume' | 'width' | 'height', min: number, max: number, step: number, fmt: (v: number) => string) => (
-    <label>{label} <output>{fmt(p[key] ?? 1)}</output>
-      <input type="range" min={min} max={max} step={step} value={p[key] ?? 1} onChange={(e) => update({ [key]: Number(e.target.value) })} />
-    </label>
-  )
 
   return (
     <section ref={sectionRef} className="clip-props" onClick={(e) => e.stopPropagation()}>
@@ -178,8 +173,9 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
             )}
             {isVideo && (
               <>
-                <h3>Reprodução</h3>
-                {slider('Velocidade', 'speed', 0.1, 4, 0.05, (v) => v.toFixed(2) + '×')}
+                <PropGroup title="Reprodução">
+                <PropRow label="Velocidade" unit="×" value={p.speed ?? 1} step={0.05} min={0.1} max={4} range={[0.1, 4]} onChange={(v) => update({ speed: Math.round(v * 100) / 100 })} />
+                <PropRow label="Volume" unit="%" value={Math.round((p.volume ?? 1) * 100)} min={0} max={150} range={[0, 150]} onChange={(v) => update({ volume: v / 100 })} />
                 <div className="row chips">
                   {[0.5, 0.75, 1, 1.5, 2].map((v) => (
                     <button key={v} className={`small ${p.speed === v ? 'active' : ''}`} onClick={() => update({ speed: v })}>{v}×</button>
@@ -196,7 +192,7 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
                 {p.end === 'seguir' && comp && (
                   <NextPicker comp={comp} layer={layer} column={column} next={p.next ?? { action: 'clip', layer, column: -1 }} onChange={(next) => update({ next })} />
                 )}
-                {slider('Volume', 'volume', 0, 1.5, 0.01, (v) => Math.round(v * 100) + '%')}
+                </PropGroup>
               </>
             )}
             {hasPicture && (
@@ -209,8 +205,7 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
                   ))}
                 </div>}
                 <TransformSection p={p} clip={clip} update={update} />
-                <h4 className="xform-h">Cantos arredondados</h4>
-                <CornerControls radius={p.radius ?? [0, 0, 0, 0]} onChange={(r) => update({ radius: r })} />
+                <PropGroup title="Cantos arredondados"><CornerControls radius={p.radius ?? [0, 0, 0, 0]} onChange={(r) => update({ radius: r })} /></PropGroup>
                 <div className="row chips">
                   <button className="small" onClick={() => update({ zoom: 1, offsetX: 0, offsetY: 0, width: 1, height: 1, rotation: 0, radius: [0, 0, 0, 0], opacity: 1, blendMode: null, rotationX: 0, rotationY: 0, anchorX: 0, anchorY: 0 })}>Voltar ao normal</button>
                 </div>
@@ -230,29 +225,49 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
 const COMP_W = 1920, COMP_H = 1080
 
 /** Campo numérico com − e + (como no Resolume); Shift no botão anda 10 vezes mais. */
-function Num({ label, value, step = 1, min, max, unit, onChange, title }: {
+/**
+ * Uma linha de propriedade como no Resolume: nome · valor (digitável) · unidade · − + · slider, tudo na mesma linha.
+ * Shift no − / + anda 10 passos. Duplo clique no slider volta ao meio da faixa.
+ */
+function PropRow({ label, value, step = 1, min, max, unit, onChange, title, range }: {
   label: string; value: number; step?: number; min?: number; max?: number; unit?: string; onChange: (v: number) => void; title?: string
+  /** limites do slider (o campo aceita além deles, dentro de min/max) */
+  range: [number, number]
 }) {
   const [text, setText] = useState<string | null>(null)
   const clampV = (v: number) => Math.min(max ?? Infinity, Math.max(min ?? -Infinity, v))
   const shown = Math.round(value * 100) / 100
   const commit = () => { if (text !== null) { const v = parseFloat(text.replace(',', '.')); if (isFinite(v)) onChange(clampV(v)); setText(null) } }
+  const [lo, hi] = range
   return (
-    <div className="num-field" title={title}>
-      <span>{label}</span>
-      <input inputMode="decimal" value={text ?? String(shown).replace('.', ',')} onFocus={(e) => { setText(String(shown)); e.target.select() }}
+    <div className="prop-row" title={title}>
+      <span className="prop-label">{label}</span>
+      <input className="prop-value" inputMode="decimal" value={text ?? String(shown).replace('.', ',')} onFocus={(e) => { setText(String(shown)); e.target.select() }}
         onChange={(e) => setText(e.target.value)} onBlur={commit}
         onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setText(null) }} />
-      {unit && <em>{unit}</em>}
-      <button className="small" onClick={(e) => onChange(clampV(value - step * (e.shiftKey ? 10 : 1)))}>−</button>
-      <button className="small" onClick={(e) => onChange(clampV(value + step * (e.shiftKey ? 10 : 1)))}>+</button>
+      <em className="prop-unit">{unit ?? ''}</em>
+      <button className="small prop-step" title={`− ${step} (Shift: − ${step * 10})`} onClick={(e) => onChange(clampV(value - step * (e.shiftKey ? 10 : 1)))}>−</button>
+      <button className="small prop-step" title={`+ ${step} (Shift: + ${step * 10})`} onClick={(e) => onChange(clampV(value + step * (e.shiftKey ? 10 : 1)))}>+</button>
+      <input className="prop-slider" type="range" min={lo} max={hi} step={(hi - lo) / 1000} value={Math.min(hi, Math.max(lo, value))}
+        onChange={(e) => onChange(clampV(Math.round(Number(e.target.value) * 10) / 10))} onDoubleClick={() => onChange(clampV((lo + hi) / 2))} />
+    </div>
+  )
+}
+
+/** Faixa de grupo (como "Transform" no Resolume), que abre e fecha. */
+function PropGroup({ title, children, extra }: { title: string; children: React.ReactNode; extra?: React.ReactNode }) {
+  const [open, setOpen] = useState(true)
+  return (
+    <div className="prop-group">
+      <button className="prop-group-head" onClick={() => setOpen(!open)}><span className="caret">{open ? '▾' : '▸'}</span> {title} {extra}</button>
+      {open && <div className="prop-group-body">{children}</div>}
     </div>
   )
 }
 
 /**
  * Transformação do clip no estilo do Resolume: opacidade, mistura, largura e altura em pixels, posição em pixels,
- * escala (geral, largura, altura), giro X/Y/Z e âncora. Tudo em cima dos mesmos ajustes salvos do clip.
+ * escala (geral, largura, altura), giro X/Y/Z e âncora. Uma linha por propriedade: valor, − +, slider.
  */
 function TransformSection({ p, clip, update }: { p: ClipProps; clip: Clip; update: (patch: Partial<ClipProps>) => void }) {
   const zoom = p.zoom ?? 1, sw = p.width ?? 1, sh = p.height ?? 1
@@ -265,52 +280,33 @@ function TransformSection({ p, clip, update }: { p: ClipProps; clip: Clip; updat
   const pct = (v: number) => Math.round(v * 1000) / 10
   return (
     <div className="xform">
-      <div className="xform-row">
-        <label>Opacidade <output>{Math.round((p.opacity ?? 1) * 100)}%</output>
-          <input type="range" min={0} max={1} step={0.01} value={p.opacity ?? 1} onChange={(e) => update({ opacity: Number(e.target.value) })} />
-        </label>
-        <label>Mistura <output />
-          <select value={p.blendMode ?? ''} onChange={(e) => update({ blendMode: (e.target.value || null) as BlendMode | null })}>
+      <PropGroup title="Clip">
+        <PropRow label="Opacidade" unit="%" value={Math.round((p.opacity ?? 1) * 100)} min={0} max={100} range={[0, 100]} onChange={(v) => update({ opacity: v / 100 })} />
+        {nat && <>
+          <PropRow label="Largura" unit="px" value={nat.w * zoom * sw} min={1} range={[1, COMP_W * 2]} onChange={(v) => update({ width: v / (nat.w * zoom) })} title={`Tamanho original: ${srcW}×${srcH}`} />
+          <PropRow label="Altura" unit="px" value={nat.h * zoom * sh} min={1} range={[1, COMP_H * 2]} onChange={(v) => update({ height: v / (nat.h * zoom) })} title={`Tamanho original: ${srcW}×${srcH}`} />
+        </>}
+        <div className="prop-row">
+          <span className="prop-label">Mistura</span>
+          <select className="prop-select" value={p.blendMode ?? ''} onChange={(e) => update({ blendMode: (e.target.value || null) as BlendMode | null })}>
             <option value="">Da layer</option>
             {BLEND_MODES.map((b) => <option key={b} value={b}>{BLEND_LABELS[b] ?? b}</option>)}
           </select>
-        </label>
-      </div>
-
-      <h4>Tamanho {nat && <span className="meta">· original {srcW}×{srcH}</span>}</h4>
-      {nat ? (
-        <div className="num-grid">
-          <Num label="Largura" unit="px" value={nat.w * zoom * sw} min={1} onChange={(v) => update({ width: v / (nat.w * zoom) })} />
-          <Num label="Altura" unit="px" value={nat.h * zoom * sh} min={1} onChange={(v) => update({ height: v / (nat.h * zoom) })} />
         </div>
-      ) : <p className="meta">Largura e altura em pixels aparecem depois que o clip tocar uma vez.</p>}
-      <div className="num-grid">
-        <Num label="Escala" unit="%" value={pct(zoom)} step={1} min={1} onChange={(v) => update({ zoom: v / 100 })} />
-        <Num label="Escala L" unit="%" value={pct(sw)} step={1} min={1} onChange={(v) => update({ width: v / 100 })} title="Largura (só na horizontal)" />
-        <Num label="Escala A" unit="%" value={pct(sh)} step={1} min={1} onChange={(v) => update({ height: v / 100 })} title="Altura (só na vertical)" />
-      </div>
+      </PropGroup>
 
-      <h4>Posição</h4>
-      <div className="num-grid">
-        <Num label="X" unit="px" value={(p.offsetX ?? 0) * COMP_W / 2} onChange={(v) => update({ offsetX: v / (COMP_W / 2) })} title="0 = centro; positivo = para a direita" />
-        <Num label="Y" unit="px" value={-(p.offsetY ?? 0) * COMP_H / 2} onChange={(v) => update({ offsetY: -v / (COMP_H / 2) })} title="0 = centro; positivo = para baixo" />
-      </div>
-
-      <h4>Rotação</h4>
-      <div className="num-grid">
-        <Num label="X" unit="°" value={p.rotationX ?? 0} min={-89} max={89} onChange={(v) => update({ rotationX: v })} title="Inclina para frente e para trás (com perspectiva)" />
-        <Num label="Y" unit="°" value={p.rotationY ?? 0} min={-89} max={89} onChange={(v) => update({ rotationY: v })} title="Vira para os lados (com perspectiva)" />
-        <Num label="Z" unit="°" value={p.rotation ?? 0} min={-360} max={360} onChange={(v) => update({ rotation: v })} title="Gira no plano da tela" />
-      </div>
-      <input className="xform-slider" type="range" min={-89} max={89} step={0.5} value={p.rotationX ?? 0} title="Rotação X" onChange={(e) => update({ rotationX: Number(e.target.value) })} />
-      <input className="xform-slider" type="range" min={-89} max={89} step={0.5} value={p.rotationY ?? 0} title="Rotação Y" onChange={(e) => update({ rotationY: Number(e.target.value) })} />
-      <input className="xform-slider" type="range" min={-180} max={180} step={0.5} value={p.rotation ?? 0} title="Rotação Z" onChange={(e) => update({ rotation: Number(e.target.value) })} />
-
-      <h4>Âncora <span className="meta">· ponto em volta do qual o clip gira e cresce (a partir do centro dele)</span></h4>
-      <div className="num-grid">
-        <Num label="X" unit="px" value={p.anchorX ?? 0} onChange={(v) => update({ anchorX: v })} />
-        <Num label="Y" unit="px" value={p.anchorY ?? 0} onChange={(v) => update({ anchorY: v })} />
-      </div>
+      <PropGroup title="Transformar">
+        <PropRow label="Posição X" unit="px" value={(p.offsetX ?? 0) * COMP_W / 2} range={[-COMP_W, COMP_W]} onChange={(v) => update({ offsetX: v / (COMP_W / 2) })} title="0 = centro; positivo = para a direita" />
+        <PropRow label="Posição Y" unit="px" value={-(p.offsetY ?? 0) * COMP_H / 2} range={[-COMP_H, COMP_H]} onChange={(v) => update({ offsetY: -v / (COMP_H / 2) })} title="0 = centro; positivo = para baixo" />
+        <PropRow label="Escala" unit="%" value={pct(zoom)} min={1} range={[1, 400]} onChange={(v) => update({ zoom: v / 100 })} />
+        <PropRow label="Escala L" unit="%" value={pct(sw)} min={1} range={[1, 400]} onChange={(v) => update({ width: v / 100 })} title="Largura (só na horizontal)" />
+        <PropRow label="Escala A" unit="%" value={pct(sh)} min={1} range={[1, 400]} onChange={(v) => update({ height: v / 100 })} title="Altura (só na vertical)" />
+        <PropRow label="Rotação X" unit="°" value={p.rotationX ?? 0} min={-89} max={89} range={[-89, 89]} onChange={(v) => update({ rotationX: v })} title="Inclina para frente e para trás (com perspectiva)" />
+        <PropRow label="Rotação Y" unit="°" value={p.rotationY ?? 0} min={-89} max={89} range={[-89, 89]} onChange={(v) => update({ rotationY: v })} title="Vira para os lados (com perspectiva)" />
+        <PropRow label="Rotação Z" unit="°" value={p.rotation ?? 0} min={-360} max={360} range={[-180, 180]} onChange={(v) => update({ rotation: v })} title="Gira no plano da tela" />
+        <PropRow label="Âncora X" unit="px" value={p.anchorX ?? 0} range={[-COMP_W / 2, COMP_W / 2]} onChange={(v) => update({ anchorX: v })} title="Ponto em volta do qual o clip gira e cresce (a partir do centro dele)" />
+        <PropRow label="Âncora Y" unit="px" value={p.anchorY ?? 0} range={[-COMP_H / 2, COMP_H / 2]} onChange={(v) => update({ anchorY: v })} title="Ponto em volta do qual o clip gira e cresce (a partir do centro dele)" />
+      </PropGroup>
     </div>
   )
 }
