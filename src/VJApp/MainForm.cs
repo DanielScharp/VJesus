@@ -488,7 +488,9 @@ sealed partial class MainForm : Form
     void PlaceFiles(int layer, int column, IEnumerable<string> paths)
     {
         int c = column;
-        foreach (var path in paths)
+        var list = paths.ToList();
+        EnsureColumns(column + list.Count); // mais arquivos que colunas: cria as que faltam
+        foreach (var path in list)
         {
             if (c >= _comp.Columns) break;
             if (IsPresentationFile(path)) { _ = ImportPresentationAsync(layer, c++, path); continue; }

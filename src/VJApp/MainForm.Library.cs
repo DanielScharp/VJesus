@@ -17,6 +17,17 @@ sealed partial class MainForm
         public List<string> Folders { get; set; } = [];
         /// <summary>Tags por arquivo (caminho completo).</summary>
         public Dictionary<string, List<string>> Tags { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Pastas da biblioteca (só para organizar; os arquivos não saem do lugar no disco).</summary>
+        public List<LibraryFolder> Collections { get; set; } = [];
+        /// <summary>Em que pasta da biblioteca cada arquivo está (caminho completo → id da pasta).</summary>
+        public Dictionary<string, string> Placement { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    sealed class LibraryFolder
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString("N")[..10];
+        public string Name { get; set; } = "Pasta";
+        public string? Parent { get; set; }
     }
 
     static string LibraryPath => Path.Combine(AppDataDir, "biblioteca.json");
@@ -34,6 +45,8 @@ sealed partial class MainForm
             if (File.Exists(LibraryPath) && JsonSerializer.Deserialize<LibrarySettings>(File.ReadAllText(LibraryPath)) is { } s)
             {
                 s.Tags = new(s.Tags ?? [], StringComparer.OrdinalIgnoreCase);
+                s.Placement = new(s.Placement ?? [], StringComparer.OrdinalIgnoreCase);
+                s.Collections ??= [];
                 return s;
             }
         }
@@ -79,6 +92,53 @@ sealed partial class MainForm
                 Send(new { type = "libraryTags", path, tags });
                 break;
             }
+            case "libraryFolderNew":
+            {
+                string? parent = (string?)msg["parent"];
+                if (parent != null && _library.Collections.All(c => c.Id != parent)) parent = null;
+                var folder = new LibraryFolder { Name = CleanFolderName((string?)msg["name"]), Parent = parent };
+                _library.Collections.Add(folder);
+                SaveLibrary();
+                SendLibraryCollections(created: folder.Id);
+                break;
+            }
+            case "libraryFolderRename":
+                if (_library.Collections.FirstOrDefault(c => c.Id == (string?)msg["id"]) is { } rf) { rf.Name = CleanFolderName((string?)msg["name"]); SaveLibrary(); SendLibraryCollections(); }
+                break;
+            case "libraryFolderMove":
+            {
+                // pasta dentro de outra (não deixa pôr dentro dela mesma ou de uma filha)
+                if (_library.Collections.FirstOrDefault(c => c.Id == (string?)msg["id"]) is not { } mf) break;
+                string? target = (string?)msg["parent"];
+                for (var p = target; p != null; p = _library.Collections.FirstOrDefault(c => c.Id == p)?.Parent)
+                    if (p == mf.Id) return;
+                mf.Parent = target;
+                SaveLibrary();
+                SendLibraryCollections();
+                break;
+            }
+            case "libraryFolderDelete":
+            {
+                // apaga só a pasta da biblioteca: o que estava nela (arquivos e subpastas) sobe um nível
+                if (_library.Collections.FirstOrDefault(c => c.Id == (string?)msg["id"]) is not { } df) break;
+                foreach (var child in _library.Collections.Where(c => c.Parent == df.Id)) child.Parent = df.Parent;
+                foreach (var k in _library.Placement.Where(p => p.Value == df.Id).Select(p => p.Key).ToList())
+                    if (df.Parent == null) _library.Placement.Remove(k); else _library.Placement[k] = df.Parent;
+                _library.Collections.Remove(df);
+                SaveLibrary();
+                SendLibraryCollections();
+                break;
+            }
+            case "libraryMove":
+            {
+                string? target = (string?)msg["folder"];
+                if (target != null && _library.Collections.All(c => c.Id != target)) break;
+                foreach (var p in (msg["paths"] as JsonArray ?? []).Select(x => (string?)x).Where(x => x != null))
+                    if (target == null) _library.Placement.Remove(p!); else _library.Placement[p!] = target;
+                SaveLibrary();
+                SendLibraryCollections();
+                break;
+            }
             case "libraryThumbs":
                 foreach (var p in (msg["paths"] as JsonArray ?? []).Select(x => (string?)x).Where(x => x != null).Take(60))
                     RequestThumb(p!);
@@ -105,7 +165,7 @@ sealed partial class MainForm
                 var paths = (msg["paths"] as JsonArray ?? []).Select(x => (string?)x).Where(x => x != null && (File.Exists(x) || Directory.Exists(x))).Select(x => x!).ToList();
                 if (layer < 0 || layer >= _comp.Layers.Count || column < 0 || column >= _comp.Columns || paths.Count == 0) return;
                 // apresentação já preparada (pasta de slides): entra como apresentação; arquivo: como se viesse do Explorer
-                var files = new List<string>();
+                EnsureColumns(column + paths.Count);
                 int c = column;
                 foreach (var p in paths)
                 {
@@ -128,6 +188,11 @@ sealed partial class MainForm
             }
         }
     }
+
+    static string CleanFolderName(string? name) => string.IsNullOrWhiteSpace(name) ? "Nova pasta" : name.Trim()[..Math.Min(name.Trim().Length, 60)];
+
+    void SendLibraryCollections(string? created = null) =>
+        Send(new { type = "libraryCollections", collections = _library.Collections, placement = _library.Placement, created });
 
     /// <summary>Nome da apresentação guardada (o arquivo de origem, se anotado; senão, o nome da pasta).</summary>
     static string PresentationName(string folder)
@@ -211,6 +276,8 @@ sealed partial class MainForm
             type = "library",
             scanning = false,
             folders,
+            collections = _library.Collections,
+            placement = _library.Placement,
             items = items.OrderBy(i => i.Name, StringComparer.CurrentCultureIgnoreCase).Select(i => new
             {
                 path = i.Path, name = i.Name, kind = i.Kind, folder = i.Folder, size = i.Size,

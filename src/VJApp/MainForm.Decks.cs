@@ -6,6 +6,19 @@ namespace VJApp;
 /// <summary>Grade de clips: colunas (adicionar/remover) e abas de clips (como os decks do Resolume).</summary>
 sealed partial class MainForm
 {
+    /// <summary>
+    /// Garante pelo menos <paramref name="needed"/> colunas (acrescenta no fim). Usado ao soltar vários
+    /// arquivos de uma vez: o que não cabe ganha colunas novas em vez de ficar de fora.
+    /// </summary>
+    void EnsureColumns(int needed)
+    {
+        needed = Math.Min(needed, 500);
+        if (needed <= _comp.Columns) return;
+        int add = needed - _comp.Columns;
+        foreach (var l in _comp.Layers) l.Clips = [.. l.Clips, .. new Clip?[add]];
+        _comp.Columns = needed;
+    }
+
     void OnGridMessage(string type, JsonNode msg)
     {
         int Int(string key, int def = 0) => (int?)msg[key] ?? def;

@@ -151,6 +151,7 @@ export type OverlaySettings = {
 export type OverlayState = { settings: OverlaySettings; mode: 'off' | 'timer' | 'notices' | 'notice'; noticeId: string | null; targets?: { id: string; name: string }[] }
 export type CheckItem = { level: 'erro' | 'aviso' | 'info' | 'ok'; area: string; title: string; detail?: string | null; fix?: 'relink' | 'searchFolder' | null; fixLabel?: string | null; path?: string | null }
 export type CheckState = { running: boolean; when?: string; errors?: number; warnings?: number; items: CheckItem[] }
+export type LibraryFolder = { id: string; name: string; parent?: string | null }
 export type LibraryItem = { path: string; name: string; kind: 'video' | 'image' | 'presentation' | 'presentationFile'; folder: string; size: number; modified: string; tags: string[]; used: boolean }
 
 export type HolyricsState = { settings: { enabled: boolean; host: string; port: number; token: string }; ok: boolean; status: string }
@@ -229,7 +230,8 @@ export type EngineMessage =
   | ({ type: 'panic' } & PanicState)
   | ({ type: 'holyrics' } & HolyricsState)
   | ({ type: 'check' } & CheckState)
-  | { type: 'library'; scanning: boolean; folders: string[]; items: LibraryItem[] | null }
+  | { type: 'library'; scanning: boolean; folders: string[]; items: LibraryItem[] | null; collections?: LibraryFolder[]; placement?: Record<string, string> }
+  | { type: 'libraryCollections'; collections: LibraryFolder[]; placement: Record<string, string>; created?: string | null }
   | { type: 'libraryPreview'; path: string; frames: string[] }
   | { type: 'libraryTags'; path: string; tags: string[] }
 
@@ -348,6 +350,11 @@ export type UiMessage =
   | { type: 'libraryTags'; path: string; tags: string[] }
   | { type: 'libraryThumbs'; paths: string[] }
   | { type: 'libraryPlace'; layer: number; column: number; paths: string[] }
+  | { type: 'libraryFolderNew'; name: string; parent: string | null }
+  | { type: 'libraryFolderRename'; id: string; name: string }
+  | { type: 'libraryFolderMove'; id: string; parent: string | null }
+  | { type: 'libraryFolderDelete'; id: string }
+  | { type: 'libraryMove'; paths: string[]; folder: string | null }
   | { type: 'serviceAddMedia'; paths: string[]; index?: number }
   | { type: 'previewSize'; width: number }
   | { type: 'blendTest'; mode: 0 | 1 | 2 | 3 }

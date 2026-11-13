@@ -1085,3 +1085,26 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .pres-clicker { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
 .pres-clicker b { color: var(--text); font-weight: 600; }
 .pres-clicker label { display: flex; align-items: center; gap: 5px; margin: 0; }
+
+/* biblioteca: pastas */
+.media-body { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 10px; }
+.media-lib.compact .media-body { grid-template-columns: minmax(0, 1fr); }
+.media-tree { border-right: 1px solid var(--line); padding-right: 8px; max-height: 520px; overflow: auto; display: flex; flex-direction: column; gap: 1px; }
+.media-tree-row { padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px dashed transparent; }
+.media-tree-row:hover { background: var(--btn); }
+.media-tree-row.sel { background: rgba(255, 176, 32, .15); color: var(--accent); }
+.media-tree-row.drop, .media-folder-card.drop { border-color: var(--accent); background: rgba(255, 176, 32, .2); }
+.media-newfolder { margin-top: 6px; align-self: flex-start; }
+.media-tree-hint { font-size: 11px; margin-top: 6px; white-space: normal; }
+.media-main { min-width: 0; }
+.media-crumbs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; font-size: 13px; }
+.media-crumbs .small { margin-left: 6px; }
+.media-rename { width: 160px; }
+.media-selbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 5px 8px; margin-bottom: 6px; border: 1px solid var(--accent); border-radius: 6px; background: rgba(255, 176, 32, .07); font-size: 12px; }
+.media-folder-card { border: 1px dashed var(--line); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; min-height: 90px; text-align: center; min-width: 0; }
+.media-folder-card:hover { border-color: var(--accent); }
+.media-folder-icon { font-size: 30px; line-height: 1; }
+.media-folder-card .media-name { max-width: 100%; padding: 0; }
+.media-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.media-check { position: absolute; right: 4px; bottom: 4px; background: var(--accent); color: #111; border-radius: 50%; width: 18px; height: 18px; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.media-where { font-size: 10px; color: var(--muted); padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
