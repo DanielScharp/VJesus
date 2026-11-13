@@ -60,9 +60,12 @@ function edit(output: HTMLElement) {
   box.inputMode = 'decimal'
   box.className = 'output-edit'
   box.value = shown.replace(/\s*(ms|s|%)$/, '').trim()
-  box.style.width = `${Math.max(44, output.getBoundingClientRect().width + 8)}px`
-  output.style.display = 'none'
-  output.after(box)
+  // a caixa fica por cima do número, presa no <body>: não mexe nos elementos que o React controla
+  // (inserir algo dentro do painel fazia o React se perder e deixar cópias do painel na tela)
+  const r = output.getBoundingClientRect()
+  Object.assign(box.style, { position: 'fixed', left: `${r.left - 4}px`, top: `${r.top + r.height / 2 - 12}px`, height: '24px', zIndex: '1000', width: `${Math.max(56, r.width + 12)}px` })
+  output.style.visibility = 'hidden'
+  document.body.appendChild(box)
   box.focus()
   box.select()
 
@@ -75,7 +78,7 @@ function edit(output: HTMLElement) {
       if (v !== null) setRange(range, v)
     }
     box.remove()
-    output.style.display = ''
+    output.style.visibility = ''
   }
   box.addEventListener('keydown', (e) => {
     e.stopPropagation() // não dispara atalhos (setas, espaço, teclas de ataque) enquanto digita
@@ -89,6 +92,8 @@ function edit(output: HTMLElement) {
     }
   })
   box.addEventListener('blur', () => finish(true))
+  // a caixa é fixa na tela: se a página rolar, confirma e some (senão ficaria fora do lugar)
+  window.addEventListener('scroll', () => finish(true), { once: true, capture: true })
   box.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation() })
 }
 

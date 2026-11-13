@@ -1,5 +1,5 @@
 import { MEDIA_MIME } from './MediaLibrary'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { KineticVideoEditor } from './KineticVideoEditor'
 import type { KProject } from './kinetic'
 import { EffectChips, type ToggleEffect } from './EffectChips'
@@ -87,6 +87,11 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
   const [layerMenu, setLayerMenu] = useState<{ layer: number; x: number; y: number } | null>(null)
   const [genEdit, setGenEdit] = useState<{ layer: number; column: number; gen: GeneratorSettings | null } | null>(null)
   const [propsEdit, setPropsEdit] = useState<{ layer: number; column: number } | null>(null)
+  // um painel de propriedades só: se sobrar alguma cópia antiga na tela (o React perdeu a referência), tira
+  const propsRef = useRef<HTMLElement>(null)
+  useLayoutEffect(() => {
+    document.querySelectorAll('section.clip-props').forEach((el) => { if (el !== propsRef.current) el.remove() })
+  })
   const [deckMenu, setDeckMenu] = useState<{ index: number; x: number; y: number } | null>(null)
   const [renaming, setRenaming] = useState<{ kind: 'deck' | 'layer' | 'column'; index: number } | null>(null)
 
@@ -345,7 +350,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
           layer={propsEdit.layer} column={propsEdit.column} playing={comp.layers[propsEdit.layer].active === propsEdit.column}
           library={library} onClose={() => setPropsEdit(null)}
           pb={comp.layers[propsEdit.layer].active === propsEdit.column ? playback[propsEdit.layer] ?? null : null}
-          muted={!!comp.layers[propsEdit.layer].muted} onMute={(m) => onLayerChange(propsEdit.layer, { muted: m })} comp={comp} />
+          muted={!!comp.layers[propsEdit.layer].muted} onMute={(m) => onLayerChange(propsEdit.layer, { muted: m })} comp={comp} sectionRef={propsRef} />
       )}
 
       {kinetic && (

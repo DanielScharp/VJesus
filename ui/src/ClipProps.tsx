@@ -129,8 +129,8 @@ function NextPicker({ comp, layer, column, next, onChange }: {
   )
 }
 
-export function ClipPropsPanel({ clip, layer, column, playing, library, onClose, pb, muted, onMute, comp }: {
-  clip: Clip; layer: number; column: number; playing: boolean; library: EffectDef[]; onClose: () => void
+export function ClipPropsPanel({ clip, layer, column, playing, library, onClose, pb, muted, onMute, comp, sectionRef }: {
+  clip: Clip; layer: number; column: number; playing: boolean; library: EffectDef[]; onClose: () => void; sectionRef?: React.Ref<HTMLElement>
   pb: LayerPlayback; muted: boolean; onMute: (m: boolean) => void; comp?: Composition
 }) {
   const [p, setP] = useState<ClipProps>({ ...DEFAULT_PROPS, ...(clip.props ?? {}) })
@@ -155,7 +155,7 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
   )
 
   return (
-    <section className="clip-props" onClick={(e) => e.stopPropagation()}>
+    <section ref={sectionRef} className="clip-props" onClick={(e) => e.stopPropagation()}>
       <div>
         <div className="bible-head">
           <h2>Propriedades do clip: <span className="fx-target">{name}</span> <span className="meta">· layer {layer + 1}, coluna {column + 1}{playing ? ' · no ar' : ' · não está tocando'}</span></h2>
