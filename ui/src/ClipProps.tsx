@@ -197,14 +197,8 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
             )}
             {hasPicture && (
               <>
-                <h3>Na tela</h3>
-                {clip.kind === 'lyrics' && <p className="meta">Vale só para este clip Letras: outro clip Letras no grid (em outra layer ou coluna) pode ter posição, escala e giro diferentes.</p>}
-                {fitMatters && <div className="row chips">
-                  {([['encaixar', 'Encaixar (inteiro)'], ['preencher', 'Preencher (sem bordas)'], ['esticar', 'Esticar']] as const).map(([v, l]) => (
-                    <button key={v} className={`small ${p.fit === v ? 'active' : ''}`} onClick={() => update({ fit: v })}>{l}</button>
-                  ))}
-                </div>}
-                <TransformSection p={p} clip={clip} update={update} />
+                {clip.kind === 'lyrics' && <p className="meta prop-note">Vale só para este clip Letras: outro clip Letras no grid (em outra layer ou coluna) pode ter posição, escala e giro diferentes.</p>}
+                <TransformSection p={p} clip={clip} update={update} showFit={fitMatters} />
                 <PropGroup title="Cantos arredondados"><CornerControls radius={p.radius ?? [0, 0, 0, 0]} onChange={(r) => update({ radius: r })} /></PropGroup>
                 <div className="row chips">
                   <button className="small" onClick={() => update({ zoom: 1, offsetX: 0, offsetY: 0, width: 1, height: 1, rotation: 0, radius: [0, 0, 0, 0], opacity: 1, blendMode: null, rotationX: 0, rotationY: 0, anchorX: 0, anchorY: 0 })}>Voltar ao normal</button>
@@ -269,7 +263,7 @@ function PropGroup({ title, children, extra }: { title: string; children: React.
  * Transformação do clip no estilo do Resolume: opacidade, mistura, largura e altura em pixels, posição em pixels,
  * escala (geral, largura, altura), giro X/Y/Z e âncora. Uma linha por propriedade: valor, − +, slider.
  */
-function TransformSection({ p, clip, update }: { p: ClipProps; clip: Clip; update: (patch: Partial<ClipProps>) => void }) {
+function TransformSection({ p, clip, update, showFit }: { p: ClipProps; clip: Clip; update: (patch: Partial<ClipProps>) => void; showFit: boolean }) {
   const zoom = p.zoom ?? 1, sw = p.width ?? 1, sh = p.height ?? 1
   // tamanho do clip na composição com 100%: depende do encaixe e do tamanho original
   const srcW = clip.sourceWidth ?? 0, srcH = clip.sourceHeight ?? 0
@@ -281,6 +275,16 @@ function TransformSection({ p, clip, update }: { p: ClipProps; clip: Clip; updat
   return (
     <div className="xform">
       <PropGroup title="Clip">
+        {showFit && (
+          <div className="prop-row">
+            <span className="prop-label">Encaixe</span>
+            <div className="prop-chips">
+              {([['encaixar', 'Encaixar (inteiro)'], ['preencher', 'Preencher (sem bordas)'], ['esticar', 'Esticar']] as const).map(([v, l]) => (
+                <button key={v} className={`small ${p.fit === v ? 'active' : ''}`} onClick={() => update({ fit: v })}>{l}</button>
+              ))}
+            </div>
+          </div>
+        )}
         <PropRow label="Opacidade" unit="%" value={Math.round((p.opacity ?? 1) * 100)} min={0} max={100} range={[0, 100]} onChange={(v) => update({ opacity: v / 100 })} />
         {nat && <>
           <PropRow label="Largura" unit="px" value={nat.w * zoom * sw} min={1} range={[1, COMP_W * 2]} onChange={(v) => update({ width: v / (nat.w * zoom) })} title={`Tamanho original: ${srcW}×${srcH}`} />
