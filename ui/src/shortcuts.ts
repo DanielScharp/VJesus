@@ -33,6 +33,7 @@ export const ACTIONS: ActionDef[] = [
 
   { id: 'apresentacao.proximo', label: 'Próximo slide da apresentação', hint: 'Passa o slide da apresentação (PowerPoint) que está tocando.', scope: 'clips', defaults: ['ArrowRight', 'PageDown', 'Space'] },
   { id: 'apresentacao.anterior', label: 'Slide anterior da apresentação', hint: 'Volta um slide da apresentação que está tocando.', scope: 'clips', defaults: ['ArrowLeft', 'PageUp'] },
+  { id: 'apresentacao.preto', label: 'Tela preta da apresentação (liga/desliga)', hint: 'Esconde a apresentação; de novo (ou passando o slide) ela volta. É o botão de tela preta do passador de slides.', scope: 'clips', defaults: ['B', '.'] },
 
   { id: 'culto.proximo', label: 'Próximo do roteiro', hint: 'Passa o slide ou o versículo; no fim, entra o próximo item.', scope: 'culto', defaults: ['ArrowRight', 'ArrowDown', 'PageDown', 'Space'] },
   { id: 'culto.anterior', label: 'Anterior do roteiro', hint: 'Volta o slide ou o versículo; no começo, volta ao item anterior.', scope: 'culto', defaults: ['ArrowLeft', 'ArrowUp', 'PageUp'] },

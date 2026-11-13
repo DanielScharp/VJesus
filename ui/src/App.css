@@ -1082,3 +1082,6 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .kin-check { display: flex !important; align-items: center; gap: 5px; margin: 0 !important; font-size: 12px; white-space: nowrap; }
 .kin-all { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 8px; }
 .kin-canvas-wrap.checker { background: repeating-conic-gradient(#2a2a2a 0% 25%, #1a1a1a 0% 50%) 50% / 24px 24px; }
+.pres-clicker { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+.pres-clicker b { color: var(--text); font-weight: 600; }
+.pres-clicker label { display: flex; align-items: center; gap: 5px; margin: 0; }

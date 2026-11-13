@@ -51,6 +51,12 @@ sealed partial class MainForm
             case "presentationGo":
                 PresentationGo(layer, (int?)msg["slide"] ?? 0);
                 break;
+            case "presentationBlack":
+                PresentationBlack(layer);
+                break;
+            case "presentationClicker":
+                SetClickerGlobal((bool?)msg["global"] == true);
+                break;
         }
     }
 
@@ -309,6 +315,7 @@ sealed partial class MainForm
         int current = _presSlide.GetValueOrDefault(layer);
         int next = current + direction;
         if (next < 0 || next >= count) return false;
+        if (_presBlack.Remove(layer)) ApplyLayerParams(layer); // passar o slide tira a tela preta
         if (ShowPresentationSlide(layer, clip, next)) { ApplyClipProps(layer, clip); SendPresentations(); }
         return true;
     }
@@ -317,6 +324,7 @@ sealed partial class MainForm
     {
         layer = PresentationLayer(layer);
         if (layer < 0 || _comp.Layers[layer].PlayingClip is not { } clip) return;
+        if (_presBlack.Remove(layer)) ApplyLayerParams(layer);
         if (ShowPresentationSlide(layer, clip, slide)) { ApplyClipProps(layer, clip); SendPresentations(); }
     }
 
@@ -393,8 +401,11 @@ sealed partial class MainForm
                 labels = labels.Select(x => x.Label),
                 current = current < labels.Count ? labels[current].Long : "",
                 images = slides.Select(SlideThumb),
+                black = _presBlack.Contains(l),
             });
         }
-        Send(new { type = "presentations", list });
+        _presBlack.RemoveWhere(l => l >= _comp.Layers.Count || _comp.Layers[l].PlayingClip?.Kind != ClipKind.Presentation);
+        UpdateClickerHook(list.Count > 0);
+        Send(new { type = "presentations", list, clickerGlobal = _clickerGlobal });
     }
 }

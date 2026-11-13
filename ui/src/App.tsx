@@ -71,6 +71,7 @@ function App() {
   const [update, setUpdate] = useState<UpdateState | null>(null)
   const [carousels, setCarousels] = useState<CarouselRun[]>([])
   const [presentations, setPresentations] = useState<PresentationState[]>([])
+  const [clickerGlobal, setClickerGlobal] = useState(false)
 
   // atalhos que valem em qualquer aba: encerrar letra/versículo e parar ataques
   useEffect(() => {
@@ -119,7 +120,7 @@ function App() {
         case 'service': setService(msg); break
         case 'update': setUpdate(msg); break
         case 'carousels': setCarousels(msg.running); break
-        case 'presentations': setPresentations(msg.list); break
+        case 'presentations': setPresentations(msg.list); setClickerGlobal(!!msg.clickerGlobal); break
         case 'shortcuts': setCustom(msg.shortcuts); break
         case 'master': setBrightness(msg.brightness); setSpeed(msg.speed); setTestCard(msg.testCard); break
       }
@@ -222,7 +223,7 @@ function App() {
       {/* no mapeamento as setas e números ajustam pontos: os ataques ficam escondidos para não disparar sem querer */}
       {tab !== 'mapping' && <AttacksBar attacks={attacks} />}
 
-      {(tab === 'clips' || tab === 'culto') && <PresentationBar list={presentations} keys={tab === 'clips'} />}
+      {(tab === 'clips' || tab === 'culto') && <PresentationBar list={presentations} keys={tab === 'clips'} clickerGlobal={clickerGlobal} />}
 
       <MonitorsBar preview={preview} stagePreview={stagePreview} stage={stage} lyrics={lyricsState} comp={comp} displays={displays} />
 

@@ -124,6 +124,7 @@ sealed partial class MainForm : Form
             core.Navigate($"https://{UiHost}/index.html");
         }
         LoadPerformance();
+        LoadClicker();
         StartHolyrics();
         _playbackTimer.Start();
         StartAutosave();
@@ -656,7 +657,7 @@ sealed partial class MainForm : Form
     void ApplyLayerParams(int layer)
     {
         var slot = _renderer!.Layers[layer];
-        slot.Opacity = _comp.Layers[layer].Opacity;
+        slot.Opacity = _presBlack.Contains(layer) ? 0 : _comp.Layers[layer].Opacity;
         slot.Blend = (int)_comp.Layers[layer].Blend;
         slot.Transition = (int)_comp.Layers[layer].Transition;
         slot.TransitionSeconds = _comp.Layers[layer].TransitionSeconds;

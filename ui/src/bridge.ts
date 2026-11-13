@@ -4,7 +4,7 @@ import type { SongKinetic } from './kinetic'
 export type Display = { index: number; name: string; width: number; height: number; primary: boolean }
 
 export type ClipKind = 'video' | 'plasma' | 'testCard' | 'camera' | 'spout' | 'lyrics' | 'ndi' | 'presentation' | 'web' | 'screen'
-export type PresentationState = { layer: number; layerName: string; name: string; slide: number; count: number; slides: number; labels: string[]; current: string; images: string[] }
+export type PresentationState = { layer: number; layerName: string; name: string; slide: number; count: number; slides: number; labels: string[]; current: string; images: string[]; black?: boolean }
 export type LiveSources = { cameras: string[]; spout: string[]; ndi?: string[]; ndiAvailable?: boolean }
 export type GeneratorSettings = { type: string; speed: number; intensity: number; scale: number; detail: number; angle: number; colors: string[] }
 export type ClipProps = { speed: number; fit: 'encaixar' | 'preencher' | 'esticar'; zoom: number; offsetX: number; offsetY: number; volume: number; end: 'repetir' | 'parar' | 'seguir'; next?: ClipNext | null; inPoint?: number; outPoint?: number; rotation?: number; width?: number; height?: number; radius?: number[]; effects: EffectInstance[]
@@ -222,7 +222,7 @@ export type EngineMessage =
   | ({ type: 'update' } & UpdateState)
   | { type: 'slidePreview'; id: string; data: string | null; error?: string }
   | { type: 'carousels'; running: CarouselRun[] }
-  | { type: 'presentations'; list: PresentationState[] }
+  | { type: 'presentations'; list: PresentationState[]; clickerGlobal?: boolean }
   | { type: 'outputPreview'; screenId: string | null; data: string }
   | { type: 'ledTest'; mode: 'off' | 'regua' | 'partes' }
   | ({ type: 'performance' } & PerformanceState)
@@ -327,6 +327,8 @@ export type UiMessage =
   | ({ type: 'presentationBrowse' } & Cell)
   | { type: 'presentationStep'; layer: number; direction: 1 | -1 }
   | { type: 'presentationGo'; layer: number; slide: number }
+  | { type: 'presentationBlack'; layer: number }
+  | { type: 'presentationClicker'; global: boolean }
   | { type: 'ledTest'; mode: 'off' | 'regua' | 'partes' }
   | { type: 'carouselRun'; deckId: string; on: boolean }
   | { type: 'carouselStep'; deckId: string; direction: 1 | -1 }
