@@ -1,3 +1,4 @@
+import { ColorInput } from './ColorInput'
 import { SlidePreview } from './SlidePreview'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -340,7 +341,7 @@ export function BiblePage({ scenes, comp }: Props) {
                 onChange={(e) => updateSettings({ referenceScale: Number(e.target.value) })} />
             </label>
             <label>Cor da referência
-              <input type="color" value={settings.referenceColor} onChange={(e) => updateSettings({ referenceColor: e.target.value })} />
+              <ColorInput value={settings.referenceColor} onChange={(e) => updateSettings({ referenceColor: e.target.value })} />
             </label>
             <label className="check">
               <input type="checkbox" checked={settings.showVersion} onChange={(e) => updateSettings({ showVersion: e.target.checked })} />

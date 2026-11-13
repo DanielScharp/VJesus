@@ -354,6 +354,17 @@ sealed partial class MainForm : Form
                 break;
             }
 
+            case "pickScreenColor":
+            {
+                // conta-gotas de tela inteira (o do navegador só pega cor dentro da própria janela)
+                string? pickId = (string?)msg["id"];
+                BeginInvoke(() =>
+                {
+                    var picked = ScreenColorPicker.Pick();
+                    Send(new { type = "screenColor", id = pickId, color = picked is { } pc ? $"#{pc.R:x2}{pc.G:x2}{pc.B:x2}" : null });
+                });
+                break;
+            }
             case "setWeb":
             {
                 // página da internet: o link vira o caminho do clip

@@ -1,3 +1,4 @@
+import { ColorInput } from './ColorInput'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { onMessage, send, type PanicState } from './bridge'
@@ -60,7 +61,7 @@ function PanicDialog({ st, onClose }: { st: PanicState; onClose: () => void }) {
               </span>
             </label>
             {st.imageName && <div className={st.imageMissing ? 'warn-text' : 'meta'}>{st.imageName}{st.imageMissing ? ' (arquivo não encontrado)' : ''}</div>}
-            <label>Cor de fundo <input type="color" value={s.color} onChange={(e) => set({ color: e.target.value })} /></label>
+            <label>Cor de fundo <ColorInput value={s.color} onChange={(e) => set({ color: e.target.value })} /></label>
             <label>Tamanho do logo <output>{Math.round(s.size * 100)}%</output>
               <input type="range" min={0.1} max={1} step={0.05} value={s.size} onChange={(e) => set({ size: Number(e.target.value) })} />
             </label>

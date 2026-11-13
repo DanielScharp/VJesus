@@ -1,3 +1,4 @@
+import { ColorInput } from './ColorInput'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Song } from './bridge'
@@ -131,9 +132,9 @@ export function KineticEditor({ song, fonts, onSave, onClose }: {
                 <label className="kin-field">Tamanho <input type="range" min={0.4} max={1.6} step={0.05} value={style.size} onChange={(e) => setStyle({ size: Number(e.target.value) })} /></label>
                 <label className="row"><input type="checkbox" checked={style.upper} onChange={(e) => setStyle({ upper: e.target.checked })} /> TUDO MAIÚSCULO</label>
                 <div className="kin-colors">
-                  {!transparent && <label>Fundo <input type="color" value={style.bg} onChange={(e) => setStyle({ bg: e.target.value })} /></label>}
-                  <label>Texto <input type="color" value={style.color} onChange={(e) => setStyle({ color: e.target.value })} /></label>
-                  <label>Destaque <input type="color" value={style.accent} onChange={(e) => setStyle({ accent: e.target.value })} /></label>
+                  {!transparent && <label>Fundo <ColorInput value={style.bg} onChange={(e) => setStyle({ bg: e.target.value })} /></label>}
+                  <label>Texto <ColorInput value={style.color} onChange={(e) => setStyle({ color: e.target.value })} /></label>
+                  <label>Destaque <ColorInput value={style.accent} onChange={(e) => setStyle({ accent: e.target.value })} /></label>
                 </div>
                 <div className="kin-palettes">
                   {PALETTES.map(([bg, color, accent], i) => (

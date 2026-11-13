@@ -184,6 +184,7 @@ export type PreviewRequest =
   | { kind: 'timer'; seconds: number }
 
 export type EngineMessage =
+  | { type: 'screenColor'; id: string; color: string | null }
   | { type: 'kineticProject'; layer: number; column: number; project: unknown }
   | { type: 'kineticSaved'; path: string; placed: boolean }
   | { type: 'displays'; list: Display[] }
@@ -359,6 +360,7 @@ export type UiMessage =
   | { type: 'previewSize'; width: number }
   | { type: 'blendTest'; mode: 0 | 1 | 2 | 3 }
   | { type: 'kineticHello' }
+  | { type: 'pickScreenColor'; id: string }
   | { type: 'kineticBegin'; id: string; layer: number; column: number; name: string; project: unknown }
   | { type: 'kineticChunk'; id: string; pos: number; data: string }
   | { type: 'kineticEnd'; id: string; ok: boolean }

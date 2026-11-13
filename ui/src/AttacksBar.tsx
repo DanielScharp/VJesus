@@ -1,3 +1,4 @@
+import { ColorInput } from './ColorInput'
 import { useEffect, useRef, useState } from 'react'
 import { send, type AttackPreset, type AttackType } from './bridge'
 import { ACTIONS, keysOf, normalizeKey, shortcutsPaused } from './shortcuts'
@@ -142,7 +143,7 @@ function AttackEditor({ attacks, onTest }: { attacks: AttackPreset[]; onTest: (a
           </label>
           <p className="meta">{type?.hint}</p>
           {a.type !== 'invert' && a.type !== 'shake' && (
-            <label className="color">Cor <input type="color" value={a.color} onChange={(e) => set({ color: e.target.value.toUpperCase() })} />
+            <label className="color">Cor <ColorInput value={a.color} onChange={(e) => set({ color: e.target.value.toUpperCase() })} />
               <span className="row inline quick-colors">
                 {['#FFFFFF', '#000000', '#FF1744', '#FFC400', '#00E5FF', '#76FF03', '#D500F9'].map((c) => (
                   <span key={c} className="swatch big" style={{ background: c }} onClick={() => set({ color: c })} />

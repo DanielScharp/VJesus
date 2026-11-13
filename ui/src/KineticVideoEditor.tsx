@@ -1,3 +1,4 @@
+import { ColorInput } from './ColorInput'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { send } from './bridge'
@@ -332,9 +333,9 @@ export function KineticVideoEditor({ layer, column, initial, fonts, onClose }: {
               </div>
               <label className="row"><input type="checkbox" checked={scene.upper} onChange={(e) => setScene(sel, { upper: e.target.checked })} /> TUDO MAIÚSCULO</label>
               <div className="kin-colors">
-                <label>Fundo <input type="color" value={scene.bg} onChange={(e) => setScene(sel, { bg: e.target.value })} /></label>
-                <label>Texto <input type="color" value={scene.color} onChange={(e) => setScene(sel, { color: e.target.value })} /></label>
-                <label>Destaque <input type="color" value={scene.accent} onChange={(e) => setScene(sel, { accent: e.target.value })} /></label>
+                <label>Fundo <ColorInput value={scene.bg} onChange={(e) => setScene(sel, { bg: e.target.value })} /></label>
+                <label>Texto <ColorInput value={scene.color} onChange={(e) => setScene(sel, { color: e.target.value })} /></label>
+                <label>Destaque <ColorInput value={scene.accent} onChange={(e) => setScene(sel, { accent: e.target.value })} /></label>
               </div>
               <div className="kin-palettes">
                 {PALETTES.map(([bg, color, accent], i) => (

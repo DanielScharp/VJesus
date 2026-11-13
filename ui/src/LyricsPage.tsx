@@ -1,3 +1,4 @@
+import { ColorInput } from './ColorInput'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { send, type Composition, type LyricScene, type LyricStyle, type LyricsState, type Song } from './bridge'
 import { maxLinesPerSlide, mergeSlideWithNext, normalize, rechunkLyrics, replaceSlide, splitSlideAt, SLIDE_TRANSITIONS, splitSlides, stripTags, WORD_ANIMS, type Slide } from './lyrics'
@@ -356,15 +357,15 @@ export function StylePanel({ style, fonts, onChange }: { style: LyricStyle; font
         <label className="check"><input type="checkbox" checked={style.shadow} onChange={(e) => onChange({ shadow: e.target.checked })} /> Sombra</label>
       </div>
       <div className="style-row">
-        <label className="color">Texto <input type="color" value={style.color} onChange={(e) => onChange({ color: e.target.value })} /></label>
-        <label className="color">Contorno <input type="color" value={style.outlineColor} onChange={(e) => onChange({ outlineColor: e.target.value })} /></label>
+        <label className="color">Texto <ColorInput value={style.color} onChange={(e) => onChange({ color: e.target.value })} /></label>
+        <label className="color">Contorno <ColorInput value={style.outlineColor} onChange={(e) => onChange({ outlineColor: e.target.value })} /></label>
       </div>
       <label>Contorno <output>{style.outlineWidth.toFixed(0)}</output>
         <input type="range" min={0} max={20} step={1} value={style.outlineWidth} onChange={(e) => onChange({ outlineWidth: Number(e.target.value) })} />
       </label>
       <div className="style-row">
         <label className="check"><input type="checkbox" checked={style.box} onChange={(e) => onChange({ box: e.target.checked })} /> Caixa atrás do texto</label>
-        {style.box && <label className="color"><input type="color" value={style.boxColor} onChange={(e) => onChange({ boxColor: e.target.value })} /></label>}
+        {style.box && <label className="color"><ColorInput value={style.boxColor} onChange={(e) => onChange({ boxColor: e.target.value })} /></label>}
       </div>
       {style.box && (
         <label>Opacidade da caixa <output>{Math.round(style.boxOpacity * 100)}%</output>
@@ -448,7 +449,7 @@ function SlideEditor({ index, slide, scenes, fonts, songSceneName, onSave, onCan
         <button className="small" title="Itálico" onClick={() => wrap('<i>', '</i>')}><i>I</i></button>
         <button className="small" title="Sublinhado" onClick={() => wrap('<u>', '</u>')}><u>S</u></button>
         <span className="sep" />
-        <input type="color" value={color} onChange={(e) => setColor(e.target.value)} title="Cor do trecho" />
+        <ColorInput value={color} onChange={(e) => setColor(e.target.value)} title="Cor do trecho" />
         <button className="small" onClick={() => wrap(`<cor ${color.toUpperCase()}>`, '</cor>')}>Aplicar cor</button>
         <span className="sep" />
         <select value="" onChange={(e) => { if (e.target.value) wrap(`<tam ${e.target.value}>`, '</tam>') }}>
@@ -508,7 +509,7 @@ function SlideEditor({ index, slide, scenes, fonts, songSceneName, onSave, onCan
         <label>Cor do texto <output />
           <span className="row inline">
             <input type="checkbox" checked={!!o.cor} onChange={(e) => setOverride('cor', e.target.checked ? '#FFFFFF' : '')} />
-            {o.cor && <input type="color" value={o.cor} onChange={(e) => setOverride('cor', e.target.value.toUpperCase())} />}
+            {o.cor && <ColorInput value={o.cor} onChange={(e) => setOverride('cor', e.target.value.toUpperCase())} />}
           </span>
         </label>
         <label>Posição <output />

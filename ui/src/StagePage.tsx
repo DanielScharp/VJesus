@@ -1,3 +1,4 @@
+import { ColorInput } from './ColorInput'
 import { useState } from 'react'
 import { send, type Display, type StageConfig, type StageElement, type StageState } from './bridge'
 import { formatTimer, STAGE_ELEMENTS, StageView, timerSeconds, useNow } from './StageView'
@@ -45,7 +46,7 @@ export function StagePage({ state, displays, onConfig, preview }: Props) {
         <label className="check">
           <input type="checkbox" checked={config.fullscreen} onChange={(e) => set({ fullscreen: e.target.checked })} /> Tela cheia
         </label>
-        <label className="color">Fundo <input type="color" value={config.background} onChange={(e) => set({ background: e.target.value })} /></label>
+        <label className="color">Fundo <ColorInput value={config.background} onChange={(e) => set({ background: e.target.value })} /></label>
         <label className="check">
           <input type="checkbox" checked={config.clockSeconds} onChange={(e) => set({ clockSeconds: e.target.checked })} /> Relógio com segundos
         </label>
@@ -77,7 +78,7 @@ export function StagePage({ state, displays, onConfig, preview }: Props) {
             <label>Tamanho do texto <output>{el.fontSize.toFixed(1)}</output>
               <input type="range" min={1} max={20} step={0.5} value={el.fontSize} onChange={(e) => setEl(selected, { fontSize: Number(e.target.value) })} />
             </label>
-            <label className="color">Cor <input type="color" value={el.color} onChange={(e) => setEl(selected, { color: e.target.value })} /></label>
+            <label className="color">Cor <ColorInput value={el.color} onChange={(e) => setEl(selected, { color: e.target.value })} /></label>
             <label>Alinhamento <output />
               <select value={el.align} onChange={(e) => setEl(selected, { align: e.target.value })}>
                 <option value="left">Esquerda</option>

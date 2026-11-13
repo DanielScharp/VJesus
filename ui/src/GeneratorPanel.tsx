@@ -1,3 +1,4 @@
+import { ColorInput } from './ColorInput'
 import { useEffect, useState } from 'react'
 import { send, type GeneratorSettings } from './bridge'
 
@@ -87,7 +88,7 @@ export function GeneratorPanel({ layer, column, initial, playing, onClose }: {
             <div className="gen-colors">
               {['Fundo', 'Meio', 'Brilho'].map((l, i) => (
                 <label key={l} className="gen-color">
-                  <input type="color" value={g.colors[i]} disabled={g.type === 'arcoiris'} onChange={(e) => setColor(i, e.target.value)} />
+                  <ColorInput value={g.colors[i]} disabled={g.type === 'arcoiris'} onChange={(e) => setColor(i, e.target.value)} />
                   <span>{l}</span>
                 </label>
               ))}
