@@ -1199,3 +1199,8 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: 
 .layer-transport button.small { padding: 0 5px; font-size: 11px; }
 .cell .clip-name { font-size: 10px; padding: 1px 5px; }
 .column-head { padding: 2px 4px; }
+/* transição da layer no grid: ícone · tipo · tempo */
+.layer-fader.transition { grid-template-columns: 16px 74px minmax(0, 1fr) 30px; --range-fill: #3b74b8; }
+.layer-fader.transition select { height: 16px; font-size: 10px; padding: 0 2px; min-width: 0; }
+.layer-fader.transition.cut input[type=range] { opacity: .3; }
+.fader-tag.t { background: #3b74b8; }

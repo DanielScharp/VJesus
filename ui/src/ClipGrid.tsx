@@ -6,7 +6,12 @@ import { EffectChips, type ToggleEffect } from './EffectChips'
 import { DEFAULT_GEN, GeneratorPanel, genThumbStyle } from './GeneratorPanel'
 import { ClipPropsPanel, fmtTime } from './ClipProps'
 import { CarouselPanel } from './CarouselPanel'
-import { BLEND_MODES, onMessage, send, sendFiles, type CarouselRun, type EffectDef, type BlendMode, type Clip, type Composition, type GeneratorSettings, type LayerPlayback, type LiveSources, type Display } from './bridge'
+import { BLEND_MODES, TRANSITIONS, onMessage, send, sendFiles, type Transition, type CarouselRun, type EffectDef, type BlendMode, type Clip, type Composition, type GeneratorSettings, type LayerPlayback, type LiveSources, type Display } from './bridge'
+
+/** Nomes curtos das transições (cabem no cabeçalho da layer). */
+const TRANSITION_SHORT: Record<Transition, string> = {
+  cut: 'Corte', crossfade: 'Crossfade', dip: 'Pelo preto', wipe: 'Cortina', push: 'Deslizar', zoom: 'Zoom', blur: 'Desfocar',
+}
 
 type Props = {
   carousels: CarouselRun[]
@@ -14,7 +19,7 @@ type Props = {
   comp: Composition
   thumbs: Record<string, string>
   playback: LayerPlayback[]
-  onLayerChange: (layer: number, patch: { opacity?: number; blend?: BlendMode; muted?: boolean; volume?: number }) => void
+  onLayerChange: (layer: number, patch: { opacity?: number; blend?: BlendMode; muted?: boolean; volume?: number; transition?: Transition; transitionSeconds?: number }) => void
   selected: number
   onSelect: (layer: number) => void
   live: LiveSources | null
@@ -207,6 +212,16 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
                   data-address={`/composition/layers/${li + 1}/audio/volume`}
                   onChange={(e) => onLayerChange(li, { volume: Number(e.target.value), muted: false })} />
                 <span className="fader-val">{layer.muted ? 'mudo' : `${Math.round((layer.volume ?? 1) * 100)}%`}</span>
+              </div>
+              <div className={`layer-fader transition ${layer.transition === 'cut' ? 'cut' : ''}`} onClick={(e) => e.stopPropagation()} title="Transição ao trocar o clip desta layer (tipo e tempo)">
+                <span className="fader-tag t">⇄</span>
+                <select value={layer.transition} onChange={(e) => onLayerChange(li, { transition: e.target.value as Transition })}>
+                  {TRANSITIONS.map((t) => <option key={t} value={t}>{TRANSITION_SHORT[t]}</option>)}
+                </select>
+                <input type="range" min={0.1} max={5} step={0.1} value={layer.transitionSeconds} disabled={layer.transition === 'cut'}
+                  data-address={`/composition/layers/${li + 1}/transition/duration`}
+                  onChange={(e) => onLayerChange(li, { transitionSeconds: Number(e.target.value) })} />
+                <span className="fader-val">{layer.transition === 'cut' ? '—' : `${layer.transitionSeconds.toFixed(1).replace('.', ',')}s`}</span>
               </div>
               <select value={layer.blend} title="Mistura (blend): como esta layer se junta com as layers de baixo"
                 onChange={(e) => onLayerChange(li, { blend: e.target.value as BlendMode })}>
