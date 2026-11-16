@@ -383,7 +383,7 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
               ))}
               {items.length === 0 && <p className="meta">Roteiro vazio. Adicione músicas, versículos, clips e avisos pela coluna ao lado.</p>}
             </div>
-            <p className="meta">Clique escolhe e mostra a prévia · duplo clique ou ▶ Ir manda ao ar · arraste para reordenar · → / espaço próximo · ← anterior · Esc tela em branco</p>
+            <p className="meta">Clique escolhe e mostra a prévia · duplo clique ou ▶ Ir manda ao ar · arraste para reordenar · → / espaço próximo · ← anterior · B tela em branco · Esc encerra a letra/Bíblia</p>
           </section>
 
           <section className="culto-live">
@@ -392,6 +392,9 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
               <button className="primary culto-next" disabled={items.length === 0} onClick={() => { send({ type: 'serviceStep', direction: 1 }); setSelected(null) }}>Próximo ▶</button>
               <button className={state.blank ? 'active' : ''} onClick={() => send({ type: 'lyricsBlank' })}>{state.blank ? 'Mostrar' : 'Em branco'}</button>
             </div>
+            {(state.text || state.songId) && (
+              <button className="danger culto-end" title="Tira a letra ou o versículo do telão e da tela de retorno (Esc, em qualquer aba)" onClick={() => send({ type: 'lyricsClear' })}>Encerrar letra (telão e retorno) · Esc</button>
+            )}
             <div className="slide-monitor">
               <div className="monitor-head"><span className="onair">NO AR</span> {curItem?.title ?? 'Nada do roteiro'}{onSong ? ` · slide ${state.slide + 1} de ${curSlides.length}` : ''}</div>
               <div className="monitor-screen" style={{ aspectRatio: '16 / 9' }}>

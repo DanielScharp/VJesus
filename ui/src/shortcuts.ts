@@ -27,7 +27,7 @@ export const ACTIONS: ActionDef[] = [
   { id: 'projeto.salvar', label: 'Salvar projeto', hint: 'Salva no arquivo atual (pergunta o nome se for novo).', scope: 'global', defaults: ['Ctrl+S'] },
   { id: 'projeto.salvarComo', label: 'Salvar projeto como…', hint: 'Salva com outro nome ou em outra pasta.', scope: 'global', defaults: ['Ctrl+Shift+S'] },
   { id: 'tempo.tap', label: 'TAP do BPM', hint: 'Toque no ritmo da música para acertar o BPM.', scope: 'global', defaults: ['T'] },
-  { id: 'telao.encerrar', label: 'Encerrar letra / versículo', hint: 'Tira a letra ou o versículo do telão e da tela de retorno (fim da música).', scope: 'global', defaults: ['Shift+Escape', 'Delete'] },
+  { id: 'telao.encerrar', label: 'Encerrar letra / versículo', hint: 'Tira a letra ou o versículo do telão e da tela de retorno, em qualquer aba.', scope: 'global', defaults: ['Escape', 'Shift+Escape', 'Delete'] },
   { id: 'telao.panico', label: 'Tela de pânico (liga/desliga)', hint: 'Cobre o telão na hora com o logo ou a cor da tela de pânico; de novo volta ao que estava.', scope: 'global', defaults: ['F9'] },
   { id: 'ataques.parar', label: 'Parar todos os ataques', hint: 'Interrompe na hora flash, strobe, tremor…', scope: 'global', defaults: [] },
 
@@ -38,12 +38,12 @@ export const ACTIONS: ActionDef[] = [
   { id: 'culto.proximo', label: 'Próximo do roteiro', hint: 'Passa o slide ou o versículo; no fim, entra o próximo item.', scope: 'culto', defaults: ['ArrowRight', 'ArrowDown', 'PageDown', 'Space'] },
   { id: 'culto.anterior', label: 'Anterior do roteiro', hint: 'Volta o slide ou o versículo; no começo, volta ao item anterior.', scope: 'culto', defaults: ['ArrowLeft', 'ArrowUp', 'PageUp'] },
   { id: 'culto.ir', label: 'Enviar o item escolhido ao telão', hint: 'Manda ao ar o item selecionado na lista.', scope: 'culto', defaults: ['Enter'] },
-  { id: 'culto.branco', label: 'Tela em branco (liga/desliga)', hint: 'Esconde a letra do telão sem perder a posição.', scope: 'culto', defaults: ['B', 'Escape'] },
+  { id: 'culto.branco', label: 'Tela em branco (liga/desliga)', hint: 'Esconde a letra do telão sem perder a posição.', scope: 'culto', defaults: ['B'] },
 
   { id: 'letras.enviar', label: 'Enviar a prévia ao telão', hint: 'Com “Prévia primeiro” ligada, manda ao ar o slide escolhido.', scope: 'letras', defaults: ['Enter'] },
   { id: 'letras.proximo', label: 'Próximo slide', hint: 'Passa a letra para o slide seguinte (ou projeta o primeiro).', scope: 'letras', defaults: ['ArrowRight', 'ArrowDown', 'PageDown', 'Space'] },
   { id: 'letras.anterior', label: 'Slide anterior', hint: 'Volta a letra um slide.', scope: 'letras', defaults: ['ArrowLeft', 'ArrowUp', 'PageUp'] },
-  { id: 'letras.branco', label: 'Tela em branco (liga/desliga)', hint: 'Esconde a letra do telão sem perder a posição.', scope: 'letras', defaults: ['B', 'Escape'] },
+  { id: 'letras.branco', label: 'Tela em branco (liga/desliga)', hint: 'Esconde a letra do telão sem perder a posição.', scope: 'letras', defaults: ['B'] },
 
   { id: 'biblia.proximo', label: 'Próximo versículo no telão', hint: 'Projeta o versículo seguinte (passa de capítulo sozinho).', scope: 'biblia', defaults: ['ArrowRight', 'PageDown', 'Space'] },
   { id: 'biblia.anterior', label: 'Versículo anterior no telão', hint: 'Projeta o versículo anterior.', scope: 'biblia', defaults: ['ArrowLeft', 'PageUp'] },

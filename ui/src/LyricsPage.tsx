@@ -229,7 +229,7 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
               })}
               {slides.length === 0 && <div className="meta">Esta música ainda não tem letra. Clique em Editar letra.</div>}
             </div>
-            <p className="meta">Clique num slide para projetar · ✎ edita só aquele slide · → / espaço próximo · ← anterior · Esc tela em branco · Shift+Esc encerra nas duas telas</p>
+            <p className="meta">Clique num slide para projetar · ✎ edita só aquele slide · → / espaço próximo · ← anterior · B tela em branco · Esc encerra (telão e retorno)</p>
           </>
         ) : (
           <div className="meta">Escolha uma música na lista, crie uma nova ou importe arquivos .txt.</div>
@@ -260,7 +260,7 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
         </div>
         <button className="clear-lyrics" disabled={!state.text} title="Fim da música: tira a letra do telão e da tela de retorno (Shift+Esc ou Delete)"
           onClick={() => send({ type: 'lyricsClear' })}>Encerrar letra (telão e retorno)</button>
-        <p className="meta">Esc / B: tira só do telão (os músicos continuam vendo). Shift+Esc / Delete: tira das duas telas.</p>
+        <p className="meta">Esc: encerra a letra ou a Bíblia (telão e retorno), em qualquer aba. B: tela em branco só no telão (os músicos continuam vendo).</p>
 
         {!lyricsInGrid && (
           <div className="grid-hint">

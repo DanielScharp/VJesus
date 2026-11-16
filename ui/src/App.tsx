@@ -76,9 +76,11 @@ function App() {
   // atalhos que valem em qualquer aba: encerrar letra/versículo e parar ataques
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Esc (encerrar) vale até com o cursor numa caixa de texto; só não age com uma janela ou menu aberto (aí o Esc fecha a janela)
+      const modalOpen = !!document.querySelector('.modal-back, .menu')
+      if (matches(e, 'telao.encerrar') && !modalOpen && (!isTyping(e) || e.key === 'Escape')) { e.preventDefault(); send({ type: 'lyricsClear' }); return }
       if (isTyping(e)) return
-      if (matches(e, 'telao.encerrar')) { e.preventDefault(); send({ type: 'lyricsClear' }) }
-      else if (matches(e, 'ataques.parar')) { e.preventDefault(); send({ type: 'attackStopAll' }) }
+      if (matches(e, 'ataques.parar')) { e.preventDefault(); send({ type: 'attackStopAll' }) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
