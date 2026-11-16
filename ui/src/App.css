@@ -1157,3 +1157,16 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .media-empty-hint { margin: 6px 0; }
 .media-drive-msg { display: flex; align-items: flex-start; gap: 10px; margin: 8px 0; padding: 8px 12px; border: 1px solid var(--accent); border-radius: 6px; background: rgba(255, 176, 32, .08); font-size: 13px; }
 .media-drive-msg span { flex: 1; }
+
+/* layer: opacidade (imagem) e volume (som) sempre visíveis, cada um com ícone, cor e valor */
+.layer-fader { display: grid; grid-template-columns: 22px minmax(0, 1fr) 38px; align-items: center; gap: 4px; margin: 1px 0; }
+.layer-fader .fader-icon { width: 22px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; color: var(--muted); padding: 0; border: none; background: none; }
+.layer-fader .fader-val { font-size: 10px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.layer-fader input[type=range] { width: 100%; margin: 0; }
+.layer-fader.opacity input[type=range] { accent-color: var(--accent); }
+.layer-fader.opacity .fader-icon { color: var(--accent); }
+.layer-fader.volume input[type=range] { accent-color: #4fc3f7; }
+.layer-fader.volume .fader-icon.mute { cursor: pointer; border-radius: 4px; }
+.layer-fader.volume .fader-icon.mute:hover { background: var(--btn); }
+.layer-fader.volume.muted input[type=range] { opacity: .4; }
+.layer-fader.volume.muted .fader-val { color: #ff8a8a; }

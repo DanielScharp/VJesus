@@ -14,7 +14,7 @@ type Props = {
   comp: Composition
   thumbs: Record<string, string>
   playback: LayerPlayback[]
-  onLayerChange: (layer: number, patch: { opacity?: number; blend?: BlendMode; muted?: boolean }) => void
+  onLayerChange: (layer: number, patch: { opacity?: number; blend?: BlendMode; muted?: boolean; volume?: number }) => void
   selected: number
   onSelect: (layer: number) => void
   live: LiveSources | null
@@ -192,15 +192,28 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
                   : <span title="Duplo clique para renomear" onDoubleClick={(e) => { e.stopPropagation(); setRenaming({ kind: 'layer', index: li }) }}>{layer.name}{layer.hasAudio && layer.playing && <span title="Este clip tem áudio"> 🔊</span>}{layer.sendToStage && <em className="ret-badge" title="Aparece na tela de retorno quando tocar">RET</em>}</span>}
                 <button className="small" title="Parar a layer" data-address={`/composition/layers/${li + 1}/clear`} onClick={() => send({ type: 'clearLayer', layer: li })}>✕</button>
               </div>
-              <input type="range" min={0} max={1} step={0.01} value={layer.opacity} title="Opacidade"
-                data-address={`/composition/layers/${li + 1}/video/opacity`}
-                onChange={(e) => onLayerChange(li, { opacity: Number(e.target.value) })} />
+              {/* opacidade (imagem) e volume (som) da layer: cada um com ícone, cor e valor próprios */}
+              <div className="layer-fader opacity" onClick={(e) => e.stopPropagation()} title="Opacidade da layer (imagem)">
+                <span className="fader-icon">◐</span>
+                <input type="range" min={0} max={1} step={0.01} value={layer.opacity}
+                  data-address={`/composition/layers/${li + 1}/video/opacity`}
+                  onChange={(e) => onLayerChange(li, { opacity: Number(e.target.value) })} />
+                <span className="fader-val">{Math.round(layer.opacity * 100)}%</span>
+              </div>
+              <div className={`layer-fader volume ${layer.muted ? 'muted' : ''}`} onClick={(e) => e.stopPropagation()} title="Volume da layer (som): vale para o que já está tocando e para o próximo vídeo chamado nela">
+                <button className={`fader-icon mute ${layer.muted ? 'active' : ''}`} title={layer.muted ? 'Ligar o som da layer' : 'Mudo (o volume fica guardado)'}
+                  onClick={() => onLayerChange(li, { muted: !layer.muted })}>{layer.muted ? '🔇' : '🔊'}</button>
+                <input type="range" min={0} max={1.5} step={0.01} value={layer.volume ?? 1}
+                  data-address={`/composition/layers/${li + 1}/audio/volume`}
+                  onChange={(e) => onLayerChange(li, { volume: Number(e.target.value), muted: false })} />
+                <span className="fader-val">{layer.muted ? 'mudo' : `${Math.round((layer.volume ?? 1) * 100)}%`}</span>
+              </div>
               <select value={layer.blend} title="Mistura (blend): como esta layer se junta com as layers de baixo"
                 onChange={(e) => onLayerChange(li, { blend: e.target.value as BlendMode })}>
                 {BLEND_MODES.map((b) => <option key={b} value={b}>{BLEND_LABELS[b]}</option>)}
               </select>
               <EffectChips chain={layer.effects} target={li} library={library} onToggle={onToggleEffect} />
-              {(pb && pb.duration > 0 || layer.hasAudio) && (
+              {pb && pb.duration > 0 && (
                 <div className="layer-transport" onClick={(e) => e.stopPropagation()}>
                   {pb && pb.duration > 0 && (
                     <>
@@ -210,8 +223,6 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
                       <span className="layer-time">{fmtTime(pb.position)}</span>
                     </>
                   )}
-                  <button className={`small ${layer.muted ? 'active' : ''}`} title={layer.muted ? 'Ligar o som da layer' : 'Mudo (o volume continua guardado)'}
-                    onClick={() => onLayerChange(li, { muted: !layer.muted })}>{layer.muted ? '🔇' : '🔊'}</button>
                 </div>
               )}
             </div>
