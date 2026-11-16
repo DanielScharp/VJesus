@@ -199,7 +199,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
               </div>
               {/* opacidade (imagem) e volume (som) da layer: cada um com ícone, cor e valor próprios */}
               <div className="layer-fader opacity" onClick={(e) => e.stopPropagation()} title="Opacidade da layer (imagem)">
-                <span className="fader-tag v" title="Opacidade (imagem)">◐</span>
+                <span className="fader-tag v" title="Opacidade (imagem)"><span>◐</span></span>
                 <input type="range" min={0} max={1} step={0.01} value={layer.opacity}
                   data-address={`/composition/layers/${li + 1}/video/opacity`}
                   onChange={(e) => onLayerChange(li, { opacity: Number(e.target.value) })} />
@@ -207,14 +207,14 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
               </div>
               <div className={`layer-fader volume ${layer.muted ? 'muted' : ''}`} onClick={(e) => e.stopPropagation()} title="Volume da layer (som): vale para o que já está tocando e para o próximo vídeo chamado nela">
                 <button className={`fader-tag a ${layer.muted ? 'off' : ''}`} title={layer.muted ? 'Som MUDO: clique para ligar' : 'Volume (som) · clique para deixar mudo (o volume fica guardado)'}
-                  onClick={() => onLayerChange(li, { muted: !layer.muted })}>{layer.muted ? '🔇' : '🔊'}</button>
+                  onClick={() => onLayerChange(li, { muted: !layer.muted })}><span>{layer.muted ? '🔇' : '🔊'}</span></button>
                 <input type="range" min={0} max={1.5} step={0.01} value={layer.volume ?? 1}
                   data-address={`/composition/layers/${li + 1}/audio/volume`}
                   onChange={(e) => onLayerChange(li, { volume: Number(e.target.value), muted: false })} />
                 <span className="fader-val">{layer.muted ? 'mudo' : `${Math.round((layer.volume ?? 1) * 100)}%`}</span>
               </div>
               <div className={`layer-fader transition ${layer.transition === 'cut' ? 'cut' : ''}`} onClick={(e) => e.stopPropagation()} title="Transição ao trocar o clip desta layer (tipo e tempo)">
-                <span className="fader-tag t">⇄</span>
+                <span className="fader-tag t"><span>⇄</span></span>
                 <select value={layer.transition} onChange={(e) => onLayerChange(li, { transition: e.target.value as Transition })}>
                   {TRANSITIONS.map((t) => <option key={t} value={t}>{TRANSITION_SHORT[t]}</option>)}
                 </select>

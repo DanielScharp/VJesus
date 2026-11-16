@@ -1171,15 +1171,15 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 /* ---------- sliders no estilo do Resolume: barra reta, preenchida até o valor, marcador fino ---------- */
 input[type=range] {
   -webkit-appearance: none; appearance: none;
-  height: 14px; margin: 0; padding: 0; cursor: ew-resize;
+  height: 14px; margin: 0; padding: 0; cursor: ew-resize; box-sizing: border-box; vertical-align: middle;
   border: 1px solid #2c2f36; border-radius: 2px;
   background: linear-gradient(to right, var(--range-fill, var(--accent)) 0 var(--p, 50%), #0d0e11 var(--p, 50%) 100%);
 }
 input[type=range]:hover { border-color: #474b55; }
 input[type=range]:focus { outline: none; border-color: var(--range-fill, var(--accent)); }
 input[type=range]:disabled { opacity: .4; cursor: default; }
-input[type=range]::-webkit-slider-runnable-track { height: 100%; background: transparent; border: none; }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 3px; height: 14px; margin-top: -1px; border: none; border-radius: 0; background: #f2f2f2; box-shadow: 0 0 0 1px rgba(0, 0, 0, .5); }
+input[type=range]::-webkit-slider-runnable-track { height: 12px; background: transparent; border: none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 3px; height: 12px; margin-top: 0; border: none; border-radius: 0; background: #f2f2f2; box-shadow: 0 0 0 1px rgba(0, 0, 0, .5); }
 
 /* ---------- grade compacta: layer com V (vídeo) e A (áudio) como no Resolume ---------- */
 .layer-head .layer-title { font-size: 12px; line-height: 1.2; }
@@ -1187,7 +1187,8 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: 
 .layer-head select { height: 20px; font-size: 11px; padding: 0 4px; }
 .layer-fader { grid-template-columns: 16px minmax(0, 1fr) 30px; gap: 4px; margin: 0; }
 .layer-fader .fader-val { font-size: 10px; }
-.fader-tag { width: 16px; height: 14px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: none; border-radius: 2px; font-size: 11px; color: #fff; line-height: 1; }
+.fader-tag { width: 16px; height: 14px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: none; border-radius: 2px; font-size: 10px; color: #fff; line-height: 14px; font-family: 'Segoe UI Symbol', 'Segoe UI Emoji', sans-serif; overflow: hidden; }
+.fader-tag > span { display: block; line-height: 1; transform: translateY(var(--icon-dy, 0)); }
 .fader-tag.v { background: #2f8a63; }
 .fader-tag.a { background: #b03a6e; cursor: pointer; }
 .fader-tag.a:hover { filter: brightness(1.2); }
