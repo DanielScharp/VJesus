@@ -1147,3 +1147,11 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .media-lib { position: relative; }
 .media-lib.file-drag { outline: 2px dashed var(--accent); outline-offset: 2px; }
 .media-dropzone { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; background: rgba(21, 22, 26, .88); color: var(--accent); font-weight: 600; font-size: 15px; border-radius: 8px; pointer-events: none; }
+
+/* cabeçalho da biblioteca: busca, filtro e botões com a mesma altura e o mesmo visual */
+.media-head .media-search, .media-head select, .media-head > button:not(.media-toggle) { height: 32px; box-sizing: border-box; font-size: 13px; border-radius: 6px; }
+.media-head .media-search { padding: 0 10px; background: var(--btn); color: var(--text); border: 1px solid var(--line); }
+.media-head .media-search:focus { outline: none; border-color: var(--accent); }
+.media-head select { padding: 0 8px; background: var(--btn); border: 1px solid var(--line); min-width: 120px; }
+.media-head > button:not(.media-toggle) { padding: 0 12px; }
+.media-empty-hint { margin: 6px 0; }

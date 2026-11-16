@@ -151,7 +151,7 @@ export type OverlaySettings = {
 export type OverlayState = { settings: OverlaySettings; mode: 'off' | 'timer' | 'notices' | 'notice'; noticeId: string | null; targets?: { id: string; name: string }[] }
 export type CheckItem = { level: 'erro' | 'aviso' | 'info' | 'ok'; area: string; title: string; detail?: string | null; fix?: 'relink' | 'searchFolder' | null; fixLabel?: string | null; path?: string | null }
 export type CheckState = { running: boolean; when?: string; errors?: number; warnings?: number; items: CheckItem[] }
-export type LibraryFolder = { id: string; name: string; parent?: string | null }
+export type LibraryFolder = { id: string; name: string; parent?: string | null; source?: string | null }
 export type LibraryItem = { path: string; name: string; kind: 'video' | 'image' | 'presentation' | 'presentationFile'; folder: string; size: number; modified: string; tags: string[]; used: boolean }
 
 export type HolyricsState = { settings: { enabled: boolean; host: string; port: number; token: string }; ok: boolean; status: string }
@@ -347,7 +347,9 @@ export type UiMessage =
   | { type: 'holyricsSet'; settings: HolyricsState['settings'] }
   | { type: 'checkRun' | 'checkSearchFolder' }
   | { type: 'checkRelink'; path: string }
-  | { type: 'libraryGet' | 'libraryAddFolder' }
+  | { type: 'libraryGet' }
+  | { type: 'libraryAddFolder'; folder?: string | null }
+  | { type: 'libraryOpenDir'; path: string }
   | { type: 'libraryRemoveFolder' | 'libraryPreview' | 'libraryReveal'; path: string }
   | { type: 'libraryTags'; path: string; tags: string[] }
   | { type: 'libraryThumbs'; paths: string[] }

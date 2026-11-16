@@ -30,6 +30,8 @@ sealed partial class MainForm
         public string Id { get; set; } = Guid.NewGuid().ToString("N")[..10];
         public string Name { get; set; } = "Pasta";
         public string? Parent { get; set; }
+        /// <summary>Pasta do computador de onde ela veio (arrastada ou escolhida em "+ Pasta do computador").</summary>
+        public string? Source { get; set; }
     }
 
     static string LibraryPath => Path.Combine(AppDataDir, "biblioteca.json");
@@ -50,6 +52,12 @@ sealed partial class MainForm
                 s.Placement = new(s.Placement ?? [], StringComparer.OrdinalIgnoreCase);
                 s.Collections ??= [];
                 s.Files ??= [];
+                // pastas importadas antes de guardar a origem: liga pelo nome
+                foreach (var dir in s.Folders)
+                    if (s.Collections.All(c => !string.Equals(c.Source, dir, StringComparison.OrdinalIgnoreCase))
+                        && s.Collections.Where(c => c.Parent == null && c.Source == null && c.Name == Path.GetFileName(dir.TrimEnd('\\')))
+                            .OrderByDescending(c => s.Placement.Count(p => p.Value == c.Id)).FirstOrDefault() is { } match)
+                        match.Source = dir;
                 return s;
             }
         }
@@ -74,9 +82,8 @@ sealed partial class MainForm
             {
                 using var dlg = new FolderBrowserDialog { Description = "Pasta com vídeos, imagens ou apresentações da igreja (as subpastas entram junto)" };
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
-                if (!_library.Folders.Contains(dlg.SelectedPath, StringComparer.OrdinalIgnoreCase)) _library.Folders.Add(dlg.SelectedPath);
-                SaveLibrary();
-                _ = SendLibraryAsync();
+                // igual a arrastar a pasta: vira uma pasta da biblioteca com o mesmo nome
+                LibraryDrop([dlg.SelectedPath], (string?)msg["folder"]);
                 break;
             }
             case "libraryRemoveFolder":
@@ -122,8 +129,21 @@ sealed partial class MainForm
             }
             case "libraryFolderDelete":
             {
-                // apaga só a pasta da biblioteca: o que estava nela (arquivos e subpastas) sobe um nível
+                // apaga só a pasta da biblioteca: o que estava nela (arquivos e subpastas) sobe um nível.
+                // Se ela veio de uma pasta do computador, a biblioteca para de ler aquela pasta (e some com o que era dela).
                 if (_library.Collections.FirstOrDefault(c => c.Id == (string?)msg["id"]) is not { } df) break;
+                if (df.Source != null)
+                {
+                    var gone = new HashSet<string>([df.Id]);
+                    for (bool more = true; more;) { more = false; foreach (var c in _library.Collections) if (c.Parent != null && gone.Contains(c.Parent) && gone.Add(c.Id)) more = true; }
+                    foreach (var k in _library.Placement.Where(p => gone.Contains(p.Value)).Select(p => p.Key).ToList()) _library.Placement.Remove(k);
+                    _library.Collections.RemoveAll(c => gone.Contains(c.Id));
+                    _library.Folders.RemoveAll(d => string.Equals(d, df.Source, StringComparison.OrdinalIgnoreCase));
+                    SaveLibrary();
+                    SendLibraryCollections();
+                    _ = SendLibraryAsync();
+                    break;
+                }
                 foreach (var child in _library.Collections.Where(c => c.Parent == df.Id)) child.Parent = df.Parent;
                 foreach (var k in _library.Placement.Where(p => p.Value == df.Id).Select(p => p.Key).ToList())
                     if (df.Parent == null) _library.Placement.Remove(k); else _library.Placement[k] = df.Parent;
@@ -182,6 +202,14 @@ sealed partial class MainForm
                 CompositionChanged();
                 break;
             }
+            case "libraryOpenDir":
+            {
+                // abre a pasta do computador de uma pasta da biblioteca
+                var dir = (string?)msg["path"];
+                if (dir != null && Directory.Exists(dir)) System.Diagnostics.Process.Start("explorer.exe", $"\"{dir}\"");
+                else Send(new { type = "error", message = "Essa pasta não existe mais no computador." });
+                break;
+            }
             case "libraryReveal":
             {
                 var path = (string?)msg["path"];
@@ -221,9 +249,11 @@ sealed partial class MainForm
             catch { return null; }
             string name = CleanFolderName(Path.GetFileName(dir.TrimEnd('\\')));
             // arrastou a mesma pasta de novo: usa a pasta da biblioteca que já existe
-            var folder = _library.Collections.FirstOrDefault(c => c.Parent == parent && c.Name == name);
+            var folder = _library.Collections.FirstOrDefault(c => string.Equals(c.Source, dir, StringComparison.OrdinalIgnoreCase))
+                ?? _library.Collections.FirstOrDefault(c => c.Parent == parent && c.Name == name && c.Source == null);
             bool created = folder == null;
             folder ??= new LibraryFolder { Name = name, Parent = parent };
+            folder.Source = dir;
             if (created) _library.Collections.Add(folder);
             bool any = media.Count > 0;
             foreach (var f in media) { _library.Placement[f] = folder.Id; files++; }

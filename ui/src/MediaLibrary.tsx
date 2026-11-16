@@ -117,7 +117,26 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
     return visible.filter((i) => selected.includes(i.path)).map((i) => i.path).concat(selected.filter((p) => !visible.some((i) => i.path === p)))
   }
   const moveTo = (paths: string[], folder: string | null) => { send({ type: 'libraryMove', paths, folder }); setSelected([]) }
-  const newFolder = () => send({ type: 'libraryFolderNew', name: 'Nova pasta', parent: cur })
+  const newFolder = (parent: string | null = cur) => send({ type: 'libraryFolderNew', name: 'Nova pasta', parent })
+  // menu do botão direito numa pasta
+  const [folderMenu, setFolderMenu] = useState<{ id: string; x: number; y: number } | null>(null)
+  useEffect(() => {
+    if (!folderMenu) return
+    const close = () => setFolderMenu(null)
+    window.addEventListener('click', close)
+    return () => window.removeEventListener('click', close)
+  }, [folderMenu])
+  const onFolderMenu = (id: string) => (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setFolderMenu({ id, x: e.clientX, y: e.clientY }) }
+  const deleteFolder = (id: string) => {
+    const f = byId.get(id)
+    if (!f) return
+    const msg = f.source
+      ? `Apagar a pasta "${f.name}" da biblioteca? A biblioteca para de mostrar o que vem dela. Nenhum arquivo é apagado do computador.`
+      : `Apagar a pasta "${f.name}" da biblioteca? O que está nela sobe um nível. Nenhum arquivo é apagado do computador.`
+    if (!window.confirm(msg)) return
+    send({ type: 'libraryFolderDelete', id })
+    if (cur === id || pathTo(cur).some((p) => p.id === id)) setCur(f.parent ?? null)
+  }
 
   // soltar arquivos ou uma pasta em cima de uma pasta (ou do "Início")
   const dropProps = (id: string | null) => ({
@@ -158,19 +177,14 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
         <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
           <option value="all">Tudo</option><option value="video">Vídeos</option><option value="image">Imagens</option><option value="pres">Apresentações</option>
         </select>
-        <button onClick={() => send({ type: 'libraryAddFolder' })} title="Escolhe uma pasta do computador para a biblioteca ler">+ Pasta do computador…</button>
+        <button onClick={() => send({ type: 'libraryAddFolder', folder: cur })} title="Escolhe uma pasta do computador: ela vira uma pasta da biblioteca (também dá para arrastar pastas do Explorer para cá)">+ Pasta do computador…</button>
         <button onClick={() => send({ type: 'libraryGet' })} disabled={scanning}>{scanning ? 'Lendo…' : 'Atualizar'}</button>
         </>}
       </div>
       {open && <>
-      <div className="media-folders">
-        {folders.length === 0 && <span className="meta">Adicione as pastas onde ficam os vídeos da igreja. O que já está na grade aparece aqui sozinho.</span>}
-        {folders.map((f) => (
-          <span key={f} className="chip" title={`Pasta do computador lida pela biblioteca: ${f}`}>💻 {f.split('\\').pop()}
-            <button className="chip-x" title="Tirar da biblioteca (não apaga os arquivos)" onClick={() => send({ type: 'libraryRemoveFolder', path: f })}>×</button>
-          </span>
-        ))}
-      </div>
+      {folders.length === 0 && collections.length === 0 && (
+        <p className="meta media-empty-hint">Arraste pastas do computador para cá (ou use “+ Pasta do computador”). O que já está na grade aparece aqui sozinho.</p>
+      )}
       {allTags.length > 0 && (
         <div className="media-tags">
           <button className={`small ${tag === null ? 'active' : ''}`} onClick={() => setTag(null)}>Todas as tags</button>
@@ -183,8 +197,8 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
             <div className={`media-tree-row root ${cur === null ? 'sel' : ''} ${dropOn === '__root' ? 'drop' : ''}`} onClick={() => { setCur(null); setQ(''); setTag(null) }} {...dropProps(null)}>
               📚 Início <span className="meta">(sem pasta)</span>
             </div>
-            <FolderTree parent={null} depth={0} childrenOf={childrenOf} cur={cur} setCur={(id) => { setCur(id); setQ(''); setTag(null) }} countIn={countIn} dropOn={dropOn} dropProps={dropProps} />
-            <button className="small media-newfolder" onClick={newFolder} title={cur ? `Nova pasta dentro de "${byId.get(cur)?.name}"` : 'Nova pasta'}>+ Nova pasta</button>
+            <FolderTree parent={null} depth={0} childrenOf={childrenOf} cur={cur} setCur={(id) => { setCur(id); setQ(''); setTag(null) }} countIn={countIn} dropOn={dropOn} dropProps={dropProps} onMenu={onFolderMenu} />
+            <button className="small media-newfolder" onClick={() => newFolder()} title={cur ? `Nova pasta dentro de "${byId.get(cur)?.name}"` : 'Nova pasta'}>+ Nova pasta</button>
             <p className="meta media-tree-hint">Arraste vídeos e imagens para uma pasta. As pastas só organizam a biblioteca; os arquivos continuam no mesmo lugar do computador.</p>
           </nav>
         )}
@@ -201,10 +215,11 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
               ))}
               {cur && <>
                 <button className="small" title="Renomear esta pasta" onClick={() => setRenaming(cur)}>✎ Renomear</button>
+                {byId.get(cur)?.source && <button className="small" title={byId.get(cur)?.source ?? ''} onClick={() => send({ type: 'libraryOpenDir', path: byId.get(cur)!.source! })}>📂 Abrir no computador</button>}
                 <button className="small" title="Apagar esta pasta da biblioteca: o que estava nela sobe um nível (os arquivos não são apagados)"
-                  onClick={() => { if (window.confirm(`Apagar a pasta "${byId.get(cur)?.name}" da biblioteca? O que está nela sobe um nível; nenhum arquivo é apagado do computador.`)) { send({ type: 'libraryFolderDelete', id: cur }); setCur(byId.get(cur)?.parent ?? null) } }}>🗑 Apagar pasta</button>
+                  onClick={() => deleteFolder(cur)}>🗑 Apagar pasta</button>
               </>}
-              {compact && <button className="small" onClick={newFolder}>+ Pasta</button>}
+              {compact && <button className="small" onClick={() => newFolder()}>+ Pasta</button>}
             </>}
           </div>
           {selected.length > 0 && (
@@ -223,7 +238,7 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
             {subfolders.map((f) => (
               <div key={f.id} className={`media-folder-card ${dropOn === f.id ? 'drop' : ''}`} draggable
                 onDragStart={(e) => { e.dataTransfer.setData(FOLDER_MIME, f.id); e.dataTransfer.effectAllowed = 'move' }}
-                onClick={() => setCur(f.id)} {...dropProps(f.id)} title="Abrir · arraste arquivos para cá · arraste a pasta para dentro de outra">
+                onClick={() => setCur(f.id)} onContextMenu={onFolderMenu(f.id)} {...dropProps(f.id)} title="Abrir · botão direito: mais opções · arraste arquivos para cá · arraste a pasta para dentro de outra">
                 <span className="media-folder-icon">📁</span>
                 <span className="media-name">{f.name}</span>
                 <span className="meta">{countIn.get(f.id) ?? 0} itens{childrenOf(f.id).length ? ` · ${childrenOf(f.id).length} pastas` : ''}</span>
@@ -241,25 +256,40 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
           {shown.length > visible.length && <div className="meta">Mostrando 200 de {shown.length}. Use a busca para achar o resto.</div>}
         </div>
       </div>
-      <p className="hint">{onPick ? 'Clique para pôr no fim do roteiro ou arraste para a lista · passe o mouse para ver o vídeo' : 'Arraste para uma célula da grade (vários de uma vez entram em sequência e criam as colunas que faltarem) · Ctrl/Shift + clique seleciona vários · # marca com tags'}</p>
+      {folderMenu && byId.get(folderMenu.id) && (() => {
+        const f = byId.get(folderMenu.id)!
+        const go = (fn: () => void) => () => { fn(); setFolderMenu(null) }
+        return (
+          <div className="menu" style={{ left: Math.min(folderMenu.x, window.innerWidth - 260), top: Math.min(folderMenu.y, window.innerHeight - 240) }} onClick={(e) => e.stopPropagation()}>
+            <div className="menu-label">📁 {f.name}</div>
+            <button onClick={go(() => { setCur(f.id); setQ(''); setTag(null) })}>Abrir</button>
+            <button onClick={go(() => { setCur(f.id); setRenaming(f.id) })}>Renomear…</button>
+            <button onClick={go(() => newFolder(f.id))}>Nova pasta dentro</button>
+            {f.source && <button title={f.source} onClick={go(() => send({ type: 'libraryOpenDir', path: f.source! }))}>Abrir a pasta no computador</button>}
+            {f.source && <button onClick={go(() => send({ type: 'libraryGet' }))}>Atualizar (ler a pasta de novo)</button>}
+            {f.parent && <button onClick={go(() => send({ type: 'libraryFolderMove', id: f.id, parent: null }))}>Mover para o início</button>}
+            <button className="danger" onClick={go(() => deleteFolder(f.id))}>Apagar pasta…</button>
+          </div>
+        )
+      })()}      <p className="hint">{onPick ? 'Clique para pôr no fim do roteiro ou arraste para a lista · passe o mouse para ver o vídeo' : 'Arraste para uma célula da grade (vários de uma vez entram em sequência e criam as colunas que faltarem) · Ctrl/Shift + clique seleciona vários · # marca com tags'}</p>
       </>}
     </section>
   )
 }
 
-function FolderTree({ parent, depth, childrenOf, cur, setCur, countIn, dropOn, dropProps }: {
+function FolderTree({ parent, depth, childrenOf, cur, setCur, countIn, dropOn, dropProps, onMenu }: {
   parent: string | null; depth: number; childrenOf: (id: string | null) => LibraryFolder[]; cur: string | null; setCur: (id: string) => void
-  countIn: Map<string, number>; dropOn: string | null; dropProps: (id: string | null) => object
+  countIn: Map<string, number>; dropOn: string | null; dropProps: (id: string | null) => object; onMenu: (id: string) => (e: React.MouseEvent) => void
 }) {
   return <>
     {childrenOf(parent).map((f) => (
       <div key={f.id}>
         <div className={`media-tree-row ${cur === f.id ? 'sel' : ''} ${dropOn === f.id ? 'drop' : ''}`} style={{ paddingLeft: 8 + depth * 14 }}
           draggable onDragStart={(e) => { e.dataTransfer.setData(FOLDER_MIME, f.id); e.dataTransfer.effectAllowed = 'move' }}
-          onClick={() => setCur(f.id)} {...dropProps(f.id)}>
+          onClick={() => setCur(f.id)} onContextMenu={onMenu(f.id)} {...dropProps(f.id)}>
           📁 {f.name} <span className="meta">{countIn.get(f.id) ?? ''}</span>
         </div>
-        <FolderTree parent={f.id} depth={depth + 1} childrenOf={childrenOf} cur={cur} setCur={setCur} countIn={countIn} dropOn={dropOn} dropProps={dropProps} />
+        <FolderTree parent={f.id} depth={depth + 1} childrenOf={childrenOf} cur={cur} setCur={setCur} countIn={countIn} dropOn={dropOn} dropProps={dropProps} onMenu={onMenu} />
       </div>
     ))}
   </>
