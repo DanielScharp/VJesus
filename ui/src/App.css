@@ -42,7 +42,7 @@ button.small { padding: 2px 8px; font-size: 12px; }
 label { display: grid; grid-template-columns: 110px 50px 1fr; align-items: center; gap: 8px; margin: 6px 0; }
 label output { color: var(--muted); font-variant-numeric: tabular-nums; }
 label.check { display: flex; }
-input[type=range] { width: 100%; accent-color: var(--accent); }
+input[type=range] { width: 100%; }
 
 select {
   background: var(--btn);
@@ -70,8 +70,8 @@ select {
 /* ---------- grade de clips ---------- */
 
 .grid {
-  --cell-w: 132px;
-  --cell-h: 92px;
+  --cell-w: 116px;
+  --cell-h: 70px;
   overflow-x: auto;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -79,7 +79,7 @@ select {
   padding: 8px;
 }
 
-.grid-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.grid-row { display: flex; gap: 4px; margin-bottom: 4px; }
 .grid-row:last-of-type { margin-bottom: 0; }
 
 .layer-head {
@@ -87,8 +87,8 @@ select {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: 2px;
+  padding: 3px 6px;
   border-left: 3px solid transparent;
   border-radius: 4px;
   background: var(--btn);
@@ -1163,10 +1163,39 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .layer-fader .fader-icon { width: 22px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; color: var(--muted); padding: 0; border: none; background: none; }
 .layer-fader .fader-val { font-size: 10px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 .layer-fader input[type=range] { width: 100%; margin: 0; }
-.layer-fader.opacity input[type=range] { accent-color: var(--accent); }
 .layer-fader.opacity .fader-icon { color: var(--accent); }
-.layer-fader.volume input[type=range] { accent-color: #4fc3f7; }
 .layer-fader.volume .fader-icon.mute { cursor: pointer; border-radius: 4px; }
 .layer-fader.volume .fader-icon.mute:hover { background: var(--btn); }
 .layer-fader.volume.muted input[type=range] { opacity: .4; }
 .layer-fader.volume.muted .fader-val { color: #ff8a8a; }
+/* ---------- sliders no estilo do Resolume: barra reta, preenchida até o valor, marcador fino ---------- */
+input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  height: 14px; margin: 0; padding: 0; cursor: ew-resize;
+  border: 1px solid #2c2f36; border-radius: 2px;
+  background: linear-gradient(to right, var(--range-fill, var(--accent)) 0 var(--p, 50%), #0d0e11 var(--p, 50%) 100%);
+}
+input[type=range]:hover { border-color: #474b55; }
+input[type=range]:focus { outline: none; border-color: var(--range-fill, var(--accent)); }
+input[type=range]:disabled { opacity: .4; cursor: default; }
+input[type=range]::-webkit-slider-runnable-track { height: 100%; background: transparent; border: none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 3px; height: 14px; margin-top: -1px; border: none; border-radius: 0; background: #f2f2f2; box-shadow: 0 0 0 1px rgba(0, 0, 0, .5); }
+
+/* ---------- grade compacta: layer com V (vídeo) e A (áudio) como no Resolume ---------- */
+.layer-head .layer-title { font-size: 12px; line-height: 1.2; }
+.layer-head .layer-title button.small { padding: 0 5px; font-size: 11px; }
+.layer-head select { height: 20px; font-size: 11px; padding: 0 4px; }
+.layer-fader { grid-template-columns: 16px minmax(0, 1fr) 30px; gap: 4px; margin: 0; }
+.layer-fader .fader-val { font-size: 10px; }
+.fader-tag { width: 16px; height: 14px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: none; border-radius: 2px; font-size: 10px; font-weight: 700; color: #fff; line-height: 1; }
+.fader-tag.v { background: #2f8a63; }
+.fader-tag.a { background: #b03a6e; cursor: pointer; }
+.fader-tag.a:hover { filter: brightness(1.2); }
+.fader-tag.a.off { background: #3a3d45; color: #ff8a8a; text-decoration: line-through; }
+.layer-fader.opacity { --range-fill: #2f8a63; }
+.layer-fader.volume { --range-fill: #b03a6e; }
+.layer-fader.volume.muted input[type=range] { opacity: .35; }
+.layer-transport { gap: 2px; }
+.layer-transport button.small { padding: 0 5px; font-size: 11px; }
+.cell .clip-name { font-size: 10px; padding: 1px 5px; }
+.column-head { padding: 2px 4px; }

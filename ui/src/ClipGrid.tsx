@@ -194,15 +194,15 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
               </div>
               {/* opacidade (imagem) e volume (som) da layer: cada um com ícone, cor e valor próprios */}
               <div className="layer-fader opacity" onClick={(e) => e.stopPropagation()} title="Opacidade da layer (imagem)">
-                <span className="fader-icon">◐</span>
+                <span className="fader-tag v" title="V = vídeo (opacidade)">V</span>
                 <input type="range" min={0} max={1} step={0.01} value={layer.opacity}
                   data-address={`/composition/layers/${li + 1}/video/opacity`}
                   onChange={(e) => onLayerChange(li, { opacity: Number(e.target.value) })} />
                 <span className="fader-val">{Math.round(layer.opacity * 100)}%</span>
               </div>
               <div className={`layer-fader volume ${layer.muted ? 'muted' : ''}`} onClick={(e) => e.stopPropagation()} title="Volume da layer (som): vale para o que já está tocando e para o próximo vídeo chamado nela">
-                <button className={`fader-icon mute ${layer.muted ? 'active' : ''}`} title={layer.muted ? 'Ligar o som da layer' : 'Mudo (o volume fica guardado)'}
-                  onClick={() => onLayerChange(li, { muted: !layer.muted })}>{layer.muted ? '🔇' : '🔊'}</button>
+                <button className={`fader-tag a ${layer.muted ? 'off' : ''}`} title={layer.muted ? 'A = áudio · MUDO: clique para ligar o som' : 'A = áudio (volume) · clique para deixar mudo (o volume fica guardado)'}
+                  onClick={() => onLayerChange(li, { muted: !layer.muted })}>A</button>
                 <input type="range" min={0} max={1.5} step={0.01} value={layer.volume ?? 1}
                   data-address={`/composition/layers/${li + 1}/audio/volume`}
                   onChange={(e) => onLayerChange(li, { volume: Number(e.target.value), muted: false })} />

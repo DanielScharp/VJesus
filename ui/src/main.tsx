@@ -6,6 +6,7 @@ import { StageApp } from './StageApp.tsx'
 import { KineticLiveApp } from './KineticLiveApp.tsx'
 import './App.css'
 import './numberEdit'
+import './rangeFill'
 
 // a mesma UI serve a janela de controle e a tela de retorno (index.html#stage)
 const isStage = location.hash === '#stage'
