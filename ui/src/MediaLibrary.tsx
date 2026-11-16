@@ -35,6 +35,7 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
   const [dropOn, setDropOn] = useState<string | null>(null)
   // pastas/arquivos arrastados do Explorer
   const [fileDrag, setFileDrag] = useState(false)
+  const [driveMsg, setDriveMsg] = useState<string | null>(null)
   const fromExplorer = (e: React.DragEvent) => e.dataTransfer.types.includes('Files') && !e.dataTransfer.types.includes(MEDIA_MIME)
   const asked = useRef(new Set<string>())
   // aberta ou fechada fica lembrado (fechada por padrão, para não ocupar a tela)
@@ -55,6 +56,7 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
         if (m.created) { setCur(m.created); setRenaming(m.created) }
       }
       if (m.type === 'libraryOpenFolder') { setCur(m.id); setQ(''); setTag(null) }
+      if (m.type === 'driveMissing') setDriveMsg(m.message)
       if (m.type === 'libraryPreview') setPreviews((p) => ({ ...p, [m.path]: m.frames }))
       if (m.type === 'libraryTags') setItems((list) => list?.map((i) => (i.path === m.path ? { ...i, tags: m.tags } : i)) ?? null)
     })
@@ -130,7 +132,9 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
   const deleteFolder = (id: string) => {
     const f = byId.get(id)
     if (!f) return
-    const msg = f.source
+    const msg = f.linked
+      ? `Desligar a pasta "${f.name}" do Google Drive? Ela sai da biblioteca, mas nada é apagado no Drive.`
+      : f.source
       ? `Apagar a pasta "${f.name}" da biblioteca? A biblioteca para de mostrar o que vem dela. Nenhum arquivo é apagado do computador.`
       : `Apagar a pasta "${f.name}" da biblioteca? O que está nela sobe um nível. Nenhum arquivo é apagado do computador.`
     if (!window.confirm(msg)) return
@@ -178,10 +182,17 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
           <option value="all">Tudo</option><option value="video">Vídeos</option><option value="image">Imagens</option><option value="pres">Apresentações</option>
         </select>
         <button onClick={() => send({ type: 'libraryAddFolder', folder: cur })} title="Escolhe uma pasta do computador: ela vira uma pasta da biblioteca (também dá para arrastar pastas do Explorer para cá)">+ Pasta do computador…</button>
-        <button onClick={() => send({ type: 'libraryGet' })} disabled={scanning}>{scanning ? 'Lendo…' : 'Atualizar'}</button>
+        <button onClick={() => send({ type: 'libraryAddDrive', folder: cur })} title="Liga uma pasta do Google Drive (precisa do app Google Drive para computador): o que mudar no Drive aparece aqui, e pastas criadas ou renomeadas aqui mudam no Drive">☁ Google Drive…</button>
+        <button onClick={() => send({ type: 'librarySync' })} disabled={scanning}>{scanning ? 'Lendo…' : 'Atualizar'}</button>
         </>}
       </div>
       {open && <>
+      {driveMsg && (
+        <div className="media-drive-msg">
+          <span>☁ {driveMsg}</span>
+          <button className="small" onClick={() => setDriveMsg(null)}>Fechar</button>
+        </div>
+      )}
       {folders.length === 0 && collections.length === 0 && (
         <p className="meta media-empty-hint">Arraste pastas do computador para cá (ou use “+ Pasta do computador”). O que já está na grade aparece aqui sozinho.</p>
       )}
@@ -239,7 +250,7 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
               <div key={f.id} className={`media-folder-card ${dropOn === f.id ? 'drop' : ''}`} draggable
                 onDragStart={(e) => { e.dataTransfer.setData(FOLDER_MIME, f.id); e.dataTransfer.effectAllowed = 'move' }}
                 onClick={() => setCur(f.id)} onContextMenu={onFolderMenu(f.id)} {...dropProps(f.id)} title="Abrir · botão direito: mais opções · arraste arquivos para cá · arraste a pasta para dentro de outra">
-                <span className="media-folder-icon">📁</span>
+                <span className="media-folder-icon">{f.linked ? '☁️' : '📁'}</span>
                 <span className="media-name">{f.name}</span>
                 <span className="meta">{countIn.get(f.id) ?? 0} itens{childrenOf(f.id).length ? ` · ${childrenOf(f.id).length} pastas` : ''}</span>
               </div>
@@ -261,14 +272,14 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
         const go = (fn: () => void) => () => { fn(); setFolderMenu(null) }
         return (
           <div className="menu" style={{ left: Math.min(folderMenu.x, window.innerWidth - 260), top: Math.min(folderMenu.y, window.innerHeight - 240) }} onClick={(e) => e.stopPropagation()}>
-            <div className="menu-label">📁 {f.name}</div>
+            <div className="menu-label">{f.linked ? '☁ ' : '📁 '}{f.name}{f.linked ? ' · Google Drive' : ''}</div>
             <button onClick={go(() => { setCur(f.id); setQ(''); setTag(null) })}>Abrir</button>
             <button onClick={go(() => { setCur(f.id); setRenaming(f.id) })}>Renomear…</button>
             <button onClick={go(() => newFolder(f.id))}>Nova pasta dentro</button>
             {f.source && <button title={f.source} onClick={go(() => send({ type: 'libraryOpenDir', path: f.source! }))}>Abrir a pasta no computador</button>}
-            {f.source && <button onClick={go(() => send({ type: 'libraryGet' }))}>Atualizar (ler a pasta de novo)</button>}
+            {f.source && <button onClick={go(() => send({ type: 'librarySync' }))}>Atualizar (ler a pasta de novo)</button>}
             {f.parent && <button onClick={go(() => send({ type: 'libraryFolderMove', id: f.id, parent: null }))}>Mover para o início</button>}
-            <button className="danger" onClick={go(() => deleteFolder(f.id))}>Apagar pasta…</button>
+            <button className="danger" onClick={go(() => deleteFolder(f.id))}>{f.linked ? (byId.get(f.parent ?? '')?.linked ? 'Tirar da biblioteca (não apaga no Drive)…' : 'Desligar do Google Drive…') : 'Apagar pasta…'}</button>
           </div>
         )
       })()}      <p className="hint">{onPick ? 'Clique para pôr no fim do roteiro ou arraste para a lista · passe o mouse para ver o vídeo' : 'Arraste para uma célula da grade (vários de uma vez entram em sequência e criam as colunas que faltarem) · Ctrl/Shift + clique seleciona vários · # marca com tags'}</p>
@@ -287,7 +298,7 @@ function FolderTree({ parent, depth, childrenOf, cur, setCur, countIn, dropOn, d
         <div className={`media-tree-row ${cur === f.id ? 'sel' : ''} ${dropOn === f.id ? 'drop' : ''}`} style={{ paddingLeft: 8 + depth * 14 }}
           draggable onDragStart={(e) => { e.dataTransfer.setData(FOLDER_MIME, f.id); e.dataTransfer.effectAllowed = 'move' }}
           onClick={() => setCur(f.id)} onContextMenu={onMenu(f.id)} {...dropProps(f.id)}>
-          📁 {f.name} <span className="meta">{countIn.get(f.id) ?? ''}</span>
+          {f.linked ? '☁' : '📁'} {f.name} <span className="meta">{countIn.get(f.id) ?? ''}</span>
         </div>
         <FolderTree parent={f.id} depth={depth + 1} childrenOf={childrenOf} cur={cur} setCur={setCur} countIn={countIn} dropOn={dropOn} dropProps={dropProps} onMenu={onMenu} />
       </div>

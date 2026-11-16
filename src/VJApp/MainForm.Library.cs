@@ -23,6 +23,8 @@ sealed partial class MainForm
         public Dictionary<string, string> Placement { get; set; } = new(StringComparer.OrdinalIgnoreCase);
         /// <summary>Arquivos soltos trazidos para a biblioteca (fora das pastas do computador lidas por ela).</summary>
         public List<string> Files { get; set; } = [];
+        /// <summary>Subpastas do computador que a pessoa tirou da biblioteca (não voltam ao reler a pasta).</summary>
+        public List<string> Hidden { get; set; } = [];
     }
 
     sealed class LibraryFolder
@@ -32,6 +34,8 @@ sealed partial class MainForm
         public string? Parent { get; set; }
         /// <summary>Pasta do computador de onde ela veio (arrastada ou escolhida em "+ Pasta do computador").</summary>
         public string? Source { get; set; }
+        /// <summary>Ligada ao Google Drive: criar e renomear pastas aqui muda no Drive também (e o que muda lá aparece aqui).</summary>
+        public bool Linked { get; set; }
     }
 
     static string LibraryPath => Path.Combine(AppDataDir, "biblioteca.json");
@@ -52,6 +56,7 @@ sealed partial class MainForm
                 s.Placement = new(s.Placement ?? [], StringComparer.OrdinalIgnoreCase);
                 s.Collections ??= [];
                 s.Files ??= [];
+                s.Hidden ??= [];
                 // pastas importadas antes de guardar a origem: liga pelo nome
                 foreach (var dir in s.Folders)
                     if (s.Collections.All(c => !string.Equals(c.Source, dir, StringComparison.OrdinalIgnoreCase))
@@ -67,6 +72,7 @@ sealed partial class MainForm
 
     void SaveLibrary()
     {
+        UpdateLibraryWatchers();
         try { File.WriteAllText(LibraryPath, JsonSerializer.Serialize(_library, new JsonSerializerOptions { WriteIndented = true })); }
         catch (Exception ex) { Send(new { type = "error", message = "Não consegui salvar a biblioteca: " + ex.Message }); }
     }
@@ -77,6 +83,12 @@ sealed partial class MainForm
         {
             case "libraryGet":
                 _ = SendLibraryAsync();
+                break;
+            case "librarySync":
+                SyncLibrarySources();
+                break;
+            case "libraryAddDrive":
+                AddDriveFolder((string?)msg["folder"]);
                 break;
             case "libraryAddFolder":
             {
@@ -107,14 +119,38 @@ sealed partial class MainForm
                 string? parent = (string?)msg["parent"];
                 if (parent != null && _library.Collections.All(c => c.Id != parent)) parent = null;
                 var folder = new LibraryFolder { Name = CleanFolderName((string?)msg["name"]), Parent = parent };
+                // dentro de uma pasta do Google Drive: cria a pasta de verdade no Drive
+                if (_library.Collections.FirstOrDefault(c => c.Id == parent) is { Linked: true, Source: { } pdir })
+                {
+                    string dir = Path.Combine(pdir, folder.Name);
+                    for (int n = 2; Directory.Exists(dir); n++) dir = Path.Combine(pdir, $"{folder.Name} ({n})");
+                    try { Directory.CreateDirectory(dir); folder.Source = dir; folder.Linked = true; folder.Name = Path.GetFileName(dir); }
+                    catch (Exception ex) { Send(new { type = "error", message = "Não consegui criar a pasta no Google Drive: " + ex.Message }); break; }
+                }
                 _library.Collections.Add(folder);
                 SaveLibrary();
                 SendLibraryCollections(created: folder.Id);
                 break;
             }
             case "libraryFolderRename":
-                if (_library.Collections.FirstOrDefault(c => c.Id == (string?)msg["id"]) is { } rf) { rf.Name = CleanFolderName((string?)msg["name"]); SaveLibrary(); SendLibraryCollections(); }
+            {
+                if (_library.Collections.FirstOrDefault(c => c.Id == (string?)msg["id"]) is not { } rf) break;
+                string newName = CleanFolderName((string?)msg["name"]);
+                // pasta do Google Drive: renomeia de verdade (e tudo que apontava para ela acompanha)
+                if (rf.Linked && rf.Source is { } old && Directory.Exists(old))
+                {
+                    string newDir = Path.Combine(Path.GetDirectoryName(old.TrimEnd('\\'))!, string.Concat(newName.Select(ch => Path.GetInvalidFileNameChars().Contains(ch) ? '_' : ch)));
+                    if (!SamePath(newDir, old))
+                    {
+                        try { Directory.Move(old, newDir); LibraryPathRenamed(old, newDir); }
+                        catch (Exception ex) { Send(new { type = "error", message = "Não consegui renomear a pasta no Google Drive: " + ex.Message }); SendLibraryCollections(); break; }
+                    }
+                }
+                rf.Name = newName;
+                SaveLibrary();
+                SendLibraryCollections();
                 break;
+            }
             case "libraryFolderMove":
             {
                 // pasta dentro de outra (não deixa pôr dentro dela mesma ou de uma filha)
@@ -139,6 +175,8 @@ sealed partial class MainForm
                     foreach (var k in _library.Placement.Where(p => gone.Contains(p.Value)).Select(p => p.Key).ToList()) _library.Placement.Remove(k);
                     _library.Collections.RemoveAll(c => gone.Contains(c.Id));
                     _library.Folders.RemoveAll(d => string.Equals(d, df.Source, StringComparison.OrdinalIgnoreCase));
+                    // subpasta de uma pasta que continua sendo lida: não volta na próxima leitura
+                    if (_library.Folders.Any(d => IsUnder(df.Source, d)) && !_library.Hidden.Contains(df.Source, StringComparer.OrdinalIgnoreCase)) _library.Hidden.Add(df.Source);
                     SaveLibrary();
                     SendLibraryCollections();
                     _ = SendLibraryAsync();
@@ -156,8 +194,15 @@ sealed partial class MainForm
             {
                 string? target = (string?)msg["folder"];
                 if (target != null && _library.Collections.All(c => c.Id != target)) break;
-                foreach (var p in (msg["paths"] as JsonArray ?? []).Select(x => (string?)x).Where(x => x != null))
-                    if (target == null) _library.Placement.Remove(p!); else _library.Placement[p!] = target;
+                var moving = (msg["paths"] as JsonArray ?? []).Select(x => (string?)x).Where(x => x != null).Select(x => x!).ToList();
+                // para uma pasta do Google Drive: copia os arquivos para lá (o original fica onde está)
+                if (_library.Collections.FirstOrDefault(c => c.Id == target) is { Linked: true, Source: { } } lf)
+                {
+                    CopyIntoLinked(moving, lf);
+                    moving = [.. moving.Where(m => IsUnder(m, lf.Source!))];
+                }
+                foreach (var p in moving)
+                    if (target == null) _library.Placement.Remove(p); else _library.Placement[p] = target;
                 SaveLibrary();
                 SendLibraryCollections();
                 break;
@@ -220,49 +265,61 @@ sealed partial class MainForm
         }
     }
 
+    static bool IsLibraryMedia(string f)
+    {
+        string ext = Path.GetExtension(f).ToLowerInvariant();
+        return VideoExtensions.Contains(ext) || ImageExtensions.Contains(ext) || PresentationExtensions.Contains(ext);
+    }
+
+    static bool SamePath(string? a, string? b) => a != null && b != null && string.Equals(a.TrimEnd('\\'), b.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+    static bool IsUnder(string path, string dir) => path.StartsWith(dir.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase);
+
+    int _mirrorFiles, _mirrorFolders;
+
+    /// <summary>
+    /// A estrutura de uma pasta do computador vira pastas da biblioteca (com o mesmo nome e as subpastas dentro).
+    /// Rodar de novo atualiza: o que já existe é reaproveitado (pela pasta de origem), o que é novo entra.
+    /// Pastas ligadas (Google Drive) mantêm até as subpastas vazias, para espelhar o Drive como ele é.
+    /// </summary>
+    string? MirrorDir(string dir, string? parent, int depth, bool linked)
+    {
+        if (depth > 8 || _mirrorFiles > 8000) return null;
+        List<string> media, subs;
+        try
+        {
+            media = [.. Directory.EnumerateFiles(dir).Where(IsLibraryMedia)];
+            subs = [.. Directory.EnumerateDirectories(dir).Where(d => !Path.GetFileName(d).StartsWith('.'))];
+        }
+        catch { return null; }
+        if (_library.Hidden.Any(h => SamePath(h, dir))) return null;
+        string name = CleanFolderName(Path.GetFileName(dir.TrimEnd('\\')));
+        // a mesma pasta de novo: usa a pasta da biblioteca que já existe
+        var folder = _library.Collections.FirstOrDefault(c => SamePath(c.Source, dir))
+            ?? _library.Collections.FirstOrDefault(c => c.Parent == parent && c.Name == name && c.Source == null);
+        bool created = folder == null;
+        folder ??= new LibraryFolder { Name = name, Parent = parent };
+        folder.Source = dir;
+        if (linked) { folder.Linked = true; folder.Name = name; } // no Drive o nome é sempre o da pasta
+        if (created) _library.Collections.Add(folder);
+        bool any = media.Count > 0 || linked;
+        foreach (var f in media) { _library.Placement[f] = folder.Id; _mirrorFiles++; }
+        foreach (var s in subs) if (MirrorDir(s, folder.Id, depth + 1, linked) != null) any = true;
+        if (!any) { if (created) _library.Collections.Remove(folder); return null; }
+        if (created) _mirrorFolders++;
+        return folder.Id;
+    }
+
     /// <summary>
     /// Pastas e arquivos arrastados do Explorer para a biblioteca. Pasta: passa a ser lida pela biblioteca e vira
     /// uma pasta da biblioteca com o mesmo nome (e as subpastas dentro), com as imagens e vídeos já organizados.
     /// Arquivo: entra na biblioteca (na pasta da biblioteca que estiver aberta).
     /// </summary>
-    void LibraryDrop(string[] paths, string? target)
+    void LibraryDrop(string[] paths, string? target, bool linked = false)
     {
         if (target != null && _library.Collections.All(c => c.Id != target)) target = null;
-        bool IsMedia(string f)
-        {
-            string ext = Path.GetExtension(f).ToLowerInvariant();
-            return VideoExtensions.Contains(ext) || ImageExtensions.Contains(ext) || PresentationExtensions.Contains(ext);
-        }
-        bool Covered(string f) => _library.Folders.Any(d => f.StartsWith(d.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase) || string.Equals(f, d, StringComparison.OrdinalIgnoreCase));
-        int files = 0, folders = 0;
-
-        // a estrutura da pasta vira pastas da biblioteca (só as que têm imagem ou vídeo)
-        string? Mirror(string dir, string? parent, int depth)
-        {
-            if (depth > 6 || files > 5000) return null;
-            List<string> media, subs;
-            try
-            {
-                media = [.. Directory.EnumerateFiles(dir).Where(IsMedia)];
-                subs = [.. Directory.EnumerateDirectories(dir)];
-            }
-            catch { return null; }
-            string name = CleanFolderName(Path.GetFileName(dir.TrimEnd('\\')));
-            // arrastou a mesma pasta de novo: usa a pasta da biblioteca que já existe
-            var folder = _library.Collections.FirstOrDefault(c => string.Equals(c.Source, dir, StringComparison.OrdinalIgnoreCase))
-                ?? _library.Collections.FirstOrDefault(c => c.Parent == parent && c.Name == name && c.Source == null);
-            bool created = folder == null;
-            folder ??= new LibraryFolder { Name = name, Parent = parent };
-            folder.Source = dir;
-            if (created) _library.Collections.Add(folder);
-            bool any = media.Count > 0;
-            foreach (var f in media) { _library.Placement[f] = folder.Id; files++; }
-            foreach (var s in subs) if (Mirror(s, folder.Id, depth + 1) != null) any = true;
-            if (!any) { if (created) _library.Collections.Remove(folder); return null; }
-            folders++;
-            return folder.Id;
-        }
-
+        bool Covered(string f) => _library.Folders.Any(d => IsUnder(f, d) || SamePath(f, d));
+        _mirrorFiles = 0; _mirrorFolders = 0;
+        int files = 0;
         string? first = null;
         foreach (var p in paths)
         {
@@ -271,28 +328,201 @@ sealed partial class MainForm
                 if (!Covered(p))
                 {
                     // pasta mais ampla que alguma já lida: fica só ela
-                    _library.Folders.RemoveAll(d => d.StartsWith(p.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase));
+                    _library.Folders.RemoveAll(d => IsUnder(d, p));
                     _library.Folders.Add(p);
                 }
-                first ??= Mirror(p, target, 0);
+                first ??= MirrorDir(p, target, 0, linked);
             }
-            else if (File.Exists(p) && IsMedia(p))
+            else if (File.Exists(p) && IsLibraryMedia(p))
             {
                 if (!Covered(p) && !_library.Files.Contains(p, StringComparer.OrdinalIgnoreCase)) _library.Files.Add(p);
                 if (target != null) _library.Placement[p] = target; else _library.Placement.Remove(p);
                 files++;
             }
         }
+        files += _mirrorFiles;
         SaveLibrary();
         SendLibraryCollections(created: null);
         _ = SendLibraryAsync();
         Send(new
         {
             type = "notice",
-            message = files == 0 ? "Nenhuma imagem, vídeo ou apresentação encontrada no que foi arrastado."
-                : $"Biblioteca: {files} arquivo(s) trazido(s){(folders > 0 ? $" em {folders} pasta(s)" : "")}.",
+            message = files == 0 && !linked ? "Nenhuma imagem, vídeo ou apresentação encontrada no que foi arrastado."
+                : linked ? $"Pasta do Google Drive ligada: {files} arquivo(s). O que mudar no Drive aparece aqui sozinho."
+                : $"Biblioteca: {files} arquivo(s) trazido(s){(_mirrorFolders > 0 ? $" em {_mirrorFolders} pasta(s)" : "")}.",
         });
         if (first != null) Send(new { type = "libraryOpenFolder", id = first });
+    }
+
+    // ---------------- pastas ligadas: acompanhar as mudanças no computador / Google Drive
+
+    readonly Dictionary<string, FileSystemWatcher> _libWatchers = new(StringComparer.OrdinalIgnoreCase);
+    System.Windows.Forms.Timer? _libSyncTimer;
+
+    /// <summary>Uma "escuta" por pasta do computador lida pela biblioteca: avisa quando algo é criado, apagado ou renomeado.</summary>
+    void UpdateLibraryWatchers()
+    {
+        foreach (var root in _libWatchers.Keys.Where(k => !_library.Folders.Contains(k, StringComparer.OrdinalIgnoreCase)).ToList())
+        {
+            _libWatchers[root].Dispose();
+            _libWatchers.Remove(root);
+        }
+        foreach (var root in _library.Folders.Where(f => !_libWatchers.ContainsKey(f) && Directory.Exists(f)))
+        {
+            try
+            {
+                var w = new FileSystemWatcher(root)
+                {
+                    IncludeSubdirectories = true,
+                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName,
+                    InternalBufferSize = 64 * 1024,
+                };
+                w.Created += (_, _) => BeginInvoke(ScheduleLibrarySync);
+                w.Deleted += (_, _) => BeginInvoke(ScheduleLibrarySync);
+                w.Renamed += (_, ev) => BeginInvoke(() => { LibraryPathRenamed(ev.OldFullPath, ev.FullPath); ScheduleLibrarySync(); });
+                w.Error += (_, _) => BeginInvoke(ScheduleLibrarySync);
+                w.EnableRaisingEvents = true;
+                _libWatchers[root] = w;
+            }
+            catch { /* pasta sem permissão ou unidade fora do ar: tenta de novo na próxima vez */ }
+        }
+    }
+
+    /// <summary>Junta várias mudanças seguidas (o Drive sincronizando muitos arquivos) numa atualização só.</summary>
+    void ScheduleLibrarySync()
+    {
+        if (_libSyncTimer == null)
+        {
+            _libSyncTimer = new System.Windows.Forms.Timer { Interval = 1500 };
+            _libSyncTimer.Tick += (_, _) => { _libSyncTimer.Stop(); SyncLibrarySources(); };
+        }
+        _libSyncTimer.Stop();
+        _libSyncTimer.Start();
+    }
+
+    /// <summary>Relê as pastas do computador: subpastas e arquivos novos entram, os que sumiram saem.</summary>
+    void SyncLibrarySources()
+    {
+        _mirrorFiles = 0; _mirrorFolders = 0;
+        foreach (var root in _library.Folders.ToList())
+        {
+            if (!Directory.Exists(root)) continue; // unidade fora do ar (Drive desconectado): não mexe em nada
+            if (_library.Collections.FirstOrDefault(c => SamePath(c.Source, root)) is not { } top) continue;
+            MirrorDir(root, top.Parent, 0, top.Linked);
+            // pastas que não existem mais dentro desta pasta do computador: saem da biblioteca
+            foreach (var gone in _library.Collections.Where(c => c.Source != null && IsUnder(c.Source, root) && !Directory.Exists(c.Source)).ToList())
+            {
+                foreach (var child in _library.Collections.Where(c => c.Parent == gone.Id)) child.Parent = gone.Parent;
+                _library.Collections.Remove(gone);
+            }
+            foreach (var k in _library.Placement.Keys.Where(k => IsUnder(k, root) && !File.Exists(k)).ToList()) _library.Placement.Remove(k);
+        }
+        SaveLibrary();
+        SendLibraryCollections();
+        _ = SendLibraryAsync();
+    }
+
+    /// <summary>
+    /// Arquivo ou pasta renomeado/movido no computador (ou no Drive): troca o caminho em tudo que apontava
+    /// para ele, inclusive os clips do grid, para nada perder a referência.
+    /// </summary>
+    void LibraryPathRenamed(string oldPath, string newPath)
+    {
+        string Fix(string p) => SamePath(p, oldPath) ? newPath : IsUnder(p, oldPath) ? newPath + p[oldPath.TrimEnd('\\').Length..] : p;
+        bool clipsChanged = false;
+        _comp.StoreDeck();
+        foreach (var clip in AllClips(_comp))
+        {
+            if (clip?.Path == null) continue;
+            var n = Fix(clip.Path);
+            if (n != clip.Path) { clip.Path = n; clipsChanged = true; }
+        }
+        foreach (var k in _library.Placement.Keys.ToList())
+        {
+            var n = Fix(k);
+            if (n != k) { var v = _library.Placement[k]; _library.Placement.Remove(k); _library.Placement[n] = v; }
+        }
+        foreach (var k in _library.Tags.Keys.ToList())
+        {
+            var n = Fix(k);
+            if (n != k) { var v = _library.Tags[k]; _library.Tags.Remove(k); _library.Tags[n] = v; }
+        }
+        for (int i = 0; i < _library.Files.Count; i++) _library.Files[i] = Fix(_library.Files[i]);
+        for (int i = 0; i < _library.Folders.Count; i++) _library.Folders[i] = Fix(_library.Folders[i]);
+        foreach (var c in _library.Collections)
+        {
+            if (c.Source == null) continue;
+            var n = Fix(c.Source);
+            if (n != c.Source) { c.Source = n; if (c.Linked) c.Name = CleanFolderName(Path.GetFileName(n.TrimEnd('\\'))); }
+        }
+        if (clipsChanged) CompositionChanged();
+    }
+
+    /// <summary>Google Drive para computador: a pasta "Meu Drive" (G:\Meu Drive ou outra letra). null = não instalado.</summary>
+    static string? FindGoogleDrive()
+    {
+        foreach (var d in DriveInfo.GetDrives())
+        {
+            try
+            {
+                if (!d.IsReady) continue;
+                foreach (var name in new[] { "Meu Drive", "My Drive", "Mi unidad" })
+                {
+                    var p = Path.Combine(d.RootDirectory.FullName, name);
+                    if (Directory.Exists(p)) return p;
+                }
+            }
+            catch { }
+        }
+        var legacy = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Google Drive");
+        return Directory.Exists(legacy) ? legacy : null;
+    }
+
+    /// <summary>Ligar uma pasta do Google Drive à biblioteca (escolhida dentro do Meu Drive).</summary>
+    void AddDriveFolder(string? target)
+    {
+        var drive = FindGoogleDrive();
+        if (drive == null)
+        {
+            Send(new
+            {
+                type = "driveMissing",
+                message = "Não achei o Google Drive neste computador. Instale o \"Google Drive para computador\" (drive.google.com/download), entre com a conta da igreja e tente de novo: o Meu Drive aparece como uma unidade (ex.: G:) e o VJesus passa a acompanhar a pasta escolhida.",
+            });
+            return;
+        }
+        using var dlg = new FolderBrowserDialog { Description = "Escolha a pasta do Google Drive que fica ligada à biblioteca", InitialDirectory = drive, SelectedPath = drive, ShowNewFolderButton = true };
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        LibraryDrop([dlg.SelectedPath], target, linked: true);
+    }
+
+    /// <summary>Copia arquivos para dentro de uma pasta ligada (Google Drive) sem tirar o original do lugar.</summary>
+    void CopyIntoLinked(List<string> paths, LibraryFolder folder)
+    {
+        var dir = folder.Source!;
+        var todo = paths.Where(p => File.Exists(p) && !IsUnder(p, dir)).ToList();
+        if (todo.Count == 0) return;
+        Send(new { type = "notice", message = $"Copiando {todo.Count} arquivo(s) para \"{folder.Name}\" no Google Drive…" });
+        Task.Run(() =>
+        {
+            int ok = 0;
+            foreach (var p in todo)
+            {
+                try
+                {
+                    string dest = Path.Combine(dir, Path.GetFileName(p));
+                    for (int n = 2; File.Exists(dest); n++) dest = Path.Combine(dir, $"{Path.GetFileNameWithoutExtension(p)} ({n}){Path.GetExtension(p)}");
+                    File.Copy(p, dest);
+                    ok++;
+                }
+                catch { }
+            }
+            BeginInvoke(() =>
+            {
+                SyncLibrarySources();
+                Send(new { type = "notice", message = $"{ok} arquivo(s) copiado(s) para o Google Drive (\"{folder.Name}\")." });
+            });
+        });
     }
 
     static string CleanFolderName(string? name) => string.IsNullOrWhiteSpace(name) ? "Nova pasta" : name.Trim()[..Math.Min(name.Trim().Length, 60)];

@@ -181,6 +181,8 @@ sealed partial class MainForm : Form
                 SendLyricsState();
                 SendFonts();
                 WarmUpKinetic();
+                // pastas do computador / Google Drive: escuta as mudanças e relê o que mudou com o programa fechado
+                if (_library.Folders.Count > 0) BeginInvoke(() => { UpdateLibraryWatchers(); SyncLibrarySources(); });
                 SendStage();
                 SendAttacks();
                 SendOverlay();
