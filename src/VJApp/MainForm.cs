@@ -195,6 +195,11 @@ sealed partial class MainForm : Form
                 break;
 
             case "tap": Tap(); break;
+            case "libraryDrop":
+                // pastas ou arquivos arrastados do Explorer para a biblioteca
+                LibraryDrop(e.AdditionalObjects?.OfType<CoreWebView2File>().Select(f => f.Path).ToArray() ?? [], (string?)msg["folder"]);
+                break;
+
             case var lyricsType when lyricsType?.StartsWith("lyrics") == true: OnLyricsMessage(lyricsType, msg); break;
             case var stageType when stageType?.StartsWith("stage") == true: OnStageMessage(stageType, msg); break;
             case var bibleType when bibleType?.StartsWith("bible") == true: OnBibleMessage(bibleType, msg); break;

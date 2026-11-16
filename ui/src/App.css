@@ -1142,3 +1142,8 @@ label > select, label > input[type=text], label > input:not([type]) { min-width:
 .prop-group-body > div:not(.prop-row) > :last-child { margin-bottom: 0; }
 .prop-chips { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
 .prop-note { margin: 0 0 10px; }
+
+/* arrastar pastas/arquivos do Explorer para a biblioteca */
+.media-lib { position: relative; }
+.media-lib.file-drag { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.media-dropzone { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; background: rgba(21, 22, 26, .88); color: var(--accent); font-weight: 600; font-size: 15px; border-radius: 8px; pointer-events: none; }

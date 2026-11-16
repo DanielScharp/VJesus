@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { onMessage, send, type LibraryFolder, type LibraryItem } from './bridge'
+import { onMessage, send, sendFiles, type LibraryFolder, type LibraryItem } from './bridge'
 
 export const MEDIA_MIME = 'application/x-vjesus-media'
 /** Arrastar uma pasta da biblioteca (para dentro de outra). */
@@ -33,6 +33,9 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
   const [anchor, setAnchor] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<string | null>(null)
   const [dropOn, setDropOn] = useState<string | null>(null)
+  // pastas/arquivos arrastados do Explorer
+  const [fileDrag, setFileDrag] = useState(false)
+  const fromExplorer = (e: React.DragEvent) => e.dataTransfer.types.includes('Files') && !e.dataTransfer.types.includes(MEDIA_MIME)
   const asked = useRef(new Set<string>())
   // aberta ou fechada fica lembrado (fechada por padrão, para não ocupar a tela)
   const [openState, setOpen] = useState(() => { try { return localStorage.getItem('biblioteca.aberta') === '1' } catch { return false } })
@@ -51,6 +54,7 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
         setCollections(m.collections); setPlacement(m.placement)
         if (m.created) { setCur(m.created); setRenaming(m.created) }
       }
+      if (m.type === 'libraryOpenFolder') { setCur(m.id); setQ(''); setTag(null) }
       if (m.type === 'libraryPreview') setPreviews((p) => ({ ...p, [m.path]: m.frames }))
       if (m.type === 'libraryTags') setItems((list) => list?.map((i) => (i.path === m.path ? { ...i, tags: m.tags } : i)) ?? null)
     })
@@ -134,7 +138,16 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
   const subfolders = searching ? [] : childrenOf(cur)
 
   return (
-    <section className={`media-lib ${open ? 'open' : 'closed'} ${compact ? 'compact' : ''}`}>
+    <section className={`media-lib ${open ? 'open' : 'closed'} ${compact ? 'compact' : ''} ${fileDrag ? 'file-drag' : ''}`}
+      onDragOver={(e) => { if (fromExplorer(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setFileDrag(true) } }}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setFileDrag(false) }}
+      onDrop={(e) => {
+        if (!fromExplorer(e) || e.dataTransfer.files.length === 0) return
+        e.preventDefault(); setFileDrag(false)
+        if (!open) toggle()
+        sendFiles({ type: 'libraryDrop', folder: cur }, e.dataTransfer.files)
+      }}>
+      {fileDrag && <div className="media-dropzone">Solte aqui para trazer para a biblioteca{cur ? ` (na pasta "${byId.get(cur)?.name}")` : ''}: pastas viram pastas da biblioteca, com as imagens e vídeos dentro</div>}
       <div className="media-head">
         {!compact && <button className="media-toggle" onClick={toggle} aria-expanded={open} title={open ? 'Recolher a biblioteca' : 'Abrir a biblioteca'}>
           <span className="caret">{open ? '▾' : '▸'}</span> <h2>Biblioteca de mídia</h2>

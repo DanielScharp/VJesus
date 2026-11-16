@@ -21,6 +21,8 @@ sealed partial class MainForm
         public List<LibraryFolder> Collections { get; set; } = [];
         /// <summary>Em que pasta da biblioteca cada arquivo está (caminho completo → id da pasta).</summary>
         public Dictionary<string, string> Placement { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Arquivos soltos trazidos para a biblioteca (fora das pastas do computador lidas por ela).</summary>
+        public List<string> Files { get; set; } = [];
     }
 
     sealed class LibraryFolder
@@ -47,6 +49,7 @@ sealed partial class MainForm
                 s.Tags = new(s.Tags ?? [], StringComparer.OrdinalIgnoreCase);
                 s.Placement = new(s.Placement ?? [], StringComparer.OrdinalIgnoreCase);
                 s.Collections ??= [];
+                s.Files ??= [];
                 return s;
             }
         }
@@ -189,6 +192,79 @@ sealed partial class MainForm
         }
     }
 
+    /// <summary>
+    /// Pastas e arquivos arrastados do Explorer para a biblioteca. Pasta: passa a ser lida pela biblioteca e vira
+    /// uma pasta da biblioteca com o mesmo nome (e as subpastas dentro), com as imagens e vídeos já organizados.
+    /// Arquivo: entra na biblioteca (na pasta da biblioteca que estiver aberta).
+    /// </summary>
+    void LibraryDrop(string[] paths, string? target)
+    {
+        if (target != null && _library.Collections.All(c => c.Id != target)) target = null;
+        bool IsMedia(string f)
+        {
+            string ext = Path.GetExtension(f).ToLowerInvariant();
+            return VideoExtensions.Contains(ext) || ImageExtensions.Contains(ext) || PresentationExtensions.Contains(ext);
+        }
+        bool Covered(string f) => _library.Folders.Any(d => f.StartsWith(d.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase) || string.Equals(f, d, StringComparison.OrdinalIgnoreCase));
+        int files = 0, folders = 0;
+
+        // a estrutura da pasta vira pastas da biblioteca (só as que têm imagem ou vídeo)
+        string? Mirror(string dir, string? parent, int depth)
+        {
+            if (depth > 6 || files > 5000) return null;
+            List<string> media, subs;
+            try
+            {
+                media = [.. Directory.EnumerateFiles(dir).Where(IsMedia)];
+                subs = [.. Directory.EnumerateDirectories(dir)];
+            }
+            catch { return null; }
+            string name = CleanFolderName(Path.GetFileName(dir.TrimEnd('\\')));
+            // arrastou a mesma pasta de novo: usa a pasta da biblioteca que já existe
+            var folder = _library.Collections.FirstOrDefault(c => c.Parent == parent && c.Name == name);
+            bool created = folder == null;
+            folder ??= new LibraryFolder { Name = name, Parent = parent };
+            if (created) _library.Collections.Add(folder);
+            bool any = media.Count > 0;
+            foreach (var f in media) { _library.Placement[f] = folder.Id; files++; }
+            foreach (var s in subs) if (Mirror(s, folder.Id, depth + 1) != null) any = true;
+            if (!any) { if (created) _library.Collections.Remove(folder); return null; }
+            folders++;
+            return folder.Id;
+        }
+
+        string? first = null;
+        foreach (var p in paths)
+        {
+            if (Directory.Exists(p))
+            {
+                if (!Covered(p))
+                {
+                    // pasta mais ampla que alguma já lida: fica só ela
+                    _library.Folders.RemoveAll(d => d.StartsWith(p.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase));
+                    _library.Folders.Add(p);
+                }
+                first ??= Mirror(p, target, 0);
+            }
+            else if (File.Exists(p) && IsMedia(p))
+            {
+                if (!Covered(p) && !_library.Files.Contains(p, StringComparer.OrdinalIgnoreCase)) _library.Files.Add(p);
+                if (target != null) _library.Placement[p] = target; else _library.Placement.Remove(p);
+                files++;
+            }
+        }
+        SaveLibrary();
+        SendLibraryCollections(created: null);
+        _ = SendLibraryAsync();
+        Send(new
+        {
+            type = "notice",
+            message = files == 0 ? "Nenhuma imagem, vídeo ou apresentação encontrada no que foi arrastado."
+                : $"Biblioteca: {files} arquivo(s) trazido(s){(folders > 0 ? $" em {folders} pasta(s)" : "")}.",
+        });
+        if (first != null) Send(new { type = "libraryOpenFolder", id = first });
+    }
+
     static string CleanFolderName(string? name) => string.IsNullOrWhiteSpace(name) ? "Nova pasta" : name.Trim()[..Math.Min(name.Trim().Length, 60)];
 
     void SendLibraryCollections(string? created = null) =>
@@ -231,6 +307,7 @@ sealed partial class MainForm
         var used = AllClips(_comp).Where(c => c?.Path != null).Select(c => c!).ToList();
         var usedPaths = new HashSet<string>(used.Select(c => c.Path!), StringComparer.OrdinalIgnoreCase);
         var folders = _library.Folders.ToList();
+        var looseFiles = _library.Files.ToList();
         var presentations = used.Where(c => c.Kind == ClipKind.Presentation).ToList();
         Send(new { type = "library", scanning = true, folders, items = (object?)null });
 
@@ -255,6 +332,15 @@ sealed partial class MainForm
                 catch { }
             }
             // o que está na grade e fora das pastas também aparece (para achar e marcar com tags)
+            // arquivos soltos que foram arrastados para a biblioteca
+            foreach (var f in looseFiles.Where(f => !list.ContainsKey(f) && File.Exists(f)))
+            {
+                string ext = Path.GetExtension(f).ToLowerInvariant();
+                string? kind = VideoExtensions.Contains(ext) ? "video" : ImageExtensions.Contains(ext) ? "image" : PresentationExtensions.Contains(ext) ? "presentationFile" : null;
+                if (kind == null) continue;
+                var info = new FileInfo(f);
+                list[f] = (f, Path.GetFileNameWithoutExtension(f), kind, "Trazidos", info.Length, info.LastWriteTime);
+            }
             foreach (var p in usedPaths.Where(p => !list.ContainsKey(p)))
             {
                 if (File.Exists(p))

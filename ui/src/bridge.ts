@@ -232,6 +232,7 @@ export type EngineMessage =
   | ({ type: 'holyrics' } & HolyricsState)
   | ({ type: 'check' } & CheckState)
   | { type: 'library'; scanning: boolean; folders: string[]; items: LibraryItem[] | null; collections?: LibraryFolder[]; placement?: Record<string, string> }
+  | { type: 'libraryOpenFolder'; id: string }
   | { type: 'libraryCollections'; collections: LibraryFolder[]; placement: Record<string, string>; created?: string | null }
   | { type: 'libraryPreview'; path: string; frames: string[] }
   | { type: 'libraryTags'; path: string; tags: string[] }
@@ -356,6 +357,7 @@ export type UiMessage =
   | { type: 'libraryFolderMove'; id: string; parent: string | null }
   | { type: 'libraryFolderDelete'; id: string }
   | { type: 'libraryMove'; paths: string[]; folder: string | null }
+  | { type: 'libraryDrop'; folder: string | null }
   | { type: 'serviceAddMedia'; paths: string[]; index?: number }
   | { type: 'previewSize'; width: number }
   | { type: 'blendTest'; mode: 0 | 1 | 2 | 3 }
