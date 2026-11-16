@@ -1187,11 +1187,11 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: 
 .layer-head select { height: 20px; font-size: 11px; padding: 0 4px; }
 .layer-fader { grid-template-columns: 16px minmax(0, 1fr) 30px; gap: 4px; margin: 0; }
 .layer-fader .fader-val { font-size: 10px; }
-.fader-tag { width: 16px; height: 14px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: none; border-radius: 2px; font-size: 10px; font-weight: 700; color: #fff; line-height: 1; }
+.fader-tag { width: 16px; height: 14px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: none; border-radius: 2px; font-size: 11px; color: #fff; line-height: 1; }
 .fader-tag.v { background: #2f8a63; }
 .fader-tag.a { background: #b03a6e; cursor: pointer; }
 .fader-tag.a:hover { filter: brightness(1.2); }
-.fader-tag.a.off { background: #3a3d45; color: #ff8a8a; text-decoration: line-through; }
+.fader-tag.a.off { background: #3a3d45; }
 .layer-fader.opacity { --range-fill: #2f8a63; }
 .layer-fader.volume { --range-fill: #b03a6e; }
 .layer-fader.volume.muted input[type=range] { opacity: .35; }
