@@ -1205,3 +1205,28 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: 
 .layer-fader.transition select { height: 16px; font-size: 10px; padding: 0 2px; min-width: 0; }
 .layer-fader.transition.cut input[type=range] { opacity: .3; }
 .fader-tag.t { background: #3b74b8; }
+/* ---------- aba Clips: biblioteca de mídia numa coluna ao lado do grid ---------- */
+.clips-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 10px; align-items: start; }
+.clips-main.lib-hidden { grid-template-columns: minmax(0, 1fr) 26px; }
+.clips-center { min-width: 0; }
+.clips-lib { position: sticky; top: 8px; max-height: calc(100vh - 16px); display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 8px; box-sizing: border-box; min-width: 0; }
+.clips-lib .media-lib.side { display: flex; flex-direction: column; min-height: 0; flex: 1; margin: 0; }
+.clips-lib .media-lib.side .media-body { min-height: 0; flex: 1; display: flex; }
+.clips-lib .media-lib.side .media-main { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.clips-lib .media-lib.side .media-grid { max-height: none; flex: 1; min-height: 120px; overflow-y: auto; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.clips-lib .media-head { flex-wrap: wrap; }
+.clips-lib .media-head > button:not(.media-toggle) { padding: 0 8px; }
+.media-side-title { display: flex; align-items: center; gap: 8px; width: 100%; }
+.media-side-title h2 { margin: 0; font-size: 13px; }
+.media-side-title button { margin-left: auto; }
+.clips-lib .hint { margin: 6px 0 0; font-size: 11px; }
+.clips-lib .media-crumbs { font-size: 12px; }
+.clips-lib .media-folder-card { min-height: 64px; padding: 6px; }
+.clips-lib .media-folder-icon { font-size: 22px; }
+.clips-lib-tab { writing-mode: vertical-rl; padding: 10px 2px; font-size: 12px; position: sticky; top: 8px; }
+@media (max-width: 1100px) { .clips-main { grid-template-columns: minmax(0, 1fr) 260px; } }
+.clips-lib .media-side-title { order: -2; }
+.clips-lib .media-lib.compact .media-search { order: -1; }
+.clips-lib .media-folder-card { min-height: 84px; justify-content: flex-start; padding-top: 10px; }
+.clips-lib .media-folder-card .media-name { width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; line-height: 1.3; }
+.clips-lib .media-folder-card .meta { font-size: 11px; }

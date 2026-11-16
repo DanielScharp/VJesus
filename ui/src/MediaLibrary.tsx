@@ -17,7 +17,9 @@ const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,
  * prévia animada ao passar o mouse e arrastar para uma célula da grade. Pastas e subpastas da
  * biblioteca organizam os arquivos (sem mexer neles no disco). Ctrl/Shift + clique seleciona vários.
  */
-export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<string, string | null>; compact?: boolean; onPick?: (path: string) => void }) {
+export function MediaLibrary({ thumbs, compact, onPick, side, onHide }: { thumbs: Record<string, string | null>; compact?: boolean; onPick?: (path: string) => void
+  /** coluna ao lado do grid: sempre aberta, estreita, com rolagem própria */
+  side?: boolean; onHide?: () => void }) {
   const [items, setItems] = useState<LibraryItem[] | null>(null)
   const [folders, setFolders] = useState<string[]>([])
   const [collections, setCollections] = useState<LibraryFolder[]>([])
@@ -40,7 +42,7 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
   const asked = useRef(new Set<string>())
   // aberta ou fechada fica lembrado (fechada por padrão, para não ocupar a tela)
   const [openState, setOpen] = useState(() => { try { return localStorage.getItem('biblioteca.aberta') === '1' } catch { return false } })
-  const open = compact || openState
+  const open = compact || side || openState
   const toggle = () => setOpen((o) => { try { localStorage.setItem('biblioteca.aberta', o ? '0' : '1') } catch { /* sem armazenamento */ } return !o })
 
   useEffect(() => {
@@ -161,7 +163,7 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
   const subfolders = searching ? [] : childrenOf(cur)
 
   return (
-    <section className={`media-lib ${open ? 'open' : 'closed'} ${compact ? 'compact' : ''} ${fileDrag ? 'file-drag' : ''}`}
+    <section className={`media-lib ${open ? 'open' : 'closed'} ${compact || side ? 'compact' : ''} ${side ? 'side' : ''} ${fileDrag ? 'file-drag' : ''}`}
       onDragOver={(e) => { if (fromExplorer(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setFileDrag(true) } }}
       onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setFileDrag(false) }}
       onDrop={(e) => {
@@ -172,7 +174,8 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
       }}>
       {fileDrag && <div className="media-dropzone">Solte aqui para trazer para a biblioteca{cur ? ` (na pasta "${byId.get(cur)?.name}")` : ''}: pastas viram pastas da biblioteca, com as imagens e vídeos dentro</div>}
       <div className="media-head">
-        {!compact && <button className="media-toggle" onClick={toggle} aria-expanded={open} title={open ? 'Recolher a biblioteca' : 'Abrir a biblioteca'}>
+        {side && <div className="media-side-title"><h2>Biblioteca</h2>{items && <span className="meta">{items.length} itens</span>}{onHide && <button className="small" title="Esconder a biblioteca (o grid fica mais largo)" onClick={onHide}>⟩</button>}</div>}
+        {!compact && !side && <button className="media-toggle" onClick={toggle} aria-expanded={open} title={open ? 'Recolher a biblioteca' : 'Abrir a biblioteca'}>
           <span className="caret">{open ? '▾' : '▸'}</span> <h2>Biblioteca de mídia</h2>
           {items && <span className="meta">{items.length} itens</span>}
         </button>}
@@ -181,9 +184,9 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
         <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
           <option value="all">Tudo</option><option value="video">Vídeos</option><option value="image">Imagens</option><option value="pres">Apresentações</option>
         </select>
-        <button onClick={() => send({ type: 'libraryAddFolder', folder: cur })} title="Escolhe uma pasta do computador: ela vira uma pasta da biblioteca (também dá para arrastar pastas do Explorer para cá)">+ Pasta do computador…</button>
-        <button onClick={() => send({ type: 'libraryAddDrive', folder: cur })} title="Liga uma pasta do Google Drive (precisa do app Google Drive para computador): o que mudar no Drive aparece aqui, e pastas criadas ou renomeadas aqui mudam no Drive">☁ Google Drive…</button>
-        <button onClick={() => send({ type: 'librarySync' })} disabled={scanning}>{scanning ? 'Lendo…' : 'Atualizar'}</button>
+        <button onClick={() => send({ type: 'libraryAddFolder', folder: cur })} title="Escolhe uma pasta do computador: ela vira uma pasta da biblioteca (também dá para arrastar pastas do Explorer para cá)">{side ? '+ Pasta' : '+ Pasta do computador…'}</button>
+        <button onClick={() => send({ type: 'libraryAddDrive', folder: cur })} title="Liga uma pasta do Google Drive (precisa do app Google Drive para computador): o que mudar no Drive aparece aqui, e pastas criadas ou renomeadas aqui mudam no Drive">{side ? '☁ Drive' : '☁ Google Drive…'}</button>
+        <button onClick={() => send({ type: 'librarySync' })} disabled={scanning}>{scanning ? 'Lendo…' : side ? '↻' : 'Atualizar'}</button>
         </>}
       </div>
       {open && <>
@@ -203,7 +206,7 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
         </div>
       )}
       <div className="media-body">
-        {!compact && (
+        {!compact && !side && (
           <nav className="media-tree">
             <div className={`media-tree-row root ${cur === null ? 'sel' : ''} ${dropOn === '__root' ? 'drop' : ''}`} onClick={() => { setCur(null); setQ(''); setTag(null) }} {...dropProps(null)}>
               📚 Início <span className="meta">(sem pasta)</span>
@@ -230,7 +233,7 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
                 <button className="small" title="Apagar esta pasta da biblioteca: o que estava nela sobe um nível (os arquivos não são apagados)"
                   onClick={() => deleteFolder(cur)}>🗑 Apagar pasta</button>
               </>}
-              {compact && <button className="small" onClick={() => newFolder()}>+ Pasta</button>}
+              {(compact || side) && <button className="small" title="Nova pasta da biblioteca aqui dentro" onClick={() => newFolder()}>+ Nova pasta</button>}
             </>}
           </div>
           {selected.length > 0 && (
@@ -282,7 +285,7 @@ export function MediaLibrary({ thumbs, compact, onPick }: { thumbs: Record<strin
             <button className="danger" onClick={go(() => deleteFolder(f.id))}>{f.linked ? (byId.get(f.parent ?? '')?.linked ? 'Tirar da biblioteca (não apaga no Drive)…' : 'Desligar do Google Drive…') : 'Apagar pasta…'}</button>
           </div>
         )
-      })()}      <p className="hint">{onPick ? 'Clique para pôr no fim do roteiro ou arraste para a lista · passe o mouse para ver o vídeo' : 'Arraste para uma célula da grade (vários de uma vez entram em sequência e criam as colunas que faltarem) · Ctrl/Shift + clique seleciona vários · # marca com tags'}</p>
+      })()}      <p className="hint">{side ? 'Arraste para uma célula do grid · Ctrl/Shift + clique seleciona vários' : onPick ? 'Clique para pôr no fim do roteiro ou arraste para a lista · passe o mouse para ver o vídeo' : 'Arraste para uma célula da grade (vários de uma vez entram em sequência e criam as colunas que faltarem) · Ctrl/Shift + clique seleciona vários · # marca com tags'}</p>
       </>}
     </section>
   )

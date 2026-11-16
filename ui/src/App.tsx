@@ -72,6 +72,9 @@ function App() {
   const [carousels, setCarousels] = useState<CarouselRun[]>([])
   const [presentations, setPresentations] = useState<PresentationState[]>([])
   const [clickerGlobal, setClickerGlobal] = useState(false)
+  // biblioteca de mídia ao lado do grid (aberta ou escondida fica lembrado)
+  const [libSide, setLibSide] = useState(() => { try { return localStorage.getItem('biblioteca.lado') !== '0' } catch { return true } })
+  const setLibSidePersist = (v: boolean) => { setLibSide(v); try { localStorage.setItem('biblioteca.lado', v ? '1' : '0') } catch { /* sem armazenamento */ } }
 
   // atalhos que valem em qualquer aba: encerrar letra/versículo e parar ataques
   useEffect(() => {
@@ -256,6 +259,8 @@ function App() {
 
       {tab === 'clips' && (
         <>
+          <div className={`clips-main ${libSide ? '' : 'lib-hidden'}`}>
+            <div className="clips-center">
           {comp && <ActiveEffectsBar comp={comp} library={library} onToggle={toggleEffect} onShow={setTarget} />}
           {comp ? (
             <ClipGrid comp={comp} thumbs={thumbs} playback={playback} onLayerChange={changeLayer}
@@ -268,8 +273,12 @@ function App() {
             Clique num clip para tocar · clique numa célula vazia ou arraste vídeos do Explorer para adicionar ·
             arraste clips entre células para mover · botão direito para trocar ou remover · número da coluna dispara a coluna inteira
           </p>
+            </div>
+            {libSide
+              ? <aside className="clips-lib"><MediaLibrary thumbs={thumbs} side onHide={() => setLibSidePersist(false)} /></aside>
+              : <button className="clips-lib-tab" title="Mostrar a biblioteca de mídia ao lado do grid" onClick={() => setLibSidePersist(true)}>⟨ Biblioteca</button>}
+          </div>
 
-          <MediaLibrary thumbs={thumbs} />
 
           <div className="panels">
             {comp && (
