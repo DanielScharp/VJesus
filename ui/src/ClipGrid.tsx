@@ -29,7 +29,7 @@ type Props = {
   fonts: string[]
 }
 
-type Menu = { layer: number; column: number; x: number; y: number; filled: boolean }
+type Menu = { layer: number; column: number; x: number; y: number; filled: boolean; viewable?: boolean }
 
 const CLIP_MIME = 'application/x-vj-clip'
 
@@ -261,7 +261,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
                     e.preventDefault()
                     e.stopPropagation()
                     send({ type: 'listLiveSources' })
-                    setMenu({ layer: li, column: c, x: e.clientX, y: e.clientY, filled: !!clip })
+                    setMenu({ layer: li, column: c, x: e.clientX, y: e.clientY, filled: !!clip, viewable: !!clip?.path && (clip.kind === 'video' || clip.kind === 'presentation') })
                   }}>
                   {clip ? (
                     <>
@@ -307,7 +307,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
             return (
               <>
                 {menu.filled && <button className="danger" onClick={pick(() => send({ type: 'removeClip', ...cell }))}>Remover este clip</button>}
-                {menu.filled && <button onClick={pick(() => setViewing(cell))} title="Mostra o conteúdo só aqui no seu monitor, sem mandar para os telões">👁 Ver (só aqui, sem ir para o telão)</button>}
+                {menu.viewable && <button onClick={pick(() => setViewing(cell))} title="Mostra o conteúdo só aqui no seu monitor, sem mandar para os telões">👁 Ver (só aqui, sem ir para o telão)</button>}
                 {menu.filled && <button onClick={pick(() => setPropsEdit(cell))}>Propriedades do clip… (velocidade, tamanho, efeitos)</button>}
                 {current?.kind === 'plasma' && <button onClick={pick(() => setGenEdit({ ...cell, gen: current.gen ?? null }))}>Ajustar fundo animado…</button>}
                 {menu.filled && <div className="menu-label">Trocar por</div>}
