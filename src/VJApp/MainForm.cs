@@ -103,6 +103,7 @@ sealed partial class MainForm : Form
         }
         var core = _web.CoreWebView2;
         core.WebMessageReceived += OnWebMessage;
+        SetupMediaPreviewServer(core);
         // links externos (ex.: endereço do controle remoto) abrem no navegador padrão
         core.NewWindowRequested += (_, ev) =>
         {
@@ -201,6 +202,10 @@ sealed partial class MainForm : Form
                 break;
 
             case "tap": Tap(); break;
+            case "clipPreviewInfo":
+                SendClipPreviewInfo(msg);
+                break;
+
             case "libraryDrop":
                 // pastas ou arquivos arrastados do Explorer para a biblioteca
                 LibraryDrop(e.AdditionalObjects?.OfType<CoreWebView2File>().Select(f => f.Path).ToArray() ?? [], (string?)msg["folder"]);

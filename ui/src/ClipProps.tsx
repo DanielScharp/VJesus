@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ClipViewer } from './ClipViewer'
 import { BLEND_MODES, send, type BlendMode, type Clip, type ClipNext, type ClipProps, type Composition, type EffectDef, type EffectInstance, type LayerPlayback } from './bridge'
 import { BLEND_LABELS } from './ClipGrid'
 import { EffectsPanel } from './EffectsPanel'
@@ -135,6 +136,7 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
 }) {
   const [p, setP] = useState<ClipProps>({ ...DEFAULT_PROPS, ...(clip.props ?? {}) })
   const [name, setName] = useState(clip.name)
+  const [viewing, setViewing] = useState(false)
   const [chain, setChain] = useState<EffectInstance[]>(clip.props?.effects ?? [])
   useEffect(() => { setChain(clip.props?.effects ?? []) }, [clip.props?.effects])
 
@@ -151,9 +153,11 @@ export function ClipPropsPanel({ clip, layer, column, playing, library, onClose,
 
   return (
     <section ref={sectionRef} className="clip-props" onClick={(e) => e.stopPropagation()}>
+      {viewing && <ClipViewer layer={layer} column={column} onClose={() => setViewing(false)} />}
       <div>
         <div className="bible-head">
           <h2>Propriedades do clip: <span className="fx-target">{name}</span> <span className="meta">· layer {layer + 1}, coluna {column + 1}{playing ? ' · no ar' : ' · não está tocando'}</span></h2>
+          <button className="small" onClick={() => setViewing(true)} title="Mostra o conteúdo só aqui no seu monitor, sem mandar para os telões">👁 Ver</button>
           {!playing && <button className="small" onClick={() => send({ type: 'trigger', layer, column })} title="Toca este clip no telão">Tocar no telão</button>}
           <button className="small" onClick={() => { update({ ...DEFAULT_PROPS, effects: p.effects }) }} title="Volta velocidade, ajuste, posição, volume e fim ao padrão">Padrão</button>
           <button className="small" onClick={onClose}>Fechar</button>

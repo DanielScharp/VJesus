@@ -1,6 +1,7 @@
 import { MEDIA_MIME } from './MediaLibrary'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { KineticVideoEditor } from './KineticVideoEditor'
+import { ClipViewer } from './ClipViewer'
 import type { KProject } from './kinetic'
 import { EffectChips, type ToggleEffect } from './EffectChips'
 import { DEFAULT_GEN, GeneratorPanel, genThumbStyle } from './GeneratorPanel'
@@ -92,6 +93,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
   const [layerMenu, setLayerMenu] = useState<{ layer: number; x: number; y: number } | null>(null)
   const [genEdit, setGenEdit] = useState<{ layer: number; column: number; gen: GeneratorSettings | null } | null>(null)
   const [propsEdit, setPropsEdit] = useState<{ layer: number; column: number } | null>(null)
+  const [viewing, setViewing] = useState<{ layer: number; column: number } | null>(null)
   // um painel de propriedades só: se sobrar alguma cópia antiga na tela (o React perdeu a referência), tira
   const propsRef = useRef<HTMLElement>(null)
   useLayoutEffect(() => {
@@ -305,6 +307,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
             return (
               <>
                 {menu.filled && <button className="danger" onClick={pick(() => send({ type: 'removeClip', ...cell }))}>Remover este clip</button>}
+                {menu.filled && <button onClick={pick(() => setViewing(cell))} title="Mostra o conteúdo só aqui no seu monitor, sem mandar para os telões">👁 Ver (só aqui, sem ir para o telão)</button>}
                 {menu.filled && <button onClick={pick(() => setPropsEdit(cell))}>Propriedades do clip… (velocidade, tamanho, efeitos)</button>}
                 {current?.kind === 'plasma' && <button onClick={pick(() => setGenEdit({ ...cell, gen: current.gen ?? null }))}>Ajustar fundo animado…</button>}
                 {menu.filled && <div className="menu-label">Trocar por</div>}
@@ -375,6 +378,7 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
           muted={!!comp.layers[propsEdit.layer].muted} onMute={(m) => onLayerChange(propsEdit.layer, { muted: m })} comp={comp} sectionRef={propsRef} />
       )}
 
+      {viewing && <ClipViewer layer={viewing.layer} column={viewing.column} onClose={() => setViewing(null)} />}
       {kinetic && (
         <KineticVideoEditor key={kinetic.layer + ':' + kinetic.column} layer={kinetic.layer} column={kinetic.column} initial={kinetic.project} fonts={fonts} onClose={() => setKinetic(null)} />
       )}

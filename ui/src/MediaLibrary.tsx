@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { onMessage, send, sendFiles, type LibraryFolder, type LibraryItem } from './bridge'
+import { ClipViewer } from './ClipViewer'
 
 export const MEDIA_MIME = 'application/x-vjesus-media'
 /** Arrastar uma pasta da biblioteca (para dentro de outra). */
@@ -314,6 +315,7 @@ function MediaCard({ item, thumb, frames, editing, onEdit, suggestions, onPick, 
   selected: boolean; onSelect: (e: React.MouseEvent) => void; dragPaths: () => string[]; where: string
 }) {
   const [hover, setHover] = useState(false)
+  const [viewing, setViewing] = useState(false)
   const [frame, setFrame] = useState(0)
   const [text, setText] = useState('')
   useEffect(() => {
@@ -345,8 +347,10 @@ function MediaCard({ item, thumb, frames, editing, onEdit, suggestions, onPick, 
           <span key={t} className="tag">#{t}{editing && <button className="chip-x" onClick={() => setTags(item.tags.filter((x) => x !== t))}>×</button>}</span>
         ))}
         <button className="small tag-btn" title="Marcar com tags" onClick={(e) => { e.stopPropagation(); onEdit(!editing) }}>#</button>
+        <button className="small tag-btn view-btn" title="Ver aqui (sem ir para o telão)" onClick={(e) => { e.stopPropagation(); setViewing(true) }}>👁</button>
         <button className="small tag-btn" title="Mostrar no Explorer" onClick={(e) => { e.stopPropagation(); send({ type: 'libraryReveal', path: item.path }) }}>📂</button>
       </div>
+      {viewing && <ClipViewer path={item.path} onClose={() => setViewing(false)} />}
       {editing && (
         <div className="media-tag-edit" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
           <input autoFocus placeholder="nova tag + Enter" value={text} onChange={(e) => setText(e.target.value)}
