@@ -106,12 +106,14 @@ sealed partial class MainForm
             SendService();
             BroadcastRemoteState();
 
+            int gone = RemoveMissingClips(notify: false);
+            // os que sobraram sem arquivo estão numa unidade desligada (HD externo, Drive): ficam, e voltam quando ela for ligada
             var missing = AllClips(_comp)
                 .Where(c => c?.Kind == ClipKind.Video && !File.Exists(c.Path)).Select(c => c!.Name).Distinct().ToList();
             if (missing.Count > 0)
-                Send(new { type = "error", message = $"{missing.Count} vídeo(s)/imagem(ns) do projeto não foram encontrados: {string.Join(", ", missing.Take(5))}{(missing.Count > 5 ? "…" : "")}" });
+                Send(new { type = "error", message = $"{missing.Count} vídeo(s)/imagem(ns) do projeto estão numa unidade desligada (HD externo, pendrive ou Drive): {string.Join(", ", missing.Take(5))}{(missing.Count > 5 ? "…" : "")}" });
             else
-                Send(new { type = "notice", message = $"Projeto aberto: {Path.GetFileNameWithoutExtension(file)}" });
+                Send(new { type = "notice", message = $"Projeto aberto: {Path.GetFileNameWithoutExtension(file)}{(gone > 0 ? $" ({gone} clip(s) sem arquivo saíram do grid)" : "")}" });
         }
         catch (Exception ex)
         {

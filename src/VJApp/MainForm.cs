@@ -160,6 +160,7 @@ sealed partial class MainForm : Form
                     StartupProject = null; // VJesus.exe "show.vjproj" (duplo clique no arquivo)
                     BeginInvoke(() => OpenProjectFile(startup));
                 }
+                BeginInvoke(() => RemoveMissingClips(notify: true)); // clips sem arquivo saem do grid
                 Send(new
                 {
                     type = "displays",

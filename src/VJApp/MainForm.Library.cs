@@ -420,6 +420,7 @@ sealed partial class MainForm
         SaveLibrary();
         SendLibraryCollections();
         _ = SendLibraryAsync();
+        RemoveMissingClips(notify: true); // arquivo apagado no computador: sai do grid também
     }
 
     /// <summary>
