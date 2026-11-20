@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using VJApp.Model;
 
@@ -25,6 +25,9 @@ sealed partial class MainForm
                 {
                     if (cfg.Elements.Count == 0) cfg.Elements = StageConfig.DefaultElements(); // "Layout padrão"
                     foreach (var (k, v) in StageConfig.DefaultElements()) cfg.Elements.TryAdd(k, v);
+                    cfg.DisplayName = DisplayNameAt(cfg.Display) ?? cfg.DisplayName;
+                    if (cfg.Fullscreen && Screen.AllScreens.Length <= 1 && !_stage.Fullscreen) _singleScreenFullscreenOk.Add("stage");
+                    if (!cfg.Fullscreen) _singleScreenFullscreenOk.Remove("stage");
                     _stage = cfg;
                     ApplyStageWindow();
                     _stageSaveTimer ??= NewSaveTimer(() => _stage.Save(StageConfig.DefaultPath));
@@ -110,10 +113,14 @@ sealed partial class MainForm
             _stageWindow = new StageWindow(() => BeginInvoke(SendStage));
             _stageWindow.Location = new Point(160, 160);
         }
-        var place = (_stage.Display, _stage.Fullscreen);
+        var (stageIndex, stageWindowed) = ResolveDisplay(_stage.DisplayName, _stage.Display);
+        _stage.Display = stageIndex;
+        _stage.DisplayName ??= DisplayNameAt(stageIndex);
+        bool stageFull = _stage.Fullscreen && (!stageWindowed || _singleScreenFullscreenOk.Contains("stage"));
+        var place = (stageIndex, stageFull);
         if (_stagePlacement != place || !_stageWindow.Visible)
         {
-            _stageWindow.PlaceOn(_stage.Display, _stage.Fullscreen);
+            _stageWindow.PlaceOn(stageIndex, stageFull);
             _stagePlacement = place;
         }
     }

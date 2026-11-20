@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 using VJApp;
 
@@ -27,6 +27,8 @@ sealed class StageConfig
 {
     public bool Enabled { get; set; }
     public int Display { get; set; } = 1;
+    /// <summary>Nome do monitor no Windows (\\.\DISPLAY2): guarda a escolha mesmo se a ordem dos monitores mudar.</summary>
+    public string? DisplayName { get; set; }
     public bool Fullscreen { get; set; } = true;
     public string Background { get; set; } = "#000000";
     public bool ClockSeconds { get; set; } = true;

@@ -20,6 +20,14 @@ sealed partial class MainForm
     {
         var m = node.Deserialize<MappingSetup>(JsonRead);
         if (m == null || m.Screens.Count == 0) return;
+        // guarda o monitor escolhido pelo nome; tela cheia ligada agora com um monitor só passa a valer
+        foreach (var s in m.Screens)
+        {
+            s.DisplayName = DisplayNameAt(s.Display) ?? s.DisplayName;
+            var before = _mapping.Screens.FirstOrDefault(o => o.Id == s.Id);
+            if (s.Fullscreen && Screen.AllScreens.Length <= 1 && before is { Fullscreen: false }) _singleScreenFullscreenOk.Add(s.Id);
+            if (!s.Fullscreen) _singleScreenFullscreenOk.Remove(s.Id);
+        }
         _mapping = m;
         ApplyMapping();
 
@@ -81,11 +89,16 @@ sealed partial class MainForm
             }
             win.Text = $"{AppInfo.Name} - {screen.Name}";
 
-            var place = (screen.Display, screen.Fullscreen);
+            // monitor desta saída: o guardado (pelo nome) ou outro que não seja o principal; com um monitor só, em janela
+            var (displayIndex, forceWindowed) = ResolveDisplay(screen.DisplayName, screen.Display);
+            screen.Display = displayIndex;
+            screen.DisplayName ??= DisplayNameAt(displayIndex);
+            bool full = screen.Fullscreen && (!forceWindowed || _singleScreenFullscreenOk.Contains(screen.Id));
+            var place = (displayIndex, full);
             if (!_placement.TryGetValue(screen.Id, out var last) || last != place)
             {
                 // a primeira vez em modo janela mantém a posição em cascata
-                if (_placement.ContainsKey(screen.Id) || screen.Fullscreen) win.PlaceOn(screen.Display, screen.Fullscreen);
+                if (_placement.ContainsKey(screen.Id) || full) win.PlaceOn(displayIndex, full);
                 _placement[screen.Id] = place;
             }
 

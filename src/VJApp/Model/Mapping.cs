@@ -85,6 +85,8 @@ sealed class OutputScreen
     public string Id { get; set; } = Guid.NewGuid().ToString("N")[..8];
     public string Name { get; set; } = "Tela";
     public int Display { get; set; }
+    /// <summary>Nome do monitor no Windows (\\.\DISPLAY2): guarda a escolha mesmo se a ordem dos monitores mudar.</summary>
+    public string? DisplayName { get; set; }
     public bool Fullscreen { get; set; }
     public List<Slice> Slices { get; set; } = [];
     public List<Mask> Masks { get; set; } = [];

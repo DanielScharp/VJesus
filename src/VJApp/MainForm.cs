@@ -59,6 +59,7 @@ sealed partial class MainForm : Form
             _effectWatcher.Deleted += restart;
             _effectWatcher.Renamed += (s, e) => restart(s, e);
         }
+        PlaceMainWindowOnPrimary();
     }
 
     protected override async void OnShown(EventArgs e)
@@ -82,6 +83,7 @@ sealed partial class MainForm : Form
         ApplyMapping();
         StartAudio();
         ApplyStageWindow();
+        HookDisplayEvents();
 
         try { await _web.EnsureCoreWebView2Async(await AppInfo.WebViewEnvironment()); }
         catch (Microsoft.Web.WebView2.Core.WebView2RuntimeNotFoundException)
