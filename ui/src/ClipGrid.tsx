@@ -6,7 +6,7 @@ import { EffectChips, type ToggleEffect } from './EffectChips'
 import { DEFAULT_GEN, GeneratorPanel, genThumbStyle } from './GeneratorPanel'
 import { ClipPropsPanel, fmtTime } from './ClipProps'
 import { CarouselPanel } from './CarouselPanel'
-import { BLEND_MODES, TRANSITIONS, onMessage, send, sendFiles, type Transition, type CarouselRun, type EffectDef, type BlendMode, type Clip, type Composition, type GeneratorSettings, type LayerPlayback, type LiveSources, type Display } from './bridge'
+import { TRANSITIONS, onMessage, send, sendFiles, type Transition, type CarouselRun, type EffectDef, type BlendMode, type Clip, type Composition, type GeneratorSettings, type LayerPlayback, type LiveSources, type Display } from './bridge'
 
 /** Nomes curtos das transições (cabem no cabeçalho da layer). */
 const TRANSITION_SHORT: Record<Transition, string> = {
@@ -223,10 +223,6 @@ export function ClipGrid({ comp, thumbs, playback, onLayerChange, selected, onSe
                   onChange={(e) => onLayerChange(li, { transitionSeconds: Number(e.target.value) })} />
                 <span className="fader-val">{layer.transition === 'cut' ? '—' : `${layer.transitionSeconds.toFixed(1).replace('.', ',')}s`}</span>
               </div>
-              <select value={layer.blend} title="Mistura (blend): como esta layer se junta com as layers de baixo"
-                onChange={(e) => onLayerChange(li, { blend: e.target.value as BlendMode })}>
-                {BLEND_MODES.map((b) => <option key={b} value={b}>{BLEND_LABELS[b]}</option>)}
-              </select>
               <EffectChips chain={layer.effects} target={li} library={library} onToggle={onToggleEffect} />
               {pb && pb.duration > 0 && (
                 <div className="layer-transport" onClick={(e) => e.stopPropagation()}>
