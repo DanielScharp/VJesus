@@ -41,7 +41,7 @@ export function KineticLiveApp() {
       const t = now()
       transparent = m.transparent
       setSize(m.light)
-      if (m.cut) { prev = null; cur = null; idle = false; return }
+      if (m.cut) { prev = null; cur = null; idle = false; wake(); return }
       // quem estava no ar começa a sair; quem estava saindo some de vez
       if (cur) { cur.leaveAt = t; prev = cur } else if (prev && prev.leaveAt !== null && t - prev.leaveAt > OUT + FADE) prev = null
       cur = null
@@ -53,6 +53,7 @@ export function KineticLiveApp() {
         void ensureFonts({ version: 1, name: '', lead: 0, scenes: [scene] })
       }
       idle = false
+      wake()
     }
 
     /** O quadro do instante t: o slide saindo e o que entra, como uma animação de duas cenas. */
@@ -86,8 +87,12 @@ export function KineticLiveApp() {
       return true
     }
 
-    const timer = window.setInterval(() => {
-      if (!shared || waiting || idle) return
+    // o relógio só roda enquanto há animação: parado (sem letra no ar) não acorda a página 125 vezes por segundo
+    let timer = 0
+    function wake() { if (!timer) timer = window.setInterval(tick, 8) }
+    function tick() {
+      if (idle) { window.clearInterval(timer); timer = 0; return }
+      if (!shared || waiting) return
       const t = now()
       if (t - lastDraw < 1 / 30 - 0.004) return
       lastDraw = t
@@ -98,7 +103,7 @@ export function KineticLiveApp() {
       waiting = true
       send({ type: 'kineticFrame', w: canvas.width, h: canvas.height } as never)
       if (!active) idle = true // mandou o quadro vazio: descansa até o próximo slide
-    }, 8)
+    }
 
     const off = onMessage((m) => {
       const msg = m as unknown as { type: string }
@@ -107,7 +112,7 @@ export function KineticLiveApp() {
       else if (msg.type === 'fonts') injectFontFaces((msg as unknown as { faces: Parameters<typeof injectFontFaces>[0] }).faces)
     })
     send({ type: 'kineticHello' } as never)
-    return () => { off(); window.clearInterval(timer) }
+    return () => { off(); if (timer) window.clearInterval(timer) }
   }, [])
   return null
 }

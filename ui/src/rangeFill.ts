@@ -17,6 +17,7 @@ document.addEventListener('input', (e) => {
 
 // valores que mudam sem a pessoa mexer: confere todos de tempos em tempos (é barato: só os da tela)
 function sweep() {
+  if (document.hidden) return // janela minimizada: ninguém está vendo
   document.querySelectorAll<HTMLInputElement>('input[type=range]').forEach(update)
 }
 setInterval(sweep, 200)

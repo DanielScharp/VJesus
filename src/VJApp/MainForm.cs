@@ -848,8 +848,12 @@ sealed partial class MainForm : Form
         }
     }
 
+    int _idlePlaybackTicks;
+
     void SendPlayback()
     {
+        // nada tocando com linha do tempo: manda bem menos (só para o ritmo do BPM seguir certo na tela)
+        if (_players.All(p => p == null || p.IsStill) && ++_idlePlaybackTicks % 10 != 0) return;
         Send(new
         {
             type = "playback",

@@ -9,13 +9,15 @@ export function TempoBar({ bpm, beat }: { bpm: number; beat: number }) {
   const [draft, setDraft] = useState<string | null>(null)
   // a batida chega a cada 100 ms; entre uma mensagem e outra a UI estima localmente
   const ref = useRef({ beat, bpm, at: performance.now() })
-  const [now, setNow] = useState(beat)
+  // só o que aparece: qual das 4 luzes e se ela está piscando (redesenha 8 vezes por compasso, não 60 por segundo)
+  const [lamp, setLamp] = useState(0)
   useEffect(() => { ref.current = { beat, bpm, at: performance.now() } }, [beat, bpm])
   useEffect(() => {
     let id = 0
     const tick = () => {
       const r = ref.current
-      setNow(r.beat + ((performance.now() - r.at) / 1000) * (r.bpm / 60))
+      const now = r.beat + ((performance.now() - r.at) / 1000) * (r.bpm / 60)
+      setLamp((Math.floor(now) % 4) * 2 + (now - Math.floor(now) < 0.15 ? 1 : 0))
       id = requestAnimationFrame(tick)
     }
     id = requestAnimationFrame(tick)
@@ -32,8 +34,8 @@ export function TempoBar({ bpm, beat }: { bpm: number; beat: number }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const current = Math.floor(now) % 4
-  const flash = now - Math.floor(now) < 0.15
+  const current = lamp >> 1
+  const flash = (lamp & 1) === 1
   return (
     <div className="tempo">
       <input className="bpm" type="text" inputMode="decimal" maxLength={6}

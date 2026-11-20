@@ -121,6 +121,7 @@ sealed partial class MainForm
     void SetOutputPreview(string? screenId)
     {
         _outputPreviewScreen = screenId;
+        _outputGate.LastSample = 0; // outra tela: manda o próximo quadro mesmo que pareça igual
         if (_renderer == null) return;
         var screen = _mapping.Screens.FirstOrDefault(s => s.Id == screenId);
         if (screen != null)
@@ -149,7 +150,7 @@ sealed partial class MainForm
     void SendMapping() => Send(new { type = "mapping", mapping = _mapping });
 
     /// <summary>Marca "codificando" de um canal de preview (para pular quadros quando a CPU está ocupada).</summary>
-    sealed class EncodeGate { public int Busy; }
+    sealed class EncodeGate { public int Busy; public ulong LastSample; public int SameCount; }
     readonly EncodeGate _mainGate = new(), _stageGate = new(), _netGate = new();
 
     /// <summary>Preview do telão: JPEG para a UI.</summary>
@@ -169,6 +170,7 @@ sealed partial class MainForm
     {
         base.OnResize(e);
         _minimized = WindowState == FormWindowState.Minimized;
+        _mainGate.LastSample = 0; _outputGate.LastSample = 0;
     }
 
     /// <summary>Imagem do item "Telão" da tela de retorno: para a janela de retorno e o monitor RETORNO da UI.</summary>
@@ -186,7 +188,25 @@ sealed partial class MainForm
     /// </summary>
     volatile int _previewWidth = 960;
 
-    void SetPreviewWidth(int width) => _previewWidth = Math.Clamp(width, 240, 960);
+    void SetPreviewWidth(int width) { _previewWidth = Math.Clamp(width, 240, 960); _mainGate.LastSample = 0; }
+
+    /// <summary>Assinatura rápida do quadro (uns 4 mil pontos espalhados): basta para saber se a imagem mudou.</summary>
+    static ulong SampleFrame(byte[] bgra, int width, int height, int pitch)
+    {
+        ulong h = 1469598103934665603UL;
+        int stepY = Math.Max(1, height / 64), stepX = Math.Max(1, width / 64);
+        for (int y = 0; y < height; y += stepY)
+        {
+            int row = y * pitch;
+            for (int x = 0; x < width; x += stepX)
+            {
+                int i = row + x * 4;
+                if (i + 3 >= bgra.Length) break;
+                h = (h ^ BitConverter.ToUInt32(bgra, i)) * 1099511628211UL;
+            }
+        }
+        return h;
+    }
 
     /// <summary>Converte BGRA em JPEG fora da thread de render (pula o quadro se ainda está codificando o anterior).</summary>
     static void EncodePreview(EncodeGate gate, byte[] bgra, int width, int height, int pitch, Action<string>? deliver, int targetWidth = 0, Action<byte[]>? raw = null, long quality = 75)
@@ -196,6 +216,12 @@ sealed partial class MainForm
         {
             try
             {
+                // imagem igual à anterior (nada mudando no telão): não converte nem manda de novo.
+                // Mesmo parada, manda uma vez a cada ~2 s, para quem acabou de abrir uma prévia receber a imagem.
+                ulong sample = SampleFrame(bgra, width, height, pitch);
+                if (sample == gate.LastSample && ++gate.SameCount % 24 != 0) return;
+                if (sample != gate.LastSample) gate.SameCount = 0;
+                gate.LastSample = sample;
                 using var bmp = new Bitmap(width, height, PixelFormat.Format32bppRgb);
                 var data = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, PixelFormat.Format32bppRgb);
                 for (int y = 0; y < height; y++)
