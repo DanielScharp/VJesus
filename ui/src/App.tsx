@@ -35,6 +35,8 @@ function App() {
   const [tab, setTab] = useState<Tab>('clips')
   const [displays, setDisplays] = useState<Display[]>([])
   const [fps, setFps] = useState(0)
+  // uso geral do computador (todos os programas): processador, memória RAM e memória de vídeo
+  const [sys, setSys] = useState<{ cpu: number; ram: number; vram: number; vramInfo: string }>({ cpu: -1, ram: -1, vram: -1, vramInfo: '' })
   const [comp, setComp] = useState<Composition | null>(null)
   const [thumbs, setThumbs] = useState<Record<string, string>>({})
   const [playback, setPlayback] = useState<LayerPlayback[]>([])
@@ -113,7 +115,7 @@ function App() {
     const off = onMessage((msg) => {
       switch (msg.type) {
         case 'displays': setDisplays(msg.list); break
-        case 'stats': setFps(msg.fps); break
+        case 'stats': setFps(msg.fps); setSys({ cpu: msg.cpu ?? -1, ram: msg.ram ?? -1, vram: msg.vram ?? -1, vramInfo: msg.vramInfo ?? '' }); break
         case 'composition': setComp({ columns: msg.columns, columnNames: msg.columnNames, layers: msg.layers, masterEffects: msg.masterEffects, decks: msg.decks, currentDeck: msg.currentDeck }); break
         case 'effects': setLibrary(msg.list); break
         case 'thumb': setThumbs((t) => ({ ...t, [msg.path]: msg.data })); break
@@ -216,7 +218,7 @@ function App() {
           <TempoBar bpm={tempo.bpm} beat={tempo.beat} />
         </div>
         <span className="stats" title="Quadros por segundo da composição 1920×1080">
-          {inApp ? <><b>{fps.toFixed(2)}</b> fps · 1920×1080</> : 'fora do app (só UI)'}
+          {inApp ? <><span className="stats-fps"><b>{fps.toFixed(2)}</b> fps · 1920×1080</span><span className="stats-usage"><UsageStat label="CPU" value={sys.cpu} title="Processador: uso geral do computador (todos os programas)" /><UsageStat label="RAM" value={sys.ram} title="Memória RAM: uso geral do computador" /><UsageStat label="VRAM" value={sys.vram} title={sys.vramInfo || 'Memória de vídeo: uso geral'} /></span></> : 'fora do app (só UI)'}
         </span>
       </header>
 
@@ -353,3 +355,10 @@ function App() {
 }
 
 export default App
+
+/** Uso (CPU, RAM, VRAM) ao lado do FPS: amarelo a partir de 70%, vermelho a partir de 85%. */
+function UsageStat({ label, value, title }: { label: string; value: number; title: string }) {
+  if (value < 0) return null
+  const level = value >= 85 ? 'high' : value >= 70 ? 'mid' : ''
+  return <span className={`usage ${level}`} title={title}>{label} <b>{Math.round(value)}%</b></span>
+}

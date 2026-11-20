@@ -30,6 +30,8 @@ sealed partial class MainForm : Form
     VideoPlayer?[] _players;
     readonly ConcurrentDictionary<string, string?> _thumbs = new();
     Renderer? _renderer;
+    /// <summary>Uso geral de CPU, RAM e memória de vídeo, mostrado ao lado do FPS.</summary>
+    readonly SystemMonitor _sysMon = new();
 
     // efeitos: biblioteca carregada da pasta Shaders/Effects (recarrega ao editar um .hlsl)
     readonly string _effectDir = EffectLibrary.FindDirectory();
@@ -71,7 +73,7 @@ sealed partial class MainForm : Form
         _effectDefs = EffectLibrary.Load(_effectDir, errors);
 
         _renderer = new Renderer(_comp.Layers.Count, _effectDefs);
-        _renderer.Stats += fps => Send(new { type = "stats", fps = Math.Round(fps, 1) });
+        _renderer.Stats += fps => Send(new { type = "stats", fps = Math.Round(fps, 1), cpu = Math.Round(_sysMon.Cpu), ram = Math.Round(_sysMon.Ram), vram = Math.Round(_sysMon.Vram), vramInfo = _sysMon.VramInfo });
         _renderer.Preview += OnPreview;
         _renderer.StagePreview += OnStagePreview;
         _renderer.OutputPreview += OnOutputPreview;

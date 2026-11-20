@@ -188,7 +188,7 @@ export type EngineMessage =
   | { type: 'kineticProject'; layer: number; column: number; project: unknown }
   | { type: 'kineticSaved'; path: string; placed: boolean }
   | { type: 'displays'; list: Display[] }
-  | { type: 'stats'; fps: number }
+  | { type: 'stats'; fps: number; cpu?: number; ram?: number; vram?: number; vramInfo?: string }
   | { type: 'mapping'; mapping: MappingSetup }
   | { type: 'preview'; data: string }
   | { type: 'stagePreview'; data: string }
