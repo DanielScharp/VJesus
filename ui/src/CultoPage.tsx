@@ -109,6 +109,12 @@ export function CultoPage({ service, songs, comp, state, thumbs, overlay, timer,
 
   // item escolhido na lista (para mandar ao telão)
   const showSelected = !!selItem && selItem.id !== current
+  // música selecionada (azul) que não está no ar: a lateral mostra os slides dela, para conferir a letra antes
+  const selSong = showSelected && selItem.kind === 'song' ? songs.find((s) => s.id === selItem.songId) : undefined
+  const selSlides = useMemo(() => (selSong ? splitSlides(selSong.text) : []), [selSong])
+  const viewSong = selSong ?? curSong
+  const viewSlides = selSong ? selSlides : curSlides
+  const viewLive = !selSong && onSong
   // teclas (configuráveis em Menu → Atalhos de teclado)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -375,13 +381,16 @@ export function CultoPage({ service, songs, comp, state, thumbs, overlay, timer,
               <span><span className="onair">NO AR</span> {curItem?.title ?? 'Nada do roteiro'}{onSong ? ` · slide ${state.slide + 1} de ${curSlides.length}` : ''}</span>
             </div>
             {showSelected && <button className="primary" onClick={() => { send({ type: 'serviceGo', id: selected! }); setSelected(null) }}>Enviar ao telão</button>}
-            {curSong && curSlides.length > 0 && (
+            {viewSong && viewSlides.length > 0 && (
               <>
-                <h3>Slides de {curSong.title}</h3>
+                <h3>{selSong ? 'Prévia: ' : 'Slides de '}{viewSong.title}{selSong && <span className="meta"> · selecionada, ainda não está no ar (clique num slide para mandar ao telão)</span>}</h3>
                 <div className="culto-slides">
-                  {curSlides.map((sl, i) => (
-                    <div key={i} className={`slide ${onSong && state.slide === i ? (state.blank ? 'live blank' : 'live') : ''}`}
-                      onClick={() => send({ type: 'lyricsShow', songId: curSong.id, slide: i })}>
+                  {viewSlides.map((sl, i) => (
+                    <div key={i} className={`slide ${viewLive && state.slide === i ? (state.blank ? 'live blank' : 'live') : ''}`}
+                      onClick={() => {
+                        if (selSong) { send({ type: 'serviceGo', id: selected! }); setSelected(null) }
+                        send({ type: 'lyricsShow', songId: viewSong.id, slide: i })
+                      }}>
                       <span className="slide-num">{i + 1}{sl.label && ` · ${sl.label}`}</span>
                       <span className="slide-text">{stripTags(sl.text)}</span>
                     </div>
