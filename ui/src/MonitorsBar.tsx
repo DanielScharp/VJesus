@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { send, type Composition, type Display, type LyricsState, type StageState } from './bridge'
 import { stripTags } from './lyrics'
 import { StageView } from './StageView'
@@ -10,20 +9,15 @@ type Props = {
   lyrics: LyricsState
   comp: Composition | null
   displays: Display[]
+  /** aberto/fechado pelo botão Monitores da barra de cima */
+  open: boolean
 }
 
 /**
  * Monitores do operador, visíveis em todas as abas: o que está no TELÃO (a composição que vai para
  * as telas) e o que está no RETORNO (a mesma tela que os músicos veem), com o resumo do que está no ar.
  */
-export function MonitorsBar({ preview, stagePreview, stage, lyrics, comp, displays }: Props) {
-  const [open, setOpen] = useState(() => {
-    try { return localStorage.getItem('monitors') !== 'closed' } catch { return true }
-  })
-  const toggle = () => {
-    setOpen(!open)
-    try { localStorage.setItem('monitors', open ? 'closed' : 'open') } catch { /* sem armazenamento */ }
-  }
+export function MonitorsBar({ preview, stagePreview, stage, lyrics, comp, displays, open }: Props) {
 
   // o que está tocando agora em cada layer (de cima para baixo)
   const playing = comp
@@ -42,9 +36,7 @@ export function MonitorsBar({ preview, stagePreview, stage, lyrics, comp, displa
 
   return (
     <div className={`monitors ${open ? '' : 'closed'}`}>
-      <button className="small monitors-toggle" onClick={toggle} title="Mostrar/ocultar os monitores">
-        {open ? '▾' : '▸'} Monitores
-      </button>
+
       {open && (
         <>
           <div className="monitor">

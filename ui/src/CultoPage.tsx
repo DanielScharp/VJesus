@@ -107,13 +107,8 @@ export function CultoPage({ service, songs, comp, state, thumbs, overlay, timer,
   const nextItem = curIndex < 0 ? items[0] : items[curIndex + 1]
   const selItem = items.find((i) => i.id === selected)
 
-  // próximo: o item escolhido na lista; sem escolha, o que entra ao apertar "próximo"
+  // item escolhido na lista (para mandar ao telão)
   const showSelected = !!selItem && selItem.id !== current
-  const nextLabel = showSelected ? selItem!.title
-    : hasNextSlide ? `${curSong!.title}, slide ${state.slide + 2}`
-      : nextVerse ? `${curItem!.title}, versículo ${nextVerse}`
-        : nextItem?.title ?? 'Fim do roteiro'
-  const previewItem = showSelected ? selItem : hasNextSlide || nextVerse ? undefined : nextItem
   // teclas (configuráveis em Menu → Atalhos de teclado)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -378,7 +373,6 @@ export function CultoPage({ service, songs, comp, state, thumbs, overlay, timer,
             {/* as imagens do telão e do retorno já aparecem nos monitores do topo: aqui só o texto do que está no ar e do próximo */}
             <div className="culto-now">
               <span><span className="onair">NO AR</span> {curItem?.title ?? 'Nada do roteiro'}{onSong ? ` · slide ${state.slide + 1} de ${curSlides.length}` : ''}</span>
-              <span><span className="next-tag">PRÓXIMO</span> {nextLabel || (previewItem ? previewItem.title : 'Fim do roteiro')}</span>
             </div>
             {showSelected && <button className="primary" onClick={() => { send({ type: 'serviceGo', id: selected! }); setSelected(null) }}>Enviar ao telão</button>}
             {curSong && curSlides.length > 0 && (

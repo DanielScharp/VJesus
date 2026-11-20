@@ -35,6 +35,9 @@ function App() {
   const [tab, setTab] = useState<Tab>('clips')
   const [displays, setDisplays] = useState<Display[]>([])
   const [fps, setFps] = useState(0)
+  // monitores (telão e retorno) abertos ou fechados, pelo botão da barra de cima
+  const [monitorsOpen, setMonitorsOpen] = useState(() => { try { return localStorage.getItem('monitors') !== 'closed' } catch { return true } })
+  const toggleMonitors = () => setMonitorsOpen((o) => { try { localStorage.setItem('monitors', o ? 'closed' : 'open') } catch { /* sem armazenamento */ } return !o })
   // uso geral do computador (todos os programas): processador, memória RAM e memória de vídeo
   const [sys, setSys] = useState<{ cpu: number; ram: number; vram: number; vramInfo: string }>({ cpu: -1, ram: -1, vram: -1, vramInfo: '' })
   const [comp, setComp] = useState<Composition | null>(null)
@@ -213,6 +216,7 @@ function App() {
           <button className={tab === 'stage' ? 'active' : ''} onClick={() => setTab('stage')}>Retorno</button>
         </nav>
         <div className="topbar-right">
+          <button className={`monitors-btn ${monitorsOpen ? 'active-soft' : ''}`} onClick={toggleMonitors} title="Mostrar ou esconder os monitores (telão e retorno), que aparecem em todas as abas">🖥</button>
           <PanicButton />
           <UpdateBadge update={update} />
           <TempoBar bpm={tempo.bpm} beat={tempo.beat} />
@@ -245,7 +249,7 @@ function App() {
 
       {(tab === 'clips' || tab === 'culto') && <PresentationBar list={presentations} keys={tab === 'clips'} clickerGlobal={clickerGlobal} />}
 
-      <MonitorsBar preview={preview} stagePreview={stagePreview} stage={stage} lyrics={lyricsState} comp={comp} displays={displays} />
+      <MonitorsBar preview={preview} stagePreview={stagePreview} stage={stage} lyrics={lyricsState} comp={comp} displays={displays} open={monitorsOpen} />
 
       {tab === 'stage' && stage && (
         <StagePage state={stage} displays={displays} preview={stagePreview} onConfig={(config: StageConfig) => {

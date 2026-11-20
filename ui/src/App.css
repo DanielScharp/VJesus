@@ -1274,3 +1274,8 @@ header.topbar .stats .usage.high b { color: #ff6b6b; }
 
 .culto-now { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; margin: 2px 0 8px; }
 .culto-now > span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+
+.monitors-btn { margin-left: 6px; }
+.monitors-btn.active-soft { border-color: var(--accent); color: var(--accent); }
+.monitors:empty { display: none; }
+.monitors-btn { padding: 4px 10px; font-size: 16px; line-height: 1; }
