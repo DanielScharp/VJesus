@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ClipViewer } from './ClipViewer'
 import { BLEND_MODES, send, type BlendMode, type Clip, type ClipNext, type ClipProps, type Composition, type EffectDef, type EffectInstance, type LayerPlayback } from './bridge'
 import { BLEND_LABELS } from './ClipGrid'
@@ -30,6 +30,24 @@ function VideoTimeline({ layer, playing, pb, duration, inPoint, outPoint, muted,
   muted: boolean; onMute: (m: boolean) => void; onRange: (inPoint: number, outPoint: number) => void
 }) {
   const [drag, setDrag] = useState<number | null>(null)
+  // o valor arrastado fica num ref: soltar o mouse (em qualquer lugar da janela) sempre manda o seek e libera a linha
+  const dragRef = useRef<number | null>(null)
+  const startDrag = (v: number) => { dragRef.current = v; setDrag(v) }
+  const endDrag = () => {
+    if (dragRef.current === null) return
+    send({ type: 'seek', layer, position: dragRef.current })
+    dragRef.current = null
+    setDrag(null)
+  }
+  useEffect(() => {
+    if (drag === null) return
+    const end = () => endDrag()
+    window.addEventListener('pointerup', end, true)
+    window.addEventListener('blur', end)
+    // garantia: se nenhum soltar chegar, a linha volta a acompanhar o vídeo
+    const t = window.setTimeout(end, 1500)
+    return () => { window.removeEventListener('pointerup', end, true); window.removeEventListener('blur', end); window.clearTimeout(t) }
+  }, [drag])
   const out = outPoint > 0 ? outPoint : duration
   const live = playing && pb && pb.duration > 0
   const pos = drag ?? (live ? pb!.position : inPoint)
@@ -46,9 +64,8 @@ function VideoTimeline({ layer, playing, pb, duration, inPoint, outPoint, muted,
             {live && <div className="timeline-head" style={{ left: pct(pos) }} />}
             <input type="range" min={0} max={duration} step={0.01} value={pos} disabled={!live}
               title={live ? 'Arraste para ir a outro ponto do vídeo' : 'Toque o clip para mudar a posição'}
-              onChange={(e) => setDrag(Number(e.target.value))}
-              onPointerUp={() => { if (drag !== null) send({ type: 'seek', layer, position: drag }); setDrag(null) }}
-              onKeyUp={() => { if (drag !== null) send({ type: 'seek', layer, position: drag }); setDrag(null) }} />
+              onChange={(e) => startDrag(Number(e.target.value))}
+              onPointerUp={endDrag} onPointerCancel={endDrag} onLostPointerCapture={endDrag} onKeyUp={endDrag} onBlur={endDrag} />
           </div>
           <div className="row timeline-info">
             <span className="timeline-time">{fmtTime(pos)} / {fmtTime(duration)}</span>
