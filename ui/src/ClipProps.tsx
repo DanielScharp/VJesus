@@ -30,27 +30,38 @@ function VideoTimeline({ layer, playing, pb, duration, inPoint, outPoint, muted,
   muted: boolean; onMute: (m: boolean) => void; onRange: (inPoint: number, outPoint: number) => void
 }) {
   const [drag, setDrag] = useState<number | null>(null)
-  // o valor arrastado fica num ref: soltar o mouse (em qualquer lugar da janela) sempre manda o seek e libera a linha
+  // arrastando: a barra mostra onde o mouse está; ao soltar (em qualquer lugar da janela) manda UM seek
+  // e segura a barra no ponto escolhido até o vídeo chegar lá (no máximo 1 s), depois volta a acompanhar o vídeo
   const dragRef = useRef<number | null>(null)
+  const holding = useRef(false)
+  const endedAt = useRef(0)
+  const [target, setTarget] = useState<{ at: number; until: number } | null>(null)
   const startDrag = (v: number) => { dragRef.current = v; setDrag(v) }
   const endDrag = () => {
-    if (dragRef.current === null) return
-    send({ type: 'seek', layer, position: dragRef.current })
+    holding.current = false
+    endedAt.current = performance.now()
+    const v = dragRef.current
     dragRef.current = null
     setDrag(null)
+    if (v === null) return
+    send({ type: 'seek', layer, position: v })
+    setTarget({ at: v, until: performance.now() + 1000 })
   }
   useEffect(() => {
-    if (drag === null) return
-    const end = () => endDrag()
+    const end = () => { if (holding.current || dragRef.current !== null) endDrag() }
     window.addEventListener('pointerup', end, true)
     window.addEventListener('blur', end)
-    // garantia: se nenhum soltar chegar, a linha volta a acompanhar o vídeo
-    const t = window.setTimeout(end, 1500)
-    return () => { window.removeEventListener('pointerup', end, true); window.removeEventListener('blur', end); window.clearTimeout(t) }
-  }, [drag])
+    return () => { window.removeEventListener('pointerup', end, true); window.removeEventListener('blur', end) }
+  }, [layer])
+  useEffect(() => {
+    if (!target) return
+    if (Math.abs((pb?.position ?? 0) - target.at) < 0.4 || performance.now() > target.until) { setTarget(null); return }
+    const t = window.setTimeout(() => setTarget(null), Math.max(0, target.until - performance.now()))
+    return () => window.clearTimeout(t)
+  }, [target, pb?.position])
   const out = outPoint > 0 ? outPoint : duration
   const live = playing && pb && pb.duration > 0
-  const pos = drag ?? (live ? pb!.position : inPoint)
+  const pos = drag ?? target?.at ?? (live ? pb!.position : inPoint)
   const pct = (v: number) => (duration > 0 ? `${(v / duration) * 100}%` : '0%')
   return (
     <div className="video-timeline">
@@ -64,8 +75,9 @@ function VideoTimeline({ layer, playing, pb, duration, inPoint, outPoint, muted,
             {live && <div className="timeline-head" style={{ left: pct(pos) }} />}
             <input type="range" min={0} max={duration} step={0.01} value={pos} disabled={!live}
               title={live ? 'Arraste para ir a outro ponto do vídeo' : 'Toque o clip para mudar a posição'}
-              onChange={(e) => startDrag(Number(e.target.value))}
-              onPointerUp={endDrag} onPointerCancel={endDrag} onLostPointerCapture={endDrag} onKeyUp={endDrag} onBlur={endDrag} />
+              onPointerDown={() => { holding.current = true }}
+              onChange={(e) => { if (holding.current) startDrag(Number(e.target.value)); else if (performance.now() - endedAt.current > 400) send({ type: 'seek', layer, position: Number(e.target.value) }) }}
+              onPointerCancel={endDrag} />
           </div>
           <div className="row timeline-info">
             <span className="timeline-time">{fmtTime(pos)} / {fmtTime(duration)}</span>
