@@ -1297,3 +1297,28 @@ header.topbar .stats .usage.high b { color: #ff6b6b; }
 .osc-table td:first-child { white-space: nowrap; }
 .osc-table td:last-child { width: 1%; white-space: nowrap; }
 .tag-hold { margin-left: 6px; font-size: 11px; padding: 0 6px; border-radius: 8px; background: var(--btn); color: var(--accent); }
+
+/* letras: três áreas com divisórias, slides em quadrados ou em linhas, com tamanho ajustável */
+.lyrics { grid-template-columns: var(--lyr-left, 260px) 8px minmax(380px, 1fr) 8px var(--lyr-right, 340px); column-gap: 4px; }
+.lyrics > .splitter { min-height: 200px; }
+.lyrics .slides { grid-template-columns: repeat(auto-fill, minmax(min(var(--slide-w, 220px), 100%), 1fr)); }
+.lyrics .slide-text { font-size: var(--slide-font, 14px); }
+.lyrics .slides.as-list { grid-template-columns: 1fr; gap: 4px; }
+.lyrics .slides.as-list .slide { flex-direction: row; align-items: flex-start; min-height: 0; gap: 18px; padding: 6px 10px; }
+.lyrics .slides.as-list .slide-num { flex: 0 0 auto; min-width: 0; gap: 4px; padding-top: 2px; }
+.lyrics .slides.as-list .slide-num .edit { margin-left: 0; }
+.lyrics .slides.as-list .slide-num .edit:first-of-type { margin-left: 8px; }
+.lyrics .slides.as-list .slide-text { flex: 1; }
+.slide-view { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 4px 0 8px; }
+.slide-view .seg { display: inline-flex; gap: 0; }
+.slide-view .seg button { border-radius: 0; }
+.slide-view .seg button:first-child { border-radius: 4px 0 0 4px; }
+.slide-view .seg button:last-child { border-radius: 0 4px 4px 0; }
+.slide-view label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.slide-view input[type=range] { width: 140px; }
+.slide-view label button { width: 24px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+@media (max-width: 1100px) {
+  .lyrics { grid-template-columns: 220px minmax(0, 1fr); }
+  .lyrics > .splitter { display: none; }
+  .lyrics-side { grid-column: 1 / -1; }
+}

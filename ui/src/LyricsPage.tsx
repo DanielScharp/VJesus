@@ -8,6 +8,7 @@ import { FontsBox } from './FontsBox'
 import { OnlineLyrics } from './OnlineLyrics'
 import { SlidePreview } from './SlidePreview'
 import { KineticEditor } from './KineticEditor'
+import { Splitter } from './Splitter'
 
 type Props = {
   songs: Song[]
@@ -30,7 +31,13 @@ const newId = () => Math.random().toString(16).slice(2, 12)
  * para a música inteira, ajustes de um slide só e formatação de trechos. A letra vai para o telão
  * por um clip "Letras" na grade, misturada com os vídeos, efeitos e o mapeamento.
  */
-export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, onStyleLocal, onScenesLocal }: Props) {
+export function LyricsPage({ songs, style, scenes, state, fonts, comp, onStyleLocal, onScenesLocal }: Props) {
+  const rootRef = useRef<HTMLDivElement>(null)
+  // slides em quadrados ou em linhas, e o tamanho (lembrados neste computador)
+  const [view, setView] = useState<'grid' | 'list'>(() => { try { return localStorage.getItem('letras.slides.modo') === 'list' ? 'list' : 'grid' } catch { return 'grid' } })
+  const [tile, setTile] = useState(() => { try { return Math.min(420, Math.max(160, Number(localStorage.getItem('letras.slides.tamanho')) || 220)) } catch { return 220 } })
+  const changeView = (v: 'grid' | 'list') => { setView(v); try { localStorage.setItem('letras.slides.modo', v) } catch { /* sem armazenamento */ } }
+  const changeTile = (v: number) => { setTile(v); try { localStorage.setItem('letras.slides.tamanho', String(v)) } catch { /* sem armazenamento */ } }
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(state.songId)
   const [editing, setEditing] = useState<Song | null>(null)
@@ -114,7 +121,7 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
   const saveSong = (s: Song) => send({ type: 'lyricsSave', song: s })
 
   return (
-    <div className="lyrics">
+    <div className="lyrics" ref={rootRef}>
       {webOpen && <OnlineLyrics songs={songs} initialQuery={query} onImported={(id) => { setSelectedId(id); setQuery(''); setWebOpen(false) }} onClose={() => setWebOpen(false)} />}
       {/* ---------- biblioteca ---------- */}
       <section className="lyrics-library">
@@ -143,6 +150,8 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
         <p className="meta">{songs.length} música(s). Duplo clique projeta o primeiro slide.</p>
       </section>
 
+      <Splitter container={rootRef} measure={() => rootRef.current?.querySelector('.lyrics-library') ?? null} cssVar="--lyr-left" storageKey="tamanho.letras.esquerda" dir={1} min={200}
+        max={(w) => Math.min(460, w - (rootRef.current?.querySelector('.lyrics-side')?.getBoundingClientRect().width ?? 0) - 380)} />
       {/* ---------- slides, editor da música ou editor de slide ---------- */}
       <section className="lyrics-main">
         {editing ? (
@@ -204,7 +213,19 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
               )}
               <span className="meta">{slides.length} slides · até {maxLinesPerSlide(song.text)} linhas · nos slides: ✂ divide ao meio, ⤓ junta com o próximo</span>
             </div>
-            <div className="slides">
+            <div className="slide-view">
+              <span className="seg">
+                <button className={`small ${view === 'grid' ? 'active' : ''}`} onClick={() => changeView('grid')} title="Slides em quadrados, lado a lado">▦ Quadrados</button>
+                <button className={`small ${view === 'list' ? 'active' : ''}`} onClick={() => changeView('list')} title="Um slide por linha, com a letra inteira">☰ Linhas</button>
+              </span>
+              <label title={view === 'grid' ? 'Largura de cada quadrado' : 'Tamanho do texto'}>
+                Tamanho
+                <button className="small" onClick={() => changeTile(Math.max(160, tile - 20))} disabled={tile <= 160}>−</button>
+                <input type="range" min={160} max={420} step={10} value={tile} onChange={(e) => changeTile(Number(e.target.value))} />
+                <button className="small" onClick={() => changeTile(Math.min(420, tile + 20))} disabled={tile >= 420}>+</button>
+              </label>
+            </div>
+            <div className={`slides ${view === 'list' ? 'as-list' : ''}`} style={{ '--slide-w': `${tile}px`, '--slide-font': `${Math.round(12 + (tile - 160) / 26)}px` } as React.CSSProperties}>
               {slides.map((sl, i) => {
                 const custom = Object.keys(sl.overrides).length > 0
                 return (
@@ -236,10 +257,11 @@ export function LyricsPage({ songs, style, scenes, state, fonts, preview, comp, 
         )}
       </section>
 
+      <Splitter container={rootRef} measure={() => rootRef.current?.querySelector('.lyrics-side') ?? null} cssVar="--lyr-right" storageKey="tamanho.letras.direita" dir={-1} min={300}
+        max={(w) => Math.min(620, w - (rootRef.current?.querySelector('.lyrics-library')?.getBoundingClientRect().width ?? 0) - 380)} />
       {/* ---------- telão, cenas e aparência ---------- */}
       <section className="lyrics-side">
         <h2>No telão</h2>
-        {preview && <img className="preview" src={preview} alt="Preview da composição" />}
         <label className="check preview-toggle" title="Clicar num slide só mostra a prévia; ele vai ao ar com Enter, duplo clique ou o botão">
           <input type="checkbox" checked={previewFirst} onChange={(e) => togglePreviewFirst(e.target.checked)} /> Prévia primeiro (não vai direto ao ar)
         </label>
