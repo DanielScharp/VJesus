@@ -1236,3 +1236,17 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: 
 .grid .grid-row:not(.grid-head):not(.layer-add-row) > .cell { height: auto; min-height: var(--cell-h); contain: size; }
 .clips-main { align-items: start; }
 .clips-lib { position: relative; top: auto; max-height: none; }
+/* ---------- divisórias arrastáveis (o tamanho de cada área fica guardado) ---------- */
+.splitter { width: 8px; align-self: stretch; cursor: col-resize; display: flex; justify-content: center; touch-action: none; min-height: 40px; }
+.splitter > span { width: 2px; height: 100%; border-radius: 1px; background: var(--line); transition: background .15s; }
+.splitter:hover > span, body.resizing .splitter > span { background: var(--accent); }
+body.resizing, body.resizing * { cursor: col-resize !important; user-select: none !important; }
+.clips-main { grid-template-columns: minmax(480px, 1fr) 8px var(--lib-w, 340px); column-gap: 4px; }
+.clips-main.lib-hidden { grid-template-columns: minmax(0, 1fr) 26px; }
+.panels { grid-template-columns: minmax(380px, 1fr) 8px var(--side-w, 38%); column-gap: 4px; }
+.culto-body { grid-template-columns: var(--culto-left, 240px) 8px minmax(360px, 1fr) 8px var(--culto-right, calc((100% - 280px) * 0.58)); column-gap: 4px; }
+@media (max-width: 1300px) {
+  .culto-body { grid-template-columns: 220px minmax(0, 1fr); }
+  .culto-body > .splitter { display: none; }
+}
+@media (max-width: 1100px) { .clips-main { grid-template-columns: minmax(0, 1fr) 8px var(--lib-w, 260px); } }

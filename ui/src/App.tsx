@@ -1,5 +1,6 @@
 import { HolyricsPanel } from './HolyricsPanel'
 import { MediaLibrary } from './MediaLibrary'
+import { Splitter } from './Splitter'
 import { PreflightDialog } from './PreflightDialog'
 import { PanicButton } from './PanicButton'
 import { useEffect, useState, useRef } from 'react'
@@ -76,6 +77,8 @@ function App() {
   const [libSide, setLibSide] = useState(() => { try { return localStorage.getItem('biblioteca.lado') !== '0' } catch { return true } })
   // a biblioteca do lado tem a mesma altura do grid (sem sobrar espaço vazio embaixo dele)
   const centerRef = useRef<HTMLDivElement>(null)
+  const clipsMainRef = useRef<HTMLDivElement>(null)
+  const panelsRef = useRef<HTMLDivElement>(null)
   const [centerH, setCenterH] = useState(0)
   useEffect(() => {
     const el = centerRef.current
@@ -269,7 +272,7 @@ function App() {
 
       {tab === 'clips' && (
         <>
-          <div className={`clips-main ${libSide ? '' : 'lib-hidden'}`}>
+          <div className={`clips-main ${libSide ? '' : 'lib-hidden'}`} ref={clipsMainRef}>
             <div className="clips-center" ref={centerRef}>
           {comp && <ActiveEffectsBar comp={comp} library={library} onToggle={toggleEffect} onShow={setTarget} />}
           {comp ? (
@@ -284,13 +287,15 @@ function App() {
             arraste clips entre células para mover · botão direito para trocar ou remover · número da coluna dispara a coluna inteira
           </p>
             </div>
+            {libSide && <Splitter container={clipsMainRef} measure={() => clipsMainRef.current?.querySelector('.clips-lib') ?? null} cssVar="--lib-w" storageKey="tamanho.biblioteca"
+              dir={-1} min={240} max={(w) => w - 520} title="Arraste para mudar a largura da biblioteca e do grid · duplo clique volta ao padrão" />}
             {libSide
               ? <aside className="clips-lib" style={{ height: Math.max(420, centerH) }}><MediaLibrary thumbs={thumbs} side onHide={() => setLibSidePersist(false)} /></aside>
               : <button className="clips-lib-tab" title="Mostrar a biblioteca de mídia ao lado do grid" onClick={() => setLibSidePersist(true)}>⟨ Biblioteca</button>}
           </div>
 
 
-          <div className="panels">
+          <div className="panels" ref={panelsRef}>
             {comp && (
               <div className="layer-panel">
               {target >= 0 && (
@@ -306,6 +311,8 @@ function App() {
               </div>
             )}
 
+            <Splitter container={panelsRef} measure={() => panelsRef.current?.querySelector(':scope > .side') ?? null} cssVar="--side-w" storageKey="tamanho.master"
+              dir={-1} min={300} max={(w) => w - 380} />
             <div className="side">
               <section>
                 <div className="effects-head">

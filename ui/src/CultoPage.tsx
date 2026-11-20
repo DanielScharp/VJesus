@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Splitter } from './Splitter'
 import { onMessage, send, type BibleBookInfo, type Composition, type Deck, type LyricsState, type OverlayState, type PreviewRequest, type ServiceItem, type ServiceKind, type ServicePlanInfo, type ServiceState, type Song, type StageTimer } from './bridge'
 import { parseRef, refLabel } from './bible'
 import { normalize, splitSlides, stripTags } from './lyrics'
@@ -60,6 +61,7 @@ function itemPreview(item: ServiceItem | undefined): PreviewRequest | null {
 export function CultoPage({ service, songs, comp, state, preview, thumbs, overlay, timer, fonts }: Props) {
   const { items, current } = service
   const [view, setView] = useState<'roteiro' | 'telao'>('roteiro')
+  const bodyRef = useRef<HTMLDivElement>(null)
   const [addTab, setAddTab] = useState<'songs' | 'bible' | 'clips' | 'media' | 'other'>('songs')
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
@@ -205,7 +207,7 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
       {view === 'telao' && overlay && timer && <OverlayPanel overlay={overlay} timer={timer} fonts={fonts} />}
 
       {view === 'roteiro' && (
-        <div className="culto-body">
+        <div className="culto-body" ref={bodyRef}>
           <section className="culto-add">
             <div className="row culto-tabs">
               {([['songs', 'Músicas'], ['bible', 'Bíblia'], ['clips', 'Clips'], ['media', 'Mídia'], ['other', 'Outros']] as const).map(([k, l]) => (
@@ -282,6 +284,7 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
             )}
           </section>
 
+          <Splitter container={bodyRef} measure={() => bodyRef.current?.querySelector('.culto-add') ?? null} cssVar="--culto-left" storageKey="tamanho.culto.esquerda" dir={1} min={180} max={(w) => Math.min(460, w - (bodyRef.current?.querySelector('.culto-live')?.getBoundingClientRect().width ?? 0) - 400)} />
           <section className="culto-list"
             onDragOver={(e) => { if (e.dataTransfer.types.includes(MEDIA_MIME)) e.preventDefault() }}
             onDrop={(e) => { const m = e.dataTransfer.getData(MEDIA_MIME); if (m) { e.preventDefault(); send({ type: 'serviceAddMedia', paths: JSON.parse(m) }) } }}>
@@ -386,6 +389,7 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
             <p className="meta">Clique escolhe e mostra a prévia · duplo clique ou ▶ Ir manda ao ar · arraste para reordenar · → / espaço próximo · ← anterior · B tela em branco · Esc encerra a letra/Bíblia</p>
           </section>
 
+          <Splitter container={bodyRef} measure={() => bodyRef.current?.querySelector('.culto-live') ?? null} cssVar="--culto-right" storageKey="tamanho.culto.direita" dir={-1} min={360} max={(w) => w - (bodyRef.current?.querySelector('.culto-add')?.getBoundingClientRect().width ?? 0) - 400} />
           <section className="culto-live">
             <div className="row culto-go">
               <button onClick={() => { send({ type: 'serviceStep', direction: -1 }); setSelected(null) }}>◀ Anterior</button>
