@@ -71,6 +71,21 @@ export function MediaLibrary({ thumbs, compact, onPick, side, onHide }: { thumbs
   const byId = useMemo(() => new Map(collections.map((c) => [c.id, c])), [collections])
   // pasta de cada arquivo (ignora pasta que não existe mais)
   const folderOf = (path: string) => { const id = placement[path]; return id && byId.has(id) ? id : null }
+  // pasta do computador de uma pasta da biblioteca: a de origem, ou (pasta criada aqui) a pasta onde estão os arquivos dela
+  const folderDir = (id: string): string | null => {
+    const f = byId.get(id)
+    if (f?.source) return f.source
+    const ids = new Set<string>([id])
+    for (let grew = true; grew;) { grew = false; for (const c of collections) if (c.parent && ids.has(c.parent) && !ids.has(c.id)) { ids.add(c.id); grew = true } }
+    const dirs = (items ?? []).filter((i) => { const fo = folderOf(i.path); return fo !== null && ids.has(fo) }).map((i) => i.path.replace(/[\\/][^\\/]*$/, ''))
+    if (dirs.length === 0) return null
+    // a pasta em comum de todos os arquivos (se não houver, a que tem mais arquivos)
+    let common = dirs[0]
+    for (const d of dirs) while (common && !(d.toLowerCase() + '\\').startsWith(common.toLowerCase() + '\\')) common = common.includes('\\') ? common.replace(/\\[^\\]*$/, '') : ''
+    if (common && common.length > 3) return common
+    const freq = new Map<string, number>(); for (const d of dirs) freq.set(d, (freq.get(d) ?? 0) + 1)
+    return [...freq].sort((a, b) => b[1] - a[1])[0][0]
+  }
   const childrenOf = (id: string | null) => collections.filter((c) => (c.parent ?? null) === id && (id === null || byId.has(id))).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   const pathTo = (id: string | null) => { const out: LibraryFolder[] = []; for (let f = id ? byId.get(id) : undefined; f; f = f.parent ? byId.get(f.parent) : undefined) out.unshift(f); return out }
   const countIn = useMemo(() => {
@@ -230,7 +245,7 @@ export function MediaLibrary({ thumbs, compact, onPick, side, onHide }: { thumbs
               ))}
               {cur && <>
                 <button className="small" title="Renomear esta pasta" onClick={() => setRenaming(cur)}>✎ Renomear</button>
-                {byId.get(cur)?.source && <button className="small" title={byId.get(cur)?.source ?? ''} onClick={() => send({ type: 'libraryOpenDir', path: byId.get(cur)!.source! })}>📂 Abrir no computador</button>}
+                {folderDir(cur) && <button className="small" title={folderDir(cur) ?? ''} onClick={() => send({ type: 'libraryOpenDir', path: folderDir(cur)! })}>📂 Abrir no computador</button>}
                 <button className="small" title="Apagar esta pasta da biblioteca: o que estava nela sobe um nível (os arquivos não são apagados)"
                   onClick={() => deleteFolder(cur)}>🗑 Apagar pasta</button>
               </>}
@@ -280,7 +295,9 @@ export function MediaLibrary({ thumbs, compact, onPick, side, onHide }: { thumbs
             <button onClick={go(() => { setCur(f.id); setQ(''); setTag(null) })}>Abrir</button>
             <button onClick={go(() => { setCur(f.id); setRenaming(f.id) })}>Renomear…</button>
             <button onClick={go(() => newFolder(f.id))}>Nova pasta dentro</button>
-            {f.source && <button title={f.source} onClick={go(() => send({ type: 'libraryOpenDir', path: f.source! }))}>Abrir a pasta no computador</button>}
+            {folderDir(f.id)
+              ? <button title={folderDir(f.id)!} onClick={go(() => send({ type: 'libraryOpenDir', path: folderDir(f.id)! }))}>Abrir a pasta no computador</button>
+              : <button disabled title="Pasta vazia: ainda não há arquivo para saber a pasta do computador">Abrir a pasta no computador</button>}
             {f.source && <button onClick={go(() => send({ type: 'librarySync' }))}>Atualizar (ler a pasta de novo)</button>}
             {f.parent && <button onClick={go(() => send({ type: 'libraryFolderMove', id: f.id, parent: null }))}>Mover para o início</button>}
             <button className="danger" onClick={go(() => deleteFolder(f.id))}>{f.linked ? (byId.get(f.parent ?? '')?.linked ? 'Tirar da biblioteca (não apaga no Drive)…' : 'Desligar do Google Drive…') : 'Apagar pasta…'}</button>
