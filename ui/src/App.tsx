@@ -74,6 +74,16 @@ function App() {
   const [clickerGlobal, setClickerGlobal] = useState(false)
   // biblioteca de mídia ao lado do grid (aberta ou escondida fica lembrado)
   const [libSide, setLibSide] = useState(() => { try { return localStorage.getItem('biblioteca.lado') !== '0' } catch { return true } })
+  // a biblioteca do lado tem a mesma altura do grid (sem sobrar espaço vazio embaixo dele)
+  const centerRef = useRef<HTMLDivElement>(null)
+  const [centerH, setCenterH] = useState(0)
+  useEffect(() => {
+    const el = centerRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setCenterH(Math.round(el.getBoundingClientRect().height)))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [tab, libSide, comp === null])
   const setLibSidePersist = (v: boolean) => { setLibSide(v); try { localStorage.setItem('biblioteca.lado', v ? '1' : '0') } catch { /* sem armazenamento */ } }
 
   // atalhos que valem em qualquer aba: encerrar letra/versículo e parar ataques
@@ -260,7 +270,7 @@ function App() {
       {tab === 'clips' && (
         <>
           <div className={`clips-main ${libSide ? '' : 'lib-hidden'}`}>
-            <div className="clips-center">
+            <div className="clips-center" ref={centerRef}>
           {comp && <ActiveEffectsBar comp={comp} library={library} onToggle={toggleEffect} onShow={setTarget} />}
           {comp ? (
             <ClipGrid comp={comp} thumbs={thumbs} playback={playback} onLayerChange={changeLayer}
@@ -275,7 +285,7 @@ function App() {
           </p>
             </div>
             {libSide
-              ? <aside className="clips-lib"><MediaLibrary thumbs={thumbs} side onHide={() => setLibSidePersist(false)} /></aside>
+              ? <aside className="clips-lib" style={{ height: Math.max(420, centerH) }}><MediaLibrary thumbs={thumbs} side onHide={() => setLibSidePersist(false)} /></aside>
               : <button className="clips-lib-tab" title="Mostrar a biblioteca de mídia ao lado do grid" onClick={() => setLibSidePersist(true)}>⟨ Biblioteca</button>}
           </div>
 

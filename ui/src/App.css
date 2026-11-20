@@ -1230,3 +1230,9 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: 
 .clips-lib .media-folder-card { min-height: 84px; justify-content: flex-start; padding-top: 10px; }
 .clips-lib .media-folder-card .media-name { width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; line-height: 1.3; }
 .clips-lib .media-folder-card .meta { font-size: 11px; }
+
+/* sem espaços vazios: as células ocupam a altura toda da linha da layer; a biblioteca acompanha a altura do grid */
+.grid .grid-row:not(.grid-head):not(.layer-add-row) { align-items: stretch; }
+.grid .grid-row:not(.grid-head):not(.layer-add-row) > .cell { height: auto; min-height: var(--cell-h); contain: size; }
+.clips-main { align-items: start; }
+.clips-lib { position: relative; top: auto; max-height: none; }
