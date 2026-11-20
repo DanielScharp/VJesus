@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Splitter } from './Splitter'
-import { onMessage, send, type BibleBookInfo, type Composition, type Deck, type LyricsState, type OverlayState, type PreviewRequest, type ServiceItem, type ServiceKind, type ServicePlanInfo, type ServiceState, type Song, type StageTimer } from './bridge'
+import { onMessage, send, type BibleBookInfo, type Composition, type Deck, type LyricsState, type OverlayState, type ServiceItem, type ServiceKind, type ServicePlanInfo, type ServiceState, type Song, type StageTimer } from './bridge'
 import { parseRef, refLabel } from './bible'
 import { normalize, splitSlides, stripTags } from './lyrics'
 import { formatTime, OverlayPanel } from './OverlayPanel'
 import { isTyping, matches } from './shortcuts'
-import { SlidePreview } from './SlidePreview'
 import { MediaLibrary, MEDIA_MIME } from './MediaLibrary'
 
 /** "Aba Principal", mas "Aba 2" (e não "Aba Aba 2") quando o nome já começa com Aba. */
@@ -41,24 +40,11 @@ const todayIso = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-/** O que o item mostra primeiro, para a prévia. */
-function itemPreview(item: ServiceItem | undefined): PreviewRequest | null {
-  if (!item) return null
-  switch (item.kind) {
-    case 'song': return item.songId ? { kind: 'song', songId: item.songId, slide: 0 } : null
-    case 'bible': return { kind: 'bible', book: item.book ?? '', chapter: item.chapter ?? 1, verse: item.verse ?? 1, verseEnd: item.verse ?? 1 }
-    case 'text': return item.text ? { kind: 'text', text: item.text } : null
-    case 'notice': return item.text ? { kind: 'notice', text: item.text } : null
-    case 'timer': return { kind: 'timer', seconds: item.seconds ?? 300 }
-    default: return null
-  }
-}
-
 /**
  * Roteiro do culto: a lista em ordem. Uma tecla avança tudo: dentro da música passa o slide e, no
  * fim dela, entra o próximo item. A prévia mostra o que vem a seguir antes de ir ao ar.
  */
-export function CultoPage({ service, songs, comp, state, preview, thumbs, overlay, timer, fonts }: Props) {
+export function CultoPage({ service, songs, comp, state, thumbs, overlay, timer, fonts }: Props) {
   const { items, current } = service
   const [view, setView] = useState<'roteiro' | 'telao'>('roteiro')
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -121,23 +107,13 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
   const nextItem = curIndex < 0 ? items[0] : items[curIndex + 1]
   const selItem = items.find((i) => i.id === selected)
 
-  // prévia: o item escolhido na lista; sem escolha, o que entra ao apertar "próximo"
+  // próximo: o item escolhido na lista; sem escolha, o que entra ao apertar "próximo"
   const showSelected = !!selItem && selItem.id !== current
-  const nextRequest: PreviewRequest | null = showSelected ? itemPreview(selItem)
-    : hasNextSlide ? { kind: 'song', songId: curSong!.id, slide: state.slide + 1 }
-      : nextVerse ? { kind: 'bible', book: curItem!.book ?? '', chapter: curItem!.chapter ?? 1, verse: nextVerse, verseEnd: nextVerse }
-        : itemPreview(nextItem)
   const nextLabel = showSelected ? selItem!.title
     : hasNextSlide ? `${curSong!.title}, slide ${state.slide + 2}`
       : nextVerse ? `${curItem!.title}, versículo ${nextVerse}`
         : nextItem?.title ?? 'Fim do roteiro'
   const previewItem = showSelected ? selItem : hasNextSlide || nextVerse ? undefined : nextItem
-  const clipThumb = (() => {
-    if (previewItem?.kind !== 'clip' || !comp) return undefined
-    const path = deckClip(previewItem)?.path
-    return path ? thumbs[path] : undefined
-  })()
-
   // teclas (configuráveis em Menu → Atalhos de teclado)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -399,15 +375,11 @@ export function CultoPage({ service, songs, comp, state, preview, thumbs, overla
             {(state.text || state.songId) && (
               <button className="danger culto-end" title="Tira a letra ou o versículo do telão e da tela de retorno (Esc, em qualquer aba)" onClick={() => send({ type: 'lyricsClear' })}>Encerrar letra (telão e retorno) · Esc</button>
             )}
-            <div className="slide-monitor">
-              <div className="monitor-head"><span className="onair">NO AR</span> {curItem?.title ?? 'Nada do roteiro'}{onSong ? ` · slide ${state.slide + 1} de ${curSlides.length}` : ''}</div>
-              <div className="monitor-screen" style={{ aspectRatio: '16 / 9' }}>
-                {preview ? <img src={preview} alt="Telão" /> : <span className="meta">sem imagem</span>}
-              </div>
+            {/* as imagens do telão e do retorno já aparecem nos monitores do topo: aqui só o texto do que está no ar e do próximo */}
+            <div className="culto-now">
+              <span><span className="onair">NO AR</span> {curItem?.title ?? 'Nada do roteiro'}{onSong ? ` · slide ${state.slide + 1} de ${curSlides.length}` : ''}</span>
+              <span><span className="next-tag">PRÓXIMO</span> {nextLabel || (previewItem ? previewItem.title : 'Fim do roteiro')}</span>
             </div>
-            {clipThumb
-              ? <div className="slide-monitor"><div className="monitor-head"><span className="next-tag">PRÉVIA</span> {nextLabel}</div><div className="monitor-screen" style={{ aspectRatio: '16 / 9' }}><img src={clipThumb} alt="Clip" /></div></div>
-              : <SlidePreview request={nextRequest} label={nextLabel} empty={previewItem ? previewItem.kind === 'clear' ? 'Telão sem letra nem avisos' : previewItem.title : 'Fim do roteiro'} />}
             {showSelected && <button className="primary" onClick={() => { send({ type: 'serviceGo', id: selected! }); setSelected(null) }}>Enviar ao telão</button>}
             {curSong && curSlides.length > 0 && (
               <>
