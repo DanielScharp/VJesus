@@ -76,12 +76,12 @@ sealed partial class MainForm
     {
         StartStreaming();
         var problems = new List<string>();
-        try { _osc = new OscServer(OscPort, (a, v) => BeginInvoke(() => ApplyControl(a, v))); }
+        try { _osc = new OscServer(OscPort, (a, v) => BeginInvoke(() => { NoteOsc(a, v); ApplyControl(a, v); })); }
         catch (Exception ex) { problems.Add($"OSC na porta {OscPort}: {ex.Message}"); }
 
         try
         {
-            _midi = new MidiInput((a, v) => BeginInvoke(() => ApplyControl(a, v)));
+            _midi = new MidiInput((a, v) => BeginInvoke(() => { NoteOsc(a, v); ApplyControl(a, v); }));
             _midi.Changed += () => BeginInvoke(SendControlInfo);
         }
         catch (Exception ex) { problems.Add($"MIDI: {ex.Message}"); }
@@ -201,6 +201,27 @@ sealed partial class MainForm
         ScheduleSync();
     }
 
+    // último comando OSC recebido: a tela de Conexões mostra, para conferir se o Stream Deck/Companion está chegando
+    long _lastOscSent;
+    void NoteOsc(string address, float value)
+    {
+        long now = Environment.TickCount64;
+        if (now - _lastOscSent < 150) return; // um knob girando manda muitos: a tela não precisa de todos
+        _lastOscSent = now;
+        Send(new { type = "oscIn", address, value, known = KnownOsc(address) });
+    }
+
+    bool KnownOsc(string a) => RxClip.IsMatch(a) || RxColumn.IsMatch(a) || RxLayerClear.IsMatch(a) || RxOpacity.IsMatch(a) || RxAttack.IsMatch(a)
+        || RxVolume.IsMatch(a) || RxLayerFx.IsMatch(a) || RxMasterFx.IsMatch(a) || FixedOsc.Contains(a);
+
+    static readonly HashSet<string> FixedOsc = [
+        "/composition/video/brightness", "/composition/speed", "/composition/testcard", "/stage/timer/start", "/stage/timer/pause",
+        "/stage/timer/toggle", "/stage/timer/reset", "/stage/mirror", "/stage/alert/clear", "/lyrics/clear", "/lyrics/next", "/lyrics/prev",
+        "/culto/next", "/culto/prev", "/apresentacao/next", "/apresentacao/prev", "/lyrics/blank", "/composition/tempocontroller/tempotap",
+        "/composition/tempocontroller/resync", "/composition/tempocontroller/tempo", "/composition/audio/volume", "/composition/clear"];
+
+    static string? SafeLocalIp() { try { return RemoteServer.LocalIp(); } catch { return null; } }
+
     static int I(Match m, int group) => int.Parse(m.Groups[group].Value, CultureInfo.InvariantCulture) - 1;
 
     /// <summary>Muda um parâmetro de efeito a partir de um valor 0..1 (convertido para mín..máx do parâmetro).</summary>
@@ -251,6 +272,7 @@ sealed partial class MainForm
         {
             type = "control",
             oscPort = _osc?.Port,
+            oscHost = SafeLocalIp(),
             remoteUrl = _remote?.Url,
             midiDevices = _midi?.DeviceNames ?? [],
             midiBindings = _midi?.Bindings.Select(b => new { address = b.Address, label = b.Label, device = b.Device }) ?? [],

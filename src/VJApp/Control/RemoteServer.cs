@@ -192,7 +192,7 @@ sealed class RemoteServer : IAsyncDisposable
     }
 
     /// <summary>IP da máquina na rede local (para mostrar o endereço do remoto).</summary>
-    static string LocalIp()
+    internal static string LocalIp()
     {
         var ip = NetworkInterface.GetAllNetworkInterfaces()
             .Where(n => n.OperationalStatus == OperationalStatus.Up && n.NetworkInterfaceType != NetworkInterfaceType.Loopback)

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { send, type ControlInfo, type StreamingInfo } from './bridge'
+import { CompanionHelp } from './CompanionHelp'
 
 type Props = {
   info: ControlInfo | null
@@ -20,7 +21,7 @@ export function ControlPanel({ info, learn, onLearn }: Props) {
       {info.error && <div className="meta warn">{info.error}</div>}
       <div className="control-grid">
         <span>OSC</span>
-        <span>{info.oscPort ? <>UDP porta <strong>{info.oscPort}</strong> (endereços no README)</> : 'desligado'}</span>
+        <span>{info.oscPort ? <>UDP porta <strong>{info.oscPort}</strong> (Stream Deck, Companion: veja abaixo)</> : 'desligado'}</span>
         <span>Celular</span>
         <span>{info.remoteUrl ? <a href={info.remoteUrl} target="_blank" rel="noreferrer">{info.remoteUrl}</a> : 'desligado'}</span>
         {info.remoteUrl && <>
@@ -57,7 +58,9 @@ export function ControlPanel({ info, learn, onLearn }: Props) {
           opacidade e volume das layers, brilho, velocidade e volume do master, test card, TAP e ressincronizar do BPM, e os ataques.</p>
         <p><b>Dica:</b> pads e teclas servem para disparar (clips, colunas, ataques, TAP); faders e knobs para valores (opacidade, volume, brilho).
           Para trocar um controle, faça o learn de novo nele. "Limpar MIDI" apaga todas as ligações. Elas ficam salvas neste computador.</p>
-      </details>      {learn && (
+      </details>
+      <CompanionHelp port={info.oscPort} host={info.oscHost ?? null} />
+      {learn && (
         <p className="meta">
           {info.learning
             ? <>Mexa no controle MIDI para ligar a <code>{info.learning}</code>…</>

@@ -81,6 +81,7 @@ export type MappingSetup = { screens: OutputScreen[]; groups?: LayerGroup[] }
 
 export type ControlInfo = {
   oscPort: number | null
+  oscHost?: string | null
   remoteUrl: string | null
   midiDevices: string[]
   midiBindings: { address: string; label: string; device: string }[]
@@ -189,6 +190,7 @@ export type EngineMessage =
   | { type: 'kineticProject'; layer: number; column: number; project: unknown }
   | { type: 'kineticSaved'; path: string; placed: boolean }
   | { type: 'displays'; list: Display[] }
+  | { type: 'oscIn'; address: string; value: number; known: boolean }
   | { type: 'stats'; fps: number; cpu?: number; ram?: number; vram?: number; vramInfo?: string }
   | { type: 'mapping'; mapping: MappingSetup }
   | { type: 'preview'; data: string }
