@@ -2,7 +2,7 @@ import { ColorInput } from './ColorInput'
 import { SlidePreview } from './SlidePreview'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  onMessage, send, type Composition, type BibleBookInfo, type BibleHit, type BiblePassage, type BibleSettings, type BibleVersion, type LyricScene,
+  onMessage, send, type Composition, type BibleBookInfo, type BibleHit, type BiblePassage, type BibleSettings, type BibleVersion, type LyricScene, type ServiceState,
 } from './bridge'
 import { NT_START, parseRef, refLabel, shortName } from './bible'
 import { BibleQuick } from './BibleQuick'
@@ -10,7 +10,7 @@ import { Splitter } from './Splitter'
 import { normalize } from './lyrics'
 import { matches } from './shortcuts'
 
-type Props = { scenes: LyricScene[]; comp: Composition | null }
+type Props = { scenes: LyricScene[]; comp: Composition | null; service: ServiceState }
 
 type Sel = { verse: number; verseEnd: number }
 
@@ -22,7 +22,7 @@ const remembered = (() => {
  * Aba Bíblia (no estilo do Holyrics): digita a referência ("jo 3 16") ou palavras para pesquisar,
  * navega por livro/capítulo, compara versões lado a lado e projeta no telão com o estilo das letras.
  */
-export function BiblePage({ scenes, comp }: Props) {
+export function BiblePage({ scenes, comp, service }: Props) {
   const [installed, setInstalled] = useState<BibleVersion[]>([])
   const [downloading, setDownloading] = useState<string[]>([])
   const [yvKey, setYvKey] = useState(false)
@@ -145,6 +145,28 @@ export function BiblePage({ scenes, comp }: Props) {
   const [vView, setVView] = useState<'list' | 'grid'>(() => { try { return localStorage.getItem('biblia.versiculos.modo') === 'grid' ? 'grid' : 'list' } catch { return 'list' } })
   const [vSize, setVSize] = useState(() => { try { return Math.min(480, Math.max(180, Number(localStorage.getItem('biblia.versiculos.tamanho')) || 280)) } catch { return 280 } })
   const changeVView = (v: 'list' | 'grid') => { setVView(v); try { localStorage.setItem('biblia.versiculos.modo', v) } catch { /* sem armazenamento */ } }
+  // favoritos: guardados nas configurações da Bíblia ("JHN 3:16-16"), para achar rápido durante o culto
+  const favorites = settings?.favorites ?? []
+  const favKey = (b: string, c: number, v: number, vEnd: number) => `${b} ${c}:${v}-${vEnd}`
+  const favOf = (v: number) => favorites.find((f) => { const m = /^(\S+) (\d+):(\d+)-(\d+)$/.exec(f); return !!m && m[1] === book && +m[2] === chapter && v >= +m[3] && v <= +m[4] })
+  const toggleFav = (v: number) => {
+    const existing = favOf(v)
+    if (existing) { updateSettings({ favorites: favorites.filter((f) => f !== existing) }); return }
+    // com vários versículos escolhidos (Shift+clique) e a estrela num deles, marca o trecho inteiro
+    const range = sel && v >= sel.verse && v <= sel.verseEnd ? sel : { verse: v, verseEnd: v }
+    updateSettings({ favorites: [favKey(book, chapter, range.verse, range.verseEnd), ...favorites] })
+  }
+  const [favFilter, setFavFilter] = useState('')
+  // manda o trecho escolhido para o roteiro do culto aberto (entra no fim)
+  const [sentToCulto, setSentToCulto] = useState<string | null>(null)
+  const sendToCulto = (b: string, c: number, v: number, vEnd: number) => {
+    const name = books.find((x) => x.id === b)?.name ?? b
+    const title = refLabel(name, c, v, vEnd)
+    const item = { id: Math.random().toString(16).slice(2, 12), kind: 'bible' as const, title, book: b, chapter: c, verse: v, verseEnd: vEnd }
+    send({ type: 'serviceSave', plan: { name: service.name, date: service.date, items: [...service.items, item] } })
+    setSentToCulto(title)
+    window.setTimeout(() => setSentToCulto((t) => (t === title ? null : t)), 3000)
+  }
   const vStyle = { '--verse-w': `${vSize}px`, '--verse-font': `${Math.round(13 + (vSize - 180) / 30)}px` } as React.CSSProperties
   const changeVSize = (v: number) => { setVSize(v); try { localStorage.setItem('biblia.versiculos.tamanho', String(v)) } catch { /* sem armazenamento */ } }
 
@@ -326,6 +348,8 @@ export function BiblePage({ scenes, comp }: Props) {
                     className={`verse ${selected(i + 1) ? 'selected' : ''} ${liveHere(i + 1) ? 'live' : ''}`}
                     onClick={(e) => clickVerse(i + 1, e)}
                     >
+                    <button className={`fav-star ${favOf(i + 1) ? 'on' : ''}`} title={favOf(i + 1) ? 'Tirar dos favoritos' : 'Marcar como favorito'}
+                      onClick={(e) => { e.stopPropagation(); toggleFav(i + 1) }}>{favOf(i + 1) ? '★' : '☆'}</button>
                     <span className="vnum">{i + 1}</span> {t}
                   </div>
                 ))}
@@ -346,6 +370,36 @@ export function BiblePage({ scenes, comp }: Props) {
               Projetar {sel ? refLabel(bookInfo?.name ?? book, chapter, sel.verse, sel.verseEnd) : ''}
             </button>
           </div>
+          <div className="row bible-actions">
+            <button disabled={!sel} title={`Põe no fim do roteiro do culto aberto (${service.name})`} onClick={() => sel && sendToCulto(book, chapter, sel.verse, sel.verseEnd)}>+ Enviar para o Culto</button>
+            <button disabled={!sel} className={sel && favOf(sel.verse) ? 'active' : ''} title="Marcar ou tirar dos favoritos" onClick={() => sel && toggleFav(sel.verse)}>{sel && favOf(sel.verse) ? '★ Favorito' : '☆ Favoritar'}</button>
+          </div>
+          {sentToCulto && <p className="ok-text">✓ {sentToCulto} entrou no fim do roteiro “{service.name}”</p>}
+          <h3>★ Favoritos {favorites.length > 0 && <span className="meta">({favorites.length})</span>}</h3>
+          {favorites.length === 0 ? (
+            <p className="meta">Clique na estrela ☆ de um versículo (ou em “Favoritar”) para guardar aqui. Shift+clique escolhe um trecho inteiro.</p>
+          ) : (
+            <>
+              {favorites.length > 8 && <input className="fav-filter" placeholder="Filtrar favoritos…" value={favFilter} onChange={(e) => setFavFilter(e.target.value)} />}
+              <div className="fav-list">
+                {favorites.map((f) => {
+                  const m = /^(\S+) (\d+):(\d+)-(\d+)$/.exec(f)
+                  if (!m) return null
+                  const label = refLabel(books.find((b) => b.id === m[1])?.name ?? m[1], +m[2], +m[3], +m[4])
+                  if (favFilter && !normalize(label).includes(normalize(favFilter))) return null
+                  const here = m[1] === book && +m[2] === chapter && sel?.verse === +m[3] && sel?.verseEnd === +m[4]
+                  return (
+                    <div key={f} className={`fav-item ${here ? 'here' : ''}`}>
+                      <button className="fav-go" title="Clique abre e escolhe · duplo clique projeta" onClick={() => go(m[1], +m[2], +m[3], +m[4])}
+                        onDoubleClick={() => project(m[1], +m[2], +m[3], +m[4])}>{label}</button>
+                      <button className="small" title="Enviar para o Culto" onClick={() => sendToCulto(m[1], +m[2], +m[3], +m[4])}>+ Culto</button>
+                      <button className="small" title="Tirar dos favoritos" onClick={() => updateSettings({ favorites: favorites.filter((x) => x !== f) })}>✕</button>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
           {comp && !lyricsPlaying && (
             <div className="warn-box info">
               O clip <b>Letras</b> não está tocando. Ao projetar, o VJesus liga ele sozinho.

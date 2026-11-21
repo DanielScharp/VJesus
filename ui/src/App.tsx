@@ -269,7 +269,7 @@ function App() {
         <LyricsPage songs={songs} style={lyricStyle} scenes={scenes} onStyleLocal={setLyricStyle} onScenesLocal={setScenes} state={lyricsState} fonts={fonts} preview={preview} comp={comp} />
       )}
 
-      {tab === 'bible' && <BiblePage scenes={scenes} comp={comp} />}
+      {tab === 'bible' && <BiblePage scenes={scenes} comp={comp} service={service} />}
 
       {tab === 'mapping' && (mapping
         ? <MappingEditor mapping={mapping} onChange={setMapping} displays={displays} preview={preview} comp={comp}

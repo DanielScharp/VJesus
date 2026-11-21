@@ -1369,3 +1369,16 @@ header.topbar .stats .usage.high b { color: #ff6b6b; }
   .bible-body > .splitter { display: none; }
   .bible-side { grid-column: 1 / -1; }
 }
+/* bíblia: favoritos e enviar para o culto */
+.verse { position: relative; }
+.fav-star { background: none; border: none; padding: 0 4px 0 0; font-size: 15px; line-height: 1; color: var(--muted); opacity: 0; cursor: pointer; vertical-align: baseline; }
+.verse:hover .fav-star, .verse.selected .fav-star, .fav-star.on { opacity: 1; }
+.fav-star.on { color: var(--accent); }
+.bible-actions { margin-top: 6px; gap: 6px; }
+.bible-actions button { flex: 1; }
+.ok-text { color: #8fe0b0; font-size: 12px; margin: 6px 0 0; }
+.fav-filter { width: 100%; margin-bottom: 6px; }
+.fav-list { display: flex; flex-direction: column; gap: 3px; max-height: 260px; overflow: auto; }
+.fav-item { display: flex; align-items: center; gap: 4px; }
+.fav-item .fav-go { flex: 1; text-align: left; padding: 5px 8px; font-size: 13px; }
+.fav-item.here .fav-go { outline: 1px solid var(--accent); }

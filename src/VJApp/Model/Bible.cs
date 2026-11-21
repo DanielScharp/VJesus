@@ -67,6 +67,8 @@ sealed class BibleSettings
     public string ReferenceColor { get; set; } = "#FFD54F";
     /// <summary>Últimas passagens projetadas (mais recente primeiro).</summary>
     public List<string> History { get; set; } = [];
+    /// <summary>Versículos favoritos ("JHN 3:16-16"), na ordem em que foram marcados.</summary>
+    public List<string> Favorites { get; set; } = [];
 }
 
 /// <summary>Versões baixadas em %AppData%\VJesus\biblia (funciona sem internet depois de baixar).</summary>

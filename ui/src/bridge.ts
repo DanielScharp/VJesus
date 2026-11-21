@@ -128,7 +128,7 @@ export type AttackPreset = {
 export type BibleVersion = { id: string; name: string; shortName: string; language: string; languageName: string; books: number; verses: number; publicDomain: boolean; licenseUrl: string; copyright?: string; provider?: string | null }
 export type BibleSettings = {
   mainVersion: string | null; compare: string[]; onScreen: string[]; sceneId: string | null
-  reference: 'abaixo' | 'acima' | 'nenhuma'; showVersion: boolean; referenceScale: number; referenceColor: string; history: string[]
+  reference: 'abaixo' | 'acima' | 'nenhuma'; showVersion: boolean; referenceScale: number; referenceColor: string; history: string[]; favorites?: string[]
 }
 export type BiblePassage = { book: string; chapter: number; verse: number; verseEnd: number }
 export type BibleBookInfo = { id: string; name: string; chapters: number[] }
