@@ -72,7 +72,7 @@ export function parseRef(text: string, books: BibleBookInfo[]): ParsedRef | null
 /** Abreviação curta para os botões dos livros. */
 export function shortName(b: BibleBookInfo) {
   const a = ALIASES[b.id]?.[0]
-  if (a) return a.charAt(0).toUpperCase() + a.slice(1)
+  if (a) return a.replace(/^(\d*)(\p{L})/u, (_, n: string, l: string) => n + l.toUpperCase()) // 1sm → 1Sm
   return b.name.slice(0, 3)
 }
 

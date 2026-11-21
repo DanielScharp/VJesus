@@ -265,6 +265,7 @@ export function BiblePage({ scenes, comp, service }: Props) {
 
       <div className="bible-body" ref={bodyRef}>
         <section className="bible-books">
+          <div className="bib-books-scroll">
           <div className="book-legend">{BOOK_GROUPS.map((g) => <span key={g.id} className={`bk-${g.id}`}>{g.name}</span>)}</div>
           <h3>Antigo Testamento</h3>
           <div className="book-grid">
@@ -278,15 +279,30 @@ export function BiblePage({ scenes, comp, service }: Props) {
               <button key={b.id} title={b.name} className={`small bk bk-${bookGroup(b.id)} ${b.id === book ? 'active' : ''}`} onClick={() => go(b.id, 1)}><span className="bk-ab">{shortName(b)}</span><span className="bk-nm">{b.name}</span></button>
             ))}
           </div>
+          </div>
+          {/* capítulos e versículos sempre à vista (os livros rolam por cima), com números grandes */}
           {bookInfo && (
-            <>
-              <h3>{bookInfo.name}: capítulos</h3>
-              <div className="chapter-grid">
-                {bookInfo.chapters.map((_, i) => (
-                  <button key={i} className={`small ${i + 1 === chapter ? 'active' : ''}`} onClick={() => go(book, i + 1)}>{i + 1}</button>
-                ))}
+            <div className="bib-nav">
+              <div className="bib-nav-block">
+                <h3><span className={`bib-nav-book bk-${bookGroup(book)}`}>{bookInfo.name}</span> capítulo</h3>
+                <div className="chapter-grid">
+                  {bookInfo.chapters.map((_, i) => (
+                    <button key={i} className={`num ${i + 1 === chapter ? 'active' : ''} ${live && live.book === book && live.chapter === i + 1 ? 'live' : ''}`} onClick={() => go(book, i + 1)}>{i + 1}</button>
+                  ))}
+                </div>
               </div>
-            </>
+              {!search && verses.length > 0 && (
+                <div className="bib-nav-block">
+                  <h3>{bookInfo.name} {chapter}: versículo</h3>
+                  <div className="chapter-grid verse-grid">
+                    {verses.map((t, i) => t && (
+                      <button key={i} className={`num ${selected(i + 1) ? 'active' : ''} ${liveHere(i + 1) ? 'live' : ''}`}
+                        title="Clique escolhe · clique de novo projeta" onClick={(e) => clickVerse(i + 1, e as unknown as React.MouseEvent)}>{i + 1}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </section>
 
