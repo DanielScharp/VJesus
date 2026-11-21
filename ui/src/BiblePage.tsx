@@ -585,15 +585,17 @@ function YouVersionBox({ hasKey, installed, downloading }: { hasKey: boolean; in
   )
 }
 
-/** Cores dos livros por grupo (mesmo padrão do Holyrics). Os ids são os códigos USFM (GEN, EXO...). */
+/** Cores dos livros por grupo (divisão clássica da Bíblia, com tons próprios do VJesus). Os ids são os códigos USFM (GEN, EXO...). */
 const BOOK_GROUPS = [
-  { id: 'lei', name: 'Lei', books: 'GEN EXO LEV NUM DEU' },
+  { id: 'pent', name: 'Pentateuco', books: 'GEN EXO LEV NUM DEU' },
   { id: 'hist', name: 'Históricos', books: 'JOS JDG RUT 1SA 2SA 1KI 2KI 1CH 2CH EZR NEH EST' },
-  { id: 'poet', name: 'Poéticos', books: 'JOB PSA PRO ECC SNG' },
-  { id: 'prof', name: 'Profetas', books: 'ISA JER LAM EZK DAN HOS JOL AMO OBA JON MIC NAM HAB ZEP HAG ZEC MAL' },
+  { id: 'poet', name: 'Poéticos e sapienciais', books: 'JOB PSA PRO ECC SNG' },
+  { id: 'pmai', name: 'Profetas maiores', books: 'ISA JER LAM EZK DAN' },
+  { id: 'pmen', name: 'Profetas menores', books: 'HOS JOL AMO OBA JON MIC NAM HAB ZEP HAG ZEC MAL' },
   { id: 'evan', name: 'Evangelhos', books: 'MAT MRK LUK JHN' },
   { id: 'atos', name: 'Atos', books: 'ACT' },
-  { id: 'epis', name: 'Cartas', books: 'ROM 1CO 2CO GAL EPH PHP COL 1TH 2TH 1TI 2TI TIT PHM HEB JAS 1PE 2PE 1JN 2JN 3JN JUD' },
+  { id: 'paul', name: 'Cartas de Paulo', books: 'ROM 1CO 2CO GAL EPH PHP COL 1TH 2TH 1TI 2TI TIT PHM' },
+  { id: 'gera', name: 'Cartas gerais', books: 'HEB JAS 1PE 2PE 1JN 2JN 3JN JUD' },
   { id: 'apoc', name: 'Apocalipse', books: 'REV' },
 ]
 const GROUP_OF = new Map(BOOK_GROUPS.flatMap((g) => g.books.split(' ').map((b) => [b, g.id] as const)))
