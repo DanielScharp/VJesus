@@ -1351,3 +1351,21 @@ header.topbar .stats .usage.high b { color: #ff6b6b; }
 .bq-cands { font-size: 14px; color: var(--muted); display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 10px; max-width: 600px; }
 .bq-cands button.link { color: var(--text); }
 .bq-cands button.link.first { color: var(--accent); font-weight: 700; text-decoration: underline; }
+/* bíblia: áreas redimensionáveis, livros com abreviação e nome, versículos em linhas ou em grade */
+.bible-body { grid-template-columns: var(--bib-left, 300px) 8px minmax(380px, 1fr) 8px var(--bib-right, 360px); column-gap: 4px; }
+.bible-body > .splitter { min-height: 300px; }
+.bible-books .book-grid { grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 3px; }
+.book-grid button.bk { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 5px 2px 4px; min-height: 44px; line-height: 1.1; }
+.bk .bk-ab { font-size: 15px; font-weight: 600; }
+.bk .bk-nm { font-size: 10px; font-weight: 400; opacity: .9; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+.bible-verses .slide-view { margin: 2px 0 6px; }
+.verse-list .verse { font-size: var(--verse-font, 15px); }
+.verse-list.as-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--verse-w, 280px), 100%), 1fr)); gap: 6px; align-content: start; }
+.verse-list.as-grid .verse { border: 1px solid var(--line); border-left-width: 3px; background: var(--bg); }
+.verse-list.as-grid .verse.selected { background: rgba(255, 176, 32, .16); }
+.verse-list.as-grid .verse.live { border-left-color: #e53935; background: rgba(229, 57, 53, .14); }
+@media (max-width: 1100px) {
+  .bible-body { grid-template-columns: 240px minmax(0, 1fr); }
+  .bible-body > .splitter { display: none; }
+  .bible-side { grid-column: 1 / -1; }
+}

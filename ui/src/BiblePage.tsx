@@ -6,6 +6,7 @@ import {
 } from './bridge'
 import { NT_START, parseRef, refLabel, shortName } from './bible'
 import { BibleQuick } from './BibleQuick'
+import { Splitter } from './Splitter'
 import { normalize } from './lyrics'
 import { matches } from './shortcuts'
 
@@ -139,6 +140,14 @@ export function BiblePage({ scenes, comp }: Props) {
     setSel({ verse: live.verse, verseEnd: live.verseEnd })
   }, [live?.book, live?.chapter, live?.verse, live?.verseEnd])
 
+  // áreas redimensionáveis e versículos em linhas ou em grade (lembrados neste computador)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const [vView, setVView] = useState<'list' | 'grid'>(() => { try { return localStorage.getItem('biblia.versiculos.modo') === 'grid' ? 'grid' : 'list' } catch { return 'list' } })
+  const [vSize, setVSize] = useState(() => { try { return Math.min(480, Math.max(180, Number(localStorage.getItem('biblia.versiculos.tamanho')) || 280)) } catch { return 280 } })
+  const changeVView = (v: 'list' | 'grid') => { setVView(v); try { localStorage.setItem('biblia.versiculos.modo', v) } catch { /* sem armazenamento */ } }
+  const vStyle = { '--verse-w': `${vSize}px`, '--verse-font': `${Math.round(13 + (vSize - 180) / 30)}px` } as React.CSSProperties
+  const changeVSize = (v: number) => { setVSize(v); try { localStorage.setItem('biblia.versiculos.tamanho', String(v)) } catch { /* sem armazenamento */ } }
+
   // digitação rápida: começar a digitar em qualquer lugar da aba abre a janela de livro/capítulo/versículo
   const [quick, setQuick] = useState<string | null>(null)
   useEffect(() => {
@@ -232,19 +241,19 @@ export function BiblePage({ scenes, comp }: Props) {
         <button className="danger" disabled={!live} onClick={() => send({ type: 'lyricsClear' })} title="Tira o versículo do telão e do retorno">Limpar telão</button>
       </div>
 
-      <div className="bible-body">
+      <div className="bible-body" ref={bodyRef}>
         <section className="bible-books">
           <div className="book-legend">{BOOK_GROUPS.map((g) => <span key={g.id} className={`bk-${g.id}`}>{g.name}</span>)}</div>
           <h3>Antigo Testamento</h3>
           <div className="book-grid">
             {ot.map((b) => (
-              <button key={b.id} title={b.name} className={`small bk bk-${bookGroup(b.id)} ${b.id === book ? 'active' : ''}`} onClick={() => go(b.id, 1)}>{shortName(b)}</button>
+              <button key={b.id} title={b.name} className={`small bk bk-${bookGroup(b.id)} ${b.id === book ? 'active' : ''}`} onClick={() => go(b.id, 1)}><span className="bk-ab">{shortName(b)}</span><span className="bk-nm">{b.name}</span></button>
             ))}
           </div>
           {nt.length > 0 && <h3>Novo Testamento</h3>}
           <div className="book-grid">
             {nt.map((b) => (
-              <button key={b.id} title={b.name} className={`small bk bk-${bookGroup(b.id)} ${b.id === book ? 'active' : ''}`} onClick={() => go(b.id, 1)}>{shortName(b)}</button>
+              <button key={b.id} title={b.name} className={`small bk bk-${bookGroup(b.id)} ${b.id === book ? 'active' : ''}`} onClick={() => go(b.id, 1)}><span className="bk-ab">{shortName(b)}</span><span className="bk-nm">{b.name}</span></button>
             ))}
           </div>
           {bookInfo && (
@@ -259,6 +268,8 @@ export function BiblePage({ scenes, comp }: Props) {
           )}
         </section>
 
+        <Splitter container={bodyRef} measure={() => bodyRef.current?.querySelector('.bible-books') ?? null} cssVar="--bib-left" storageKey="tamanho.biblia.esquerda" dir={1} min={220}
+          max={(w) => Math.min(640, w - (bodyRef.current?.querySelector('.bible-side')?.getBoundingClientRect().width ?? 0) - 380)} />
         <section className="bible-verses">
           {search ? (
             <>
@@ -266,7 +277,19 @@ export function BiblePage({ scenes, comp }: Props) {
                 <h2>“{search.query}”: {search.total} versículo(s){search.total > search.hits.length ? `, mostrando ${search.hits.length}` : ''}</h2>
                 <button className="small" onClick={() => setSearch(null)}>Voltar ao capítulo</button>
               </div>
-              <div className="verse-list">
+              <div className="slide-view">
+                <span className="seg">
+                  <button className={`small ${vView === 'list' ? 'active' : ''}`} onClick={() => changeVView('list')} title="Um versículo por linha">☰ Linhas</button>
+                  <button className={`small ${vView === 'grid' ? 'active' : ''}`} onClick={() => changeVView('grid')} title="Versículos em quadros, lado a lado">▦ Grade</button>
+                </span>
+                <label title={vView === 'grid' ? 'Largura de cada quadro e tamanho do texto' : 'Tamanho do texto'}>
+                  Tamanho
+                  <button className="small" onClick={() => changeVSize(Math.max(180, vSize - 20))} disabled={vSize <= 180}>−</button>
+                  <input type="range" min={180} max={480} step={10} value={vSize} onChange={(e) => changeVSize(Number(e.target.value))} />
+                  <button className="small" onClick={() => changeVSize(Math.min(480, vSize + 20))} disabled={vSize >= 480}>+</button>
+                </label>
+              </div>
+              <div className={`verse-list ${vView === 'grid' ? 'as-grid' : ''}`} style={vStyle}>
                 {search.hits.map((h) => (
                   <div key={`${h.book}${h.chapter}:${h.verse}`} className="verse hit"
                     onClick={() => go(h.book, h.chapter, h.verse)}
@@ -285,7 +308,19 @@ export function BiblePage({ scenes, comp }: Props) {
                 <button className="small" disabled={!bookInfo || chapter >= bookInfo.chapters.length} onClick={() => go(book, chapter + 1)}>▶</button>
                 <span className="meta">Digite o livro em qualquer lugar (ex.: jos 3 5) · clique escolhe · clique de novo projeta</span>
               </div>
-              <div className="verse-list" ref={listRef}>
+              <div className="slide-view">
+                <span className="seg">
+                  <button className={`small ${vView === 'list' ? 'active' : ''}`} onClick={() => changeVView('list')} title="Um versículo por linha">☰ Linhas</button>
+                  <button className={`small ${vView === 'grid' ? 'active' : ''}`} onClick={() => changeVView('grid')} title="Versículos em quadros, lado a lado">▦ Grade</button>
+                </span>
+                <label title={vView === 'grid' ? 'Largura de cada quadro e tamanho do texto' : 'Tamanho do texto'}>
+                  Tamanho
+                  <button className="small" onClick={() => changeVSize(Math.max(180, vSize - 20))} disabled={vSize <= 180}>−</button>
+                  <input type="range" min={180} max={480} step={10} value={vSize} onChange={(e) => changeVSize(Number(e.target.value))} />
+                  <button className="small" onClick={() => changeVSize(Math.min(480, vSize + 20))} disabled={vSize >= 480}>+</button>
+                </label>
+              </div>
+              <div className={`verse-list ${vView === 'grid' ? 'as-grid' : ''}`} ref={listRef} style={vStyle}>
                 {verses.map((t, i) => t && (
                   <div key={i} data-verse={i + 1}
                     className={`verse ${selected(i + 1) ? 'selected' : ''} ${liveHere(i + 1) ? 'live' : ''}`}
@@ -301,6 +336,8 @@ export function BiblePage({ scenes, comp }: Props) {
           )}
         </section>
 
+        <Splitter container={bodyRef} measure={() => bodyRef.current?.querySelector('.bible-side') ?? null} cssVar="--bib-right" storageKey="tamanho.biblia.direita" dir={-1} min={300}
+          max={(w) => Math.min(640, w - (bodyRef.current?.querySelector('.bible-books')?.getBoundingClientRect().width ?? 0) - 380)} />
         <section className="bible-side">
           <SlidePreview label={sel ? refLabel(bookInfo?.name ?? book, chapter, sel.verse, sel.verseEnd) : 'Escolha um versículo'}
             request={sel ? { kind: 'bible', book, chapter, verse: sel.verse, verseEnd: sel.verseEnd } : null} empty="Clique num versículo para ver aqui" />
