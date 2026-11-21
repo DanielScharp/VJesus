@@ -1382,3 +1382,12 @@ header.topbar .stats .usage.high b { color: #ff6b6b; }
 .fav-item { display: flex; align-items: center; gap: 4px; }
 .fav-item .fav-go { flex: 1; text-align: left; padding: 5px 8px; font-size: 13px; }
 .fav-item.here .fav-go { outline: 1px solid var(--accent); }
+/* tela de pânico: fundo em cor, vídeo ou fundo animado */
+.panic-fields .seg { display: inline-flex; }
+.panic-fields .seg button { border-radius: 0; }
+.panic-fields .seg button:first-child { border-radius: 4px 0 0 4px; }
+.panic-fields .seg button:last-child { border-radius: 0 4px 4px 0; }
+.panic-gens { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+.panic-gens .gen-pick { height: 48px; display: flex; align-items: flex-end; justify-content: center; padding: 3px; border: 2px solid transparent; }
+.panic-gens .gen-pick span { font-size: 10px; color: #fff; text-shadow: 0 1px 2px #000; }
+.panic-gens .gen-pick.active { border-color: var(--accent); }

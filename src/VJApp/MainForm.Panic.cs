@@ -24,6 +24,41 @@ sealed partial class MainForm
         public float Fade { get; set; } = 0.4f;
         /// <summary>Tamanho do logo em relação à altura da tela (0.1 a 1).</summary>
         public float Size { get; set; } = 0.5f;
+        /// <summary>Fundo: "cor", "video" (um vídeo em repetição) ou "fundo" (fundo animado gerado).</summary>
+        public string Background { get; set; } = "cor";
+        public string? Video { get; set; }
+        public GeneratorSettings? Gen { get; set; }
+    }
+
+    /// <summary>O vídeo do fundo (pausado enquanto a tela de pânico está desligada; quem libera é o motor).</summary>
+    VideoPlayer? _panicPlayer;
+    string? _panicMediaKey;
+
+    bool PanicHasMedia => _panic.Background == "fundo" || (_panic.Background == "video" && _panic.Video is { } v && File.Exists(v));
+
+    /// <summary>Prepara o fundo em movimento no motor (só quando muda o que foi escolhido).</summary>
+    void ApplyPanicMedia()
+    {
+        if (_renderer == null) return;
+        _renderer.PanicMediaFade = _panic.Fade;
+        string key = !PanicHasMedia ? "" : _panic.Background == "video" ? "v:" + _panic.Video : "g:" + JsonSerializer.Serialize(_panic.Gen);
+        if (key == _panicMediaKey) return;
+        _panicMediaKey = key;
+        _panicPlayer = null;
+        if (key == "") { _renderer.SetPanicMedia(null, null, GenParams.Default); return; }
+        if (_panic.Background == "fundo") { _renderer.SetPanicMedia(SourceKind.Plasma, null, ToGenParams(_panic.Gen)); return; }
+        try
+        {
+            var player = new VideoPlayer(_panic.Video!);
+            if (!_panicOn) player.Pause(); // parado e sem gastar processador até a tela de pânico entrar
+            _panicPlayer = player;
+            _renderer.SetPanicMedia(SourceKind.Video, player, GenParams.Default);
+        }
+        catch (Exception ex)
+        {
+            _renderer.SetPanicMedia(null, null, GenParams.Default);
+            Send(new { type = "error", message = "Não consegui abrir o vídeo da tela de pânico: " + ex.Message });
+        }
     }
 
     static string PanicPath => Path.Combine(AppDataDir, "panico.json");
@@ -40,6 +75,7 @@ sealed partial class MainForm
     void StartPanic()
     {
         if (_renderer != null) _renderer.Panic = _panicFeed;
+        ApplyPanicMedia();
     }
 
     void OnPanicMessage(string type, JsonNode msg)
@@ -53,11 +89,29 @@ sealed partial class MainForm
                 if (msg["settings"].Deserialize<PanicSettings>(JsonRead) is not { } s) return;
                 s.Fade = Math.Clamp(s.Fade, 0, 5);
                 s.Size = Math.Clamp(s.Size, 0.1f, 1);
+                if (s.Background is not ("cor" or "video" or "fundo")) s.Background = "cor";
                 _panic = s;
                 try { File.WriteAllText(PanicPath, JsonSerializer.Serialize(_panic)); } catch { }
+                ApplyPanicMedia();
                 if (_panicOn) _panicFeed.ShowImage(PanicImage(), 0.15f); // atualiza o que está no ar
                 SendPanic();
                 break;
+            case "panicBrowseVideo":
+            {
+                using var dlg = new OpenFileDialog
+                {
+                    Title = "Vídeo da tela de pânico (fica repetindo, sem som)",
+                    Filter = "Vídeos|*.mp4;*.mov;*.mkv;*.avi;*.webm;*.wmv;*.m4v|Todos os arquivos|*.*",
+                };
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                _panic.Video = dlg.FileName;
+                _panic.Background = "video";
+                try { File.WriteAllText(PanicPath, JsonSerializer.Serialize(_panic)); } catch { }
+                ApplyPanicMedia();
+                if (_panicOn) _panicFeed.ShowImage(PanicImage(), 0.15f);
+                SendPanic();
+                break;
+            }
             case "panicBrowse":
             {
                 using var dlg = new OpenFileDialog
@@ -79,6 +133,9 @@ sealed partial class MainForm
     {
         if (on == _panicOn) { SendPanic(); return; }
         _panicOn = on;
+        if (on) ApplyPanicMedia();
+        if (on) _panicPlayer?.Play(); else _panicPlayer?.Pause();
+        if (_renderer != null) { _renderer.PanicMediaFade = _panic.Fade; _renderer.PanicMediaOn = on && PanicHasMedia; }
         _panicFeed.ShowImage(on ? PanicImage() : null, _panic.Fade);
         SendPanic();
         SaveLiveState(force: true);
@@ -91,6 +148,8 @@ sealed partial class MainForm
         settings = _panic,
         imageName = _panic.Image != null ? Path.GetFileName(_panic.Image) : null,
         imageMissing = _panic.Image != null && !File.Exists(_panic.Image),
+        videoName = _panic.Video != null ? Path.GetFileName(_panic.Video) : null,
+        videoMissing = _panic.Video != null && !File.Exists(_panic.Video),
         thumb = PanicThumb(),
     });
 
@@ -101,7 +160,8 @@ sealed partial class MainForm
         using var bmp = new Bitmap(w, h, PixelFormat.Format32bppArgb);
         using (var g = Graphics.FromImage(bmp))
         {
-            g.Clear(ParseColor(_panic.Color));
+            // com vídeo ou fundo animado, o fundo vem do motor: aqui fica só o logo (fundo transparente)
+            g.Clear(PanicHasMedia ? Color.Transparent : ParseColor(_panic.Color));
             if (_panic.Image is { } path && File.Exists(path))
             {
                 try

@@ -159,7 +159,9 @@ export type HolyricsState = { settings: { enabled: boolean; host: string; port: 
 
 export type PanicState = {
   on: boolean
-  settings: { image: string | null; color: string; fade: number; size: number }
+  settings: { image: string | null; color: string; fade: number; size: number; background?: 'cor' | 'video' | 'fundo'; video?: string | null; gen?: GeneratorSettings | null }
+  videoName?: string | null
+  videoMissing?: boolean
   imageName: string | null
   imageMissing: boolean
   thumb: string | null
@@ -344,6 +346,7 @@ export type UiMessage =
   | { type: 'performanceGet' | 'performanceTest' }
   | { type: 'panicToggle'; on?: boolean }
   | { type: 'panicBrowse' }
+  | { type: 'panicBrowseVideo' }
   | { type: 'holyricsGet' }
   | { type: 'setWeb'; layer: number; column: number; url: string; name?: string }
   | { type: 'setScreen'; layer: number; column: number; display: number }

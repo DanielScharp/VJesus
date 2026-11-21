@@ -135,6 +135,7 @@ partial class Renderer
             DrawFeed(feed, _overlayGpu, target.Rtv, now, time);
         }
         // tela de pânico: por cima de absolutamente tudo (vídeos, letra, avisos e ataques)
+        DrawPanicMedia(target);
         if (Panic is { } panic) DrawFeed(panic, _panicGpu, target.Rtv, now, time);
     }
 

@@ -646,6 +646,7 @@ sealed partial class Renderer : IDisposable
             long p1 = Stopwatch.GetTimestamp();
             int result = Compose(time, _comp, _ => true, main: true);
             result = ApplyAttacks(_comp, result, time);
+            UpdatePanicMedia(now);
             DrawOverlay(_comp[result]!, now, time);
 
             SendStreams(_comp[result]!);
@@ -684,6 +685,7 @@ sealed partial class Renderer : IDisposable
             slot.OutgoingUnder?.Dispose();
             lock (slot.Lock) slot.PendingPlayer?.Dispose();
         }
+        DisposePanicMedia();
         foreach (var h in _history.Values) h.Dispose();
         foreach (var fx in _effects.Values) fx.Ps.Dispose();
         for (int i = 0; i < 2; i++) { _comp[i]?.Dispose(); _work[i]?.Dispose(); }

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { onMessage, send, type PanicState } from './bridge'
 import { comboLabel, keysOf, matches, subscribe } from './shortcuts'
+import { DEFAULT_GEN, GEN_PRESETS, genThumbStyle } from './GeneratorPanel'
 
 /**
  * Botão vermelho do topo (e a tecla de atalho): cobre o telão na hora com o logo ou a cor escolhida.
@@ -43,6 +44,7 @@ export function PanicButton() {
 function PanicDialog({ st, onClose }: { st: PanicState; onClose: () => void }) {
   const s = st.settings
   const set = (patch: Partial<PanicState['settings']>) => send({ type: 'panicSet', settings: { ...s, ...patch } })
+  const bg = s.background ?? 'cor'
   return createPortal(
     <div className="modal-back" onMouseDown={onClose}>
       <div className="modal panic-dialog" onMouseDown={(e) => e.stopPropagation()}>
@@ -61,7 +63,31 @@ function PanicDialog({ st, onClose }: { st: PanicState; onClose: () => void }) {
               </span>
             </label>
             {st.imageName && <div className={st.imageMissing ? 'warn-text' : 'meta'}>{st.imageName}{st.imageMissing ? ' (arquivo não encontrado)' : ''}</div>}
-            <label>Cor de fundo <ColorInput value={s.color} onChange={(e) => set({ color: e.target.value })} /></label>
+            <label>Fundo
+              <span className="seg">
+                {([['cor', 'Cor'], ['video', 'Vídeo'], ['fundo', 'Fundo animado']] as const).map(([v, l]) => (
+                  <button key={v} className={`small ${bg === v ? 'active' : ''}`}
+                    onClick={() => v === 'video' && !s.video ? send({ type: 'panicBrowseVideo' }) : set({ background: v, gen: v === 'fundo' ? (s.gen ?? DEFAULT_GEN) : s.gen })}>{l}</button>
+                ))}
+              </span>
+            </label>
+            {bg === 'cor' && <label>Cor de fundo <ColorInput value={s.color} onChange={(e) => set({ color: e.target.value })} /></label>}
+            {bg === 'video' && (
+              <>
+                <label>Vídeo (repete, sem som)
+                  <span className="row"><button onClick={() => send({ type: 'panicBrowseVideo' })}>{s.video ? 'Trocar…' : 'Escolher…'}</button></span>
+                </label>
+                {st.videoName && <div className={st.videoMissing ? 'warn-text' : 'meta'}>{st.videoName}{st.videoMissing ? ' (arquivo não encontrado: vai entrar só a cor)' : ''}</div>}
+              </>
+            )}
+            {bg === 'fundo' && (
+              <div className="panic-gens">
+                {GEN_PRESETS.map((pr) => (
+                  <button key={pr.name} className={`gen-pick ${JSON.stringify(s.gen) === JSON.stringify(pr.gen) ? 'active' : ''}`} style={genThumbStyle(pr.gen)}
+                    title={pr.name} onClick={() => set({ gen: pr.gen })}><span>{pr.name}</span></button>
+                ))}
+              </div>
+            )}
             <label>Tamanho do logo <output>{Math.round(s.size * 100)}%</output>
               <input type="range" min={0.1} max={1} step={0.05} value={s.size} onChange={(e) => set({ size: Number(e.target.value) })} />
             </label>
