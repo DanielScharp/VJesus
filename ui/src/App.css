@@ -1411,3 +1411,34 @@ header.topbar .stats .usage.high b { color: #ff6b6b; }
 .bk .bk-ab { font-size: 19px; font-weight: 700; }
 .bk .bk-nm { font-size: 11px; }
 .verse-list .vnum { font-weight: 700; color: var(--accent); font-size: .85em; margin-right: 2px; }
+/* bíblia: barra de ação em linha (sem a prévia) e mais espaço para livros, capítulos e versículos */
+.bible-actbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 8px; padding: 8px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.bible-actbar button { padding: 8px 14px; font-size: 14px; }
+.bible-actbar .primary { font-size: 15px; font-weight: 700; padding: 8px 18px; }
+.bab-air { font-size: 15px; color: var(--muted); }
+.bab-air.on { color: var(--text); font-weight: 600; }
+.bab-air .onair { margin-right: 4px; }
+.bab-air:not(.on) .onair { opacity: .4; }
+.bab-sel { flex: 1; min-width: 200px; font-size: 15px; }
+.bab-sel b { color: var(--accent); font-size: 16px; }
+.bab-warn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--accent); }
+.bible-body { grid-template-columns: var(--bib-left, clamp(420px, 38vw, 760px)) 8px minmax(380px, 1fr) 8px var(--bib-right, 300px); }
+.bible-books { height: calc(100vh - 120px); }
+.bib-nav .chapter-grid { max-height: 260px; }
+.verse-list { max-height: calc(100vh - 210px); }
+/* bíblia: as três colunas usam a altura livre da tela (calculada na página) */
+.bible-books { height: var(--bib-avail, calc(100vh - 300px)); position: static; }
+.bib-books-scroll { flex: 0 1 auto; }
+.bib-nav { flex: 1 1 auto; min-height: 150px; align-items: stretch; }
+.bib-nav-block { min-height: 0; }
+.bib-nav .chapter-grid { max-height: none; flex: 1 1 auto; min-height: 0; }
+.verse-list { max-height: calc(var(--bib-avail, 600px) - 80px); }
+.bible-side { max-height: var(--bib-avail, none); overflow: auto; }
+.bible-books .book-grid { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 3px; }
+.book-grid button.bk { min-height: 46px; padding: 3px 2px; }
+.bk .bk-ab { font-size: 18px; }
+.book-legend { margin: 0 0 4px; }
+.bible-books h3 { margin: 4px 0 4px; }
+
+.bib-books-scroll { flex: 0 0 auto; max-height: 68%; }
+.bib-nav { min-height: 180px; }

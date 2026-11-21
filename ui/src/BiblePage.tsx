@@ -1,5 +1,4 @@
 import { ColorInput } from './ColorInput'
-import { SlidePreview } from './SlidePreview'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   onMessage, send, type Composition, type BibleBookInfo, type BibleHit, type BiblePassage, type BibleSettings, type BibleVersion, type LyricScene, type ServiceState,
@@ -142,6 +141,20 @@ export function BiblePage({ scenes, comp, service }: Props) {
 
   // áreas redimensionáveis e versículos em linhas ou em grade (lembrados neste computador)
   const bodyRef = useRef<HTMLDivElement>(null)
+  // altura livre abaixo do topo da área (livros, capítulos e versículos cabem na tela sem rolar a página)
+  useEffect(() => {
+    const fit = () => {
+      const el = bodyRef.current
+      if (!el) return
+      const top = el.getBoundingClientRect().top + window.scrollY
+      el.style.setProperty('--bib-avail', `${Math.max(420, window.innerHeight - top - 14)}px`)
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(document.body)
+    window.addEventListener('resize', fit)
+    return () => { ro.disconnect(); window.removeEventListener('resize', fit) }
+  }, [!!settings, installed.length])
   const [vView, setVView] = useState<'list' | 'grid'>(() => { try { return localStorage.getItem('biblia.versiculos.modo') === 'grid' ? 'grid' : 'list' } catch { return 'list' } })
   const [vSize, setVSize] = useState(() => { try { return Math.min(480, Math.max(180, Number(localStorage.getItem('biblia.versiculos.tamanho')) || 280)) } catch { return 280 } })
   const changeVView = (v: 'list' | 'grid') => { setVView(v); try { localStorage.setItem('biblia.versiculos.modo', v) } catch { /* sem armazenamento */ } }
@@ -263,6 +276,23 @@ export function BiblePage({ scenes, comp, service }: Props) {
         <button className="danger" disabled={!live} onClick={() => send({ type: 'lyricsClear' })} title="Tira o versículo do telão e do retorno">Limpar telão</button>
       </div>
 
+{/* barra de ação em linha: o que está no ar, o escolhido e os botões (a prévia saiu para sobrar espaço) */}
+      <div className="bible-actbar">
+        <span className={`bab-air ${live ? 'on' : ''}`}>
+          <span className="onair">NO AR</span> {live ? refLabel(books.find((b) => b.id === live.book)?.name ?? live.book, live.chapter, live.verse, live.verseEnd) : 'nada'}
+        </span>
+        <span className="bab-sel">{sel ? <>Escolhido: <b>{refLabel(bookInfo?.name ?? book, chapter, sel.verse, sel.verseEnd)}</b></> : <span className="meta">Escolha um versículo (clique no número ou no texto)</span>}</span>
+        <button className="primary" disabled={!sel} onClick={() => sel && project(book, chapter, sel.verse, sel.verseEnd)}>▶ Projetar</button>
+        <button disabled={!sel} title={`Põe no fim do roteiro do culto aberto (${service.name})`} onClick={() => sel && sendToCulto(book, chapter, sel.verse, sel.verseEnd)}>+ Enviar para o Culto</button>
+        <button disabled={!sel} className={sel && favOf(sel.verse) ? 'active' : ''} title="Marcar ou tirar dos favoritos" onClick={() => sel && toggleFav(sel.verse)}>{sel && favOf(sel.verse) ? '★ Favorito' : '☆ Favoritar'}</button>
+        {sentToCulto && <span className="ok-text">✓ {sentToCulto} entrou no roteiro “{service.name}”</span>}
+        {comp && !lyricsPlaying && (
+          <span className="bab-warn" title="A Bíblia sai pelo clip Letras da grade. Ao projetar, o VJesus liga ele sozinho.">
+            Clip Letras parado
+            <button className="small" onClick={playLyricsClip}>{lyricsCell ? 'Tocar' : 'Colocar na grade'}</button>
+          </span>
+        )}
+      </div>
       <div className="bible-body" ref={bodyRef}>
         <section className="bible-books">
           <div className="bib-books-scroll">
@@ -379,18 +409,6 @@ export function BiblePage({ scenes, comp, service }: Props) {
         <Splitter container={bodyRef} measure={() => bodyRef.current?.querySelector('.bible-side') ?? null} cssVar="--bib-right" storageKey="tamanho.biblia.direita" dir={-1} min={300}
           max={(w) => Math.min(640, w - (bodyRef.current?.querySelector('.bible-books')?.getBoundingClientRect().width ?? 0) - 380)} />
         <section className="bible-side">
-          <SlidePreview label={sel ? refLabel(bookInfo?.name ?? book, chapter, sel.verse, sel.verseEnd) : 'Escolha um versículo'}
-            request={sel ? { kind: 'bible', book, chapter, verse: sel.verse, verseEnd: sel.verseEnd } : null} empty="Clique num versículo para ver aqui" />
-          <div className="row">
-            <button className="primary" disabled={!sel} onClick={() => sel && project(book, chapter, sel.verse, sel.verseEnd)}>
-              Projetar {sel ? refLabel(bookInfo?.name ?? book, chapter, sel.verse, sel.verseEnd) : ''}
-            </button>
-          </div>
-          <div className="row bible-actions">
-            <button disabled={!sel} title={`Põe no fim do roteiro do culto aberto (${service.name})`} onClick={() => sel && sendToCulto(book, chapter, sel.verse, sel.verseEnd)}>+ Enviar para o Culto</button>
-            <button disabled={!sel} className={sel && favOf(sel.verse) ? 'active' : ''} title="Marcar ou tirar dos favoritos" onClick={() => sel && toggleFav(sel.verse)}>{sel && favOf(sel.verse) ? '★ Favorito' : '☆ Favoritar'}</button>
-          </div>
-          {sentToCulto && <p className="ok-text">✓ {sentToCulto} entrou no fim do roteiro “{service.name}”</p>}
           <h3>★ Favoritos {favorites.length > 0 && <span className="meta">({favorites.length})</span>}</h3>
           {favorites.length === 0 ? (
             <p className="meta">Clique na estrela ☆ de um versículo (ou em “Favoritar”) para guardar aqui. Shift+clique escolhe um trecho inteiro.</p>
@@ -416,16 +434,6 @@ export function BiblePage({ scenes, comp, service }: Props) {
               </div>
             </>
           )}
-          {comp && !lyricsPlaying && (
-            <div className="warn-box info">
-              O clip <b>Letras</b> não está tocando. Ao projetar, o VJesus liga ele sozinho.
-              <button className="small" onClick={playLyricsClip}>
-                {lyricsCell ? 'Tocar o clip Letras' : 'Colocar na grade e tocar'}
-              </button>
-            </div>
-          )}
-          {live && <p className="onair-line"><span className="onair">NO AR</span> {refLabel(books.find((b) => b.id === live.book)?.name ?? live.book, live.chapter, live.verse, live.verseEnd)}</p>}
-
           <h3>Comparar versões</h3>
           <p className="meta">Marque “telão” para projetar mais de uma versão juntas.</p>
           <div className="compare">
