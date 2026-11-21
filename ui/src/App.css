@@ -1322,3 +1322,18 @@ header.topbar .stats .usage.high b { color: #ff6b6b; }
   .lyrics > .splitter { display: none; }
   .lyrics-side { grid-column: 1 / -1; }
 }
+/* bíblia: livros coloridos por grupo (padrão do Holyrics) */
+.bk { color: #fff; border-color: transparent; font-weight: 600; }
+.bk:hover { filter: brightness(1.15); }
+.book-grid button.bk.active { background: var(--bk) !important; color: #fff !important; outline: 2px solid #fff; outline-offset: -2px; box-shadow: 0 0 0 2px var(--accent); }
+.bk-lei { --bk: #7a4a1e; background: #7a4a1e; }
+.bk-hist { --bk: #d9821c; background: #d9821c; }
+.bk-poet { --bk: #c62828; background: #c62828; }
+.bk-prof { --bk: #7b3584; background: #7b3584; }
+.bk-evan { --bk: #3b4290; background: #3b4290; }
+.bk-atos { --bk: #1489a8; background: #1489a8; }
+.bk-epis { --bk: #11804a; background: #11804a; }
+.bk-apoc { --bk: #78b02a; background: #78b02a; }
+.bk-outro { background: var(--btn); }
+.book-legend { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 8px; }
+.book-legend span { font-size: 10px; padding: 1px 6px; border-radius: 8px; color: #fff; }

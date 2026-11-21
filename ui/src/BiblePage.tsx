@@ -212,16 +212,17 @@ export function BiblePage({ scenes, comp }: Props) {
 
       <div className="bible-body">
         <section className="bible-books">
+          <div className="book-legend">{BOOK_GROUPS.map((g) => <span key={g.id} className={`bk-${g.id}`}>{g.name}</span>)}</div>
           <h3>Antigo Testamento</h3>
           <div className="book-grid">
             {ot.map((b) => (
-              <button key={b.id} title={b.name} className={`small ${b.id === book ? 'active' : ''}`} onClick={() => go(b.id, 1)}>{shortName(b)}</button>
+              <button key={b.id} title={b.name} className={`small bk bk-${bookGroup(b.id)} ${b.id === book ? 'active' : ''}`} onClick={() => go(b.id, 1)}>{shortName(b)}</button>
             ))}
           </div>
           {nt.length > 0 && <h3>Novo Testamento</h3>}
           <div className="book-grid">
             {nt.map((b) => (
-              <button key={b.id} title={b.name} className={`small ${b.id === book ? 'active' : ''}`} onClick={() => go(b.id, 1)}>{shortName(b)}</button>
+              <button key={b.id} title={b.name} className={`small bk bk-${bookGroup(b.id)} ${b.id === book ? 'active' : ''}`} onClick={() => go(b.id, 1)}>{shortName(b)}</button>
             ))}
           </div>
           {bookInfo && (
@@ -561,3 +562,17 @@ function YouVersionBox({ hasKey, installed, downloading }: { hasKey: boolean; in
     </div>
   )
 }
+
+/** Cores dos livros por grupo (mesmo padrão do Holyrics). Os ids são os códigos USFM (GEN, EXO...). */
+const BOOK_GROUPS = [
+  { id: 'lei', name: 'Lei', books: 'GEN EXO LEV NUM DEU' },
+  { id: 'hist', name: 'Históricos', books: 'JOS JDG RUT 1SA 2SA 1KI 2KI 1CH 2CH EZR NEH EST' },
+  { id: 'poet', name: 'Poéticos', books: 'JOB PSA PRO ECC SNG' },
+  { id: 'prof', name: 'Profetas', books: 'ISA JER LAM EZK DAN HOS JOL AMO OBA JON MIC NAM HAB ZEP HAG ZEC MAL' },
+  { id: 'evan', name: 'Evangelhos', books: 'MAT MRK LUK JHN' },
+  { id: 'atos', name: 'Atos', books: 'ACT' },
+  { id: 'epis', name: 'Cartas', books: 'ROM 1CO 2CO GAL EPH PHP COL 1TH 2TH 1TI 2TI TIT PHM HEB JAS 1PE 2PE 1JN 2JN 3JN JUD' },
+  { id: 'apoc', name: 'Apocalipse', books: 'REV' },
+]
+const GROUP_OF = new Map(BOOK_GROUPS.flatMap((g) => g.books.split(' ').map((b) => [b, g.id] as const)))
+const bookGroup = (id: string) => GROUP_OF.get(id.toUpperCase()) ?? 'outro'
