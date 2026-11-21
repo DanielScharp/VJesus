@@ -1337,3 +1337,15 @@ header.topbar .stats .usage.high b { color: #ff6b6b; }
 .bk-outro { background: var(--btn); }
 .book-legend { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 8px; }
 .book-legend span { font-size: 10px; padding: 1px 6px; border-radius: 8px; color: #fff; }
+/* bíblia: digitação rápida (livro → capítulo → versículo) */
+.modal.bible-quick { width: min(720px, 92vw); padding: 28px 32px 32px; display: flex; flex-direction: column; align-items: center; gap: 18px; position: relative; text-align: center; }
+.bq-esc { position: absolute; top: 10px; right: 14px; font-size: 12px; color: var(--muted); }
+.bq-step { display: flex; flex-direction: column; align-items: center; gap: 4px; opacity: .45; min-height: 64px; }
+.bq-step.on { opacity: 1; }
+.bq-label { font-size: 26px; font-weight: 600; }
+.bq-value { font-size: 26px; color: var(--accent); min-height: 32px; }
+.bq-caret { font-style: normal; animation: bqblink 1s steps(1) infinite; }
+@keyframes bqblink { 50% { opacity: 0; } }
+.bq-cands { font-size: 14px; color: var(--muted); display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 10px; max-width: 600px; }
+.bq-cands button.link { color: var(--text); }
+.bq-cands button.link.first { color: var(--accent); font-weight: 700; text-decoration: underline; }

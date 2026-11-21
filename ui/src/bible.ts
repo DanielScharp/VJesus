@@ -79,3 +79,18 @@ export function shortName(b: BibleBookInfo) {
 export function refLabel(bookName: string, chapter: number, verse?: number, verseEnd?: number) {
   return `${bookName} ${chapter}${verse ? `:${verse}${verseEnd && verseEnd > verse ? `-${verseEnd}` : ''}` : ''}`
 }
+
+/**
+ * Livros que combinam com o que foi digitado (digitação rápida da aba Bíblia): começo do nome ou de uma abreviação.
+ * exact = o texto é exatamente o nome ou uma abreviação do livro (ex.: "jo" é João, mas Josué, Joel e Jonas também começam assim).
+ */
+export function bookCandidates(text: string, books: BibleBookInfo[]): { list: BibleBookInfo[]; exact: BibleBookInfo | null } {
+  const q = key(text)
+  if (!q) return { list: [], exact: null }
+  const names = (b: BibleBookInfo) => [key(b.name), ...(ALIASES[b.id] ?? [])]
+  const list = books.filter((b) => names(b).some((n) => n.startsWith(q)))
+  // abreviação vale mais que o nome: "jo" é João (Jó só com acento, "jó")
+  const exact = (q === 'jo' && /ó/i.test(text) ? list.find((b) => b.id === 'JOB') : undefined)
+    ?? list.find((b) => !(b.id === 'JOB' && q === 'jo') && (ALIASES[b.id] ?? []).includes(q)) ?? list.find((b) => key(b.name) === q) ?? null
+  return { list, exact }
+}

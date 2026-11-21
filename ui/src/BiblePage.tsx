@@ -5,6 +5,7 @@ import {
   onMessage, send, type Composition, type BibleBookInfo, type BibleHit, type BiblePassage, type BibleSettings, type BibleVersion, type LyricScene,
 } from './bridge'
 import { NT_START, parseRef, refLabel, shortName } from './bible'
+import { BibleQuick } from './BibleQuick'
 import { normalize } from './lyrics'
 import { matches } from './shortcuts'
 
@@ -138,7 +139,26 @@ export function BiblePage({ scenes, comp }: Props) {
     setSel({ verse: live.verse, verseEnd: live.verseEnd })
   }, [live?.book, live?.chapter, live?.verse, live?.verseEnd])
 
+  // digitação rápida: começar a digitar em qualquer lugar da aba abre a janela de livro/capítulo/versículo
+  const [quick, setQuick] = useState<string | null>(null)
+  useEffect(() => {
+    if (quick !== null || catalogOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement
+      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable) return
+      if (e.ctrlKey || e.altKey || e.metaKey || e.repeat || document.querySelector('.modal-back')) return
+      if (!/^[\p{L}]$/u.test(e.key) && !/^[1-3]$/.test(e.key)) return // letras, ou 1/2/3 (1 Coríntios, 2 Reis...)
+      e.preventDefault(); e.stopImmediatePropagation()
+      setQuick(e.key)
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [quick, catalogOpen])
+
   const clickVerse = (v: number, e: React.MouseEvent) => {
+    // clicar no versículo que já está escolhido confirma: vai para o telão
+    if (!e.shiftKey && sel && sel.verse === v && sel.verseEnd === v && !liveHere(v)) { project(book, chapter, v); return }
+    if (!e.shiftKey && sel && sel.verseEnd > sel.verse && v >= sel.verse && v <= sel.verseEnd) { project(book, chapter, sel.verse, sel.verseEnd); return }
     if (e.shiftKey && sel) setSel({ verse: Math.min(sel.verse, v), verseEnd: Math.max(sel.verseEnd, v) })
     else setSel({ verse: v, verseEnd: v })
   }
@@ -189,6 +209,8 @@ export function BiblePage({ scenes, comp }: Props) {
 
   return (
     <div className="bible">
+      {quick !== null && <BibleQuick books={books} start={quick} onClose={() => setQuick(null)}
+        onDone={(b, c, v, vEnd) => { setQuick(null); go(b, c, v, vEnd) }} />}
       <div className="bible-top">
         <div className="bible-search">
           <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)}
@@ -261,14 +283,14 @@ export function BiblePage({ scenes, comp }: Props) {
                 <button className="small" disabled={chapter <= 1} onClick={() => go(book, chapter - 1)}>◀</button>
                 <h2>{bookInfo?.name ?? book} {chapter} <span className="meta">{info(main ?? '')?.shortName}</span></h2>
                 <button className="small" disabled={!bookInfo || chapter >= bookInfo.chapters.length} onClick={() => go(book, chapter + 1)}>▶</button>
-                <span className="meta">Clique escolhe · duplo clique projeta</span>
+                <span className="meta">Digite o livro em qualquer lugar (ex.: jos 3 5) · clique escolhe · clique de novo projeta</span>
               </div>
               <div className="verse-list" ref={listRef}>
                 {verses.map((t, i) => t && (
                   <div key={i} data-verse={i + 1}
                     className={`verse ${selected(i + 1) ? 'selected' : ''} ${liveHere(i + 1) ? 'live' : ''}`}
                     onClick={(e) => clickVerse(i + 1, e)}
-                    onDoubleClick={() => { setSel({ verse: i + 1, verseEnd: i + 1 }); project(book, chapter, i + 1) }}>
+                    >
                     <span className="vnum">{i + 1}</span> {t}
                   </div>
                 ))}
