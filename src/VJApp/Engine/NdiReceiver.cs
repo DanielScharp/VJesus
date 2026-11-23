@@ -159,6 +159,12 @@ sealed unsafe class NdiReceiver : IDisposable
 
     void Loop()
     {
+        try { LoopInner(); }
+        catch (Exception ex) { VJApp.Program.LogError("NDI", ex); } // fonte NDI com problema: some da tela, o programa continua
+    }
+
+    void LoopInner()
+    {
         while (_running)
         {
             VideoFrame f;

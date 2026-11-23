@@ -27,26 +27,29 @@ static class Program
     static string ErrorLog => Path.Combine(AppInfo.DataDir, "erros.log");
     static string RelaunchMark => Path.Combine(AppInfo.DataDir, "ultimo-reinicio.txt");
 
-    static void LogError(string where, Exception? ex)
+    internal static void LogError(string where, Exception? ex)
     {
         try
         {
             Directory.CreateDirectory(AppInfo.DataDir);
+            // o arquivo não cresce sem fim: passando de 2 MB, guarda só a metade mais nova
+            if (File.Exists(ErrorLog) && new FileInfo(ErrorLog).Length > 2_000_000) { var t = File.ReadAllText(ErrorLog); File.WriteAllText(ErrorLog, t[(t.Length / 2)..]); }
             File.AppendAllText(ErrorLog, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ({where}) {ex}\n\n");
         }
         catch { }
     }
 
     /// <summary>Reabre o programa (no máximo uma vez por minuto, para não ficar reabrindo sem parar).</summary>
-    static void Relaunch()
+    internal static bool Relaunch()
     {
         try
         {
             if (File.Exists(RelaunchMark) && DateTime.TryParse(File.ReadAllText(RelaunchMark), out var last)
-                && DateTime.Now - last < TimeSpan.FromMinutes(1)) return;
+                && DateTime.Now - last < TimeSpan.FromMinutes(1)) return false;
             File.WriteAllText(RelaunchMark, DateTime.Now.ToString("o"));
             Process.Start(new ProcessStartInfo(Environment.ProcessPath!, "--recuperar") { UseShellExecute = true });
+            return true;
         }
-        catch { }
+        catch { return false; }
     }
 }

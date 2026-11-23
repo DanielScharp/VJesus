@@ -1,4 +1,4 @@
-﻿using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
 namespace VJApp;
@@ -31,6 +31,8 @@ sealed class StageWindow : Form
         base.OnShown(e);
         await _web.EnsureCoreWebView2Async(await AppInfo.WebViewEnvironment());
         var core = _web.CoreWebView2;
+        // a página caiu (pouca memória): recarrega só ela, sem derrubar o programa
+        core.ProcessFailed += (_, _) => { try { BeginInvoke(() => { try { _web.Reload(); } catch { } }); } catch { } };
         core.Settings.AreDefaultContextMenusEnabled = false;
         core.WebMessageReceived += (_, ev) =>
         {

@@ -79,6 +79,7 @@ sealed partial class MainForm : Form
         _renderer.OutputPreview += OnOutputPreview;
         _renderer.Error += ex => Send(new { type = "error", message = "Motor de vídeo: " + ex.Message });
         _renderer.EffectError += msg => Send(new { type = "error", message = msg });
+        _renderer.DeviceLost += ex => BeginInvoke(() => OnRendererLost(ex));
         for (int i = 0; i < _comp.Layers.Count; i++) ApplyLayerParams(i);
         _renderer.SetBpm(_comp.Bpm);
         RebuildEffectChains();
@@ -103,6 +104,7 @@ sealed partial class MainForm : Form
         }
         var core = _web.CoreWebView2;
         core.WebMessageReceived += OnWebMessage;
+        core.ProcessFailed += (_, ev) => BeginInvoke(() => OnWebProcessFailed(ev.ProcessFailedKind));
         SetupMediaPreviewServer(core);
         // links externos (ex.: endereço do controle remoto) abrem no navegador padrão
         core.NewWindowRequested += (_, ev) =>
@@ -869,7 +871,9 @@ sealed partial class MainForm : Form
     {
         if (IsDisposed) return;
         if (InvokeRequired) { BeginInvoke(() => Send(payload)); return; }
-        _web.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(payload, Json));
+        // a interface ainda carregando (ou recarregando depois de cair): a mensagem se perde, o programa segue
+        try { _web.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(payload, Json)); }
+        catch (System.Runtime.InteropServices.COMException) { }
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)

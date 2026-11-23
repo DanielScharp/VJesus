@@ -628,9 +628,39 @@ sealed partial class Renderer : IDisposable
         catch (Exception ex) { Error?.Invoke(ex); return; }
 
         var fpsClock = Stopwatch.StartNew();
-        int frames = 0;
+        int failures = 0;
 
         while (_running)
+        {
+            // um quadro com problema não pode derrubar o programa: anota, espera um instante e tenta o próximo.
+            // Placa de vídeo reiniciada pelo Windows (driver travou, computador fraco): avisa para o VJesus se reabrir sozinho.
+            try
+            {
+                RenderFrame(fpsClock);
+                failures = 0;
+            }
+            catch (Exception ex)
+            {
+                failures++;
+                bool lost = false;
+                try { lost = _device != null && _device.DeviceRemovedReason.Failure; } catch { lost = true; }
+                VJApp.Program.LogError(lost ? "placa de vídeo" : "motor", ex);
+                if (lost || failures >= 50) { DeviceLost?.Invoke(ex); return; }
+                if (failures == 1) Error?.Invoke(ex);
+                Thread.Sleep(20);
+            }
+        }
+    }
+
+    /// <summary>Placa de vídeo perdida (o Windows reiniciou o driver) ou falhas seguidas: o motor parou.</summary>
+    public event Action<Exception>? DeviceLost;
+
+    int _fpsFrames;
+
+    void RenderFrame(Stopwatch fpsClock)
+    {
+        int frames = _fpsFrames;
+        try
         {
             double now = _clock.Elapsed.TotalSeconds;
             ApplyPendingOutputs();
@@ -672,6 +702,7 @@ sealed partial class Renderer : IDisposable
                 fpsClock.Restart();
             }
         }
+        finally { _fpsFrames = frames; }
     }
 
     public void Dispose()

@@ -33,6 +33,14 @@ sealed class AudioMixer : ISampleProvider, IDisposable
 
     public int Read(Span<float> span)
     {
+        // a thread do som não pode derrubar o programa: com problema, sai silêncio neste pedaço
+        try { return ReadInner(span); }
+        catch (Exception ex) { span.Clear(); if (Interlocked.Exchange(ref _logged, 1) == 0) VJApp.Program.LogError("som", ex); return span.Length; }
+    }
+    int _logged;
+
+    int ReadInner(Span<float> span)
+    {
         span.Clear();
         float master = MasterVolume;
         _mixed.Clear();

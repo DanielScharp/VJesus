@@ -556,6 +556,11 @@ sealed unsafe class VideoPlayer : IDisposable
                 av_packet_unref(pkt);
             }
         }
+        catch (Exception ex)
+        {
+            // arquivo com defeito, decodificação na placa que falhou...: o clip para, o programa continua
+            VJApp.Program.LogError("vídeo " + Path.GetFileName(FilePath), ex);
+        }
         finally
         {
             av_frame_free(&frame);
@@ -730,6 +735,11 @@ sealed unsafe class VideoPlayer : IDisposable
                 lock (_lock) if (_audioSeek < 0) _audioSeek = _in;
             }
         }
+        catch (Exception ex)
+        {
+            // arquivo com defeito, decodificação na placa que falhou...: o clip para, o programa continua
+            VJApp.Program.LogError("vídeo " + Path.GetFileName(FilePath), ex);
+        }
         finally
         {
             av_frame_free(&frame);
@@ -777,8 +787,11 @@ sealed unsafe class VideoPlayer : IDisposable
     {
         _running = false;
         lock (_lock) Monitor.PulseAll(_lock);
-        _thread.Join(2000);
-        _audioThread?.Join(2000);
+        bool stopped = _thread.Join(3000);
+        stopped &= _audioThread?.Join(3000) ?? true;
+        // a thread ainda está lendo (computador muito lento, disco travado): liberar a memória do FFmpeg agora
+        // derrubaria o programa inteiro. Melhor deixar como está (fica um pouco de memória presa) do que fechar.
+        if (!stopped) { VJApp.Program.LogError("vídeo " + Path.GetFileName(FilePath), new TimeoutException("a leitura não parou a tempo; recursos não liberados")); return; }
         if (_sws != null) { sws_freeContext(_sws); _sws = null; }
         if (_swFrame != null) { var sf = _swFrame; av_frame_free(&sf); _swFrame = null; }
         if (_swr != null) { var s = _swr; swr_free(&s); _swr = null; }

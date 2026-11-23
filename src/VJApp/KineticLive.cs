@@ -98,6 +98,8 @@ sealed class KineticWindow : Form
         var env = await AppInfo.WebViewEnvironment();
         await _web.EnsureCoreWebView2Async(env);
         var core = _web.CoreWebView2;
+        // a página caiu (pouca memória): recarrega só ela, sem derrubar o programa
+        core.ProcessFailed += (_, _) => { try { BeginInvoke(() => { try { _web.Reload(); } catch { } }); } catch { } };
         _buffer = env.CreateSharedBuffer((ulong)(MaxW * MaxH * 4));
         core.WebMessageReceived += (_, ev) =>
         {
