@@ -89,7 +89,7 @@ sealed partial class MainForm
             r.Brightness = brightness;
             r.Speed = speed;
             r.ShowTestCard = testCard;
-            r.FrameMode = _perf.Fps;
+            ApplyPerformanceToRenderer();
             r.StageMirror = _stageMirror;
             r.Overlay = _overlayFeed;
             ApplyOverlayTargets();
@@ -183,5 +183,18 @@ sealed partial class MainForm
             if (!await InitWebViewAsync()) return;
         }
         catch (Exception ex) { Program.LogError("interface (recriar)", ex); }
+    }
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    static extern uint SetThreadExecutionState(uint flags);
+
+    /// <summary>
+    /// Enquanto o VJesus está aberto, o Windows não desliga o monitor nem põe o computador para dormir
+    /// (nem por economia de energia no meio do culto). Ao fechar, volta ao normal.
+    /// </summary>
+    static void KeepAwake(bool on)
+    {
+        const uint Continuous = 0x80000000, SystemRequired = 0x1, DisplayRequired = 0x2;
+        try { SetThreadExecutionState(on ? Continuous | SystemRequired | DisplayRequired : Continuous); } catch { }
     }
 }

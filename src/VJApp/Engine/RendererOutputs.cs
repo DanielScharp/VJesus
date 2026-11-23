@@ -43,6 +43,8 @@ sealed class OutputTarget(IntPtr hwnd) : IDisposable
 partial class Renderer
 {
     public const int PreviewWidth = 960, PreviewHeight = 540;
+    /// <summary>Intervalo entre as imagens de prévia para a tela de controle (66 ms ≈ 15 por segundo; o telão não muda).</summary>
+    public volatile int PreviewIntervalMs = 66;
 
     /// <summary>Preview reduzido da composição (BGRA, largura, altura, bytes por linha).</summary>
     public event Action<byte[], int, int, int>? Preview;
@@ -324,7 +326,7 @@ partial class Renderer
             return;
         }
         if (!Layers.Any(s => s.ToStage && s.Opacity > 0 && (s.Current is { Ready: true } || s.TransitionActive))) return;
-        if (Environment.TickCount64 - _stagePreview!.Last < 66 && !_stagePreview.Pending) return; // só compõe quando vai usar
+        if (Environment.TickCount64 - _stagePreview!.Last < PreviewIntervalMs && !_stagePreview.Pending) return; // só compõe quando vai usar
         for (int i = 0; i < 2; i++) _stageComp[i] ??= new RenderTexture(_device!, CompWidth, CompHeight);
         int r = Compose(time, _stageComp, s => s.ToStage, main: false);
         RunPreview(_stagePreview, _stageComp[r]!, time, StagePreview);
@@ -347,7 +349,7 @@ partial class Renderer
         }
 
         long now = Environment.TickCount64;
-        if (sink == null || now - ch.Last < 66) return; // ~15 fps
+        if (sink == null || now - ch.Last < PreviewIntervalMs) return; // ~15 fps (menos no modo computador fraco)
         ch.Last = now;
 
         SetFrameParams(PreviewWidth, PreviewHeight, time);

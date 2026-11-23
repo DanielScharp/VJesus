@@ -68,6 +68,7 @@ sealed partial class MainForm : Form
     {
         base.OnShown(e);
         BeginSession();
+        KeepAwake(true);
 
         var errors = new List<string>();
         _effectDefs = EffectLibrary.Load(_effectDir, errors);
@@ -877,6 +878,7 @@ sealed partial class MainForm : Form
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
         _playbackTimer.Stop();
+        KeepAwake(false);
         EndSession();
         StopControl();
         _audio?.Dispose();

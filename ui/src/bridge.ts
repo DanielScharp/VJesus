@@ -173,6 +173,7 @@ export type PerformanceState = {
   decode: DecodeMode
   fps?: 'auto' | '60' | '30'
   fpsNow?: number
+  lowEnd?: boolean
   testing: boolean
   layers: { layer: string; clip: string; codec: string; size: string; gpu: boolean }[]
   test: null | { error: string } | { files: string[]; cpu: PerfResult; gpu: PerfResult; suggestion: DecodeMode; why: string }
@@ -383,7 +384,7 @@ export type UiMessage =
   | { type: 'kineticOpen'; layer: number; column: number }
   | { type: 'kineticFrame'; w: number; h: number }
   | { type: 'panicSet'; settings: PanicState['settings'] }
-  | { type: 'performanceSet'; decode?: DecodeMode; fps?: 'auto' | '60' | '30' }
+  | { type: 'performanceSet'; decode?: DecodeMode; fps?: 'auto' | '60' | '30'; lowEnd?: boolean }
   | ({ type: 'previewRender'; id: string } & PreviewRequest)
 
 type WebView = {

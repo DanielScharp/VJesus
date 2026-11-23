@@ -8,6 +8,8 @@ static class Program
     static void Main(string[] args)
     {
         AppInfo.MigrateOldData();
+        // acima dos programas comuns (antivírus, atualizações, navegador): o telão não engasga quando o PC está ocupado
+        try { Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.AboveNormal; } catch { }
         // erro na tela (botão, mensagem): anota e continua; o culto não pode parar por causa de um clique
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
         Application.ThreadException += (_, e) => LogError("tela", e.Exception);

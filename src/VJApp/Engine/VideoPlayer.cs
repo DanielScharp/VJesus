@@ -318,11 +318,11 @@ sealed unsafe class VideoPlayer : IDisposable
 
         if (!IsLive) _audioStream = OpenAudio();
 
-        _thread = new Thread(DecodeLoop) { IsBackground = true, Name = "Decode " + Path.GetFileName(path) };
+        _thread = new Thread(DecodeLoop) { IsBackground = true, Name = "Decode " + Path.GetFileName(path), Priority = ThreadPriority.AboveNormal };
         _thread.Start();
         if (_audioStream >= 0)
         {
-            _audioThread = new Thread(AudioLoop) { IsBackground = true, Name = "Audio " + Path.GetFileName(path) };
+            _audioThread = new Thread(AudioLoop) { IsBackground = true, Name = "Audio " + Path.GetFileName(path), Priority = ThreadPriority.AboveNormal };
             _audioThread.Start();
         }
         // o relógio começa no primeiro quadro mostrado (TakeFrame): abrir o arquivo não "come" o começo do clip

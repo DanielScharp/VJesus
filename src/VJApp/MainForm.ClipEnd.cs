@@ -90,7 +90,8 @@ sealed partial class MainForm
     /// <summary>Abre o vídeo seguinte antes da hora: quando o atual acabar, ele já tem imagem.</summary>
     void Preload(int layer, NextTarget? target)
     {
-        if (target?.Clip is not { Kind: ClipKind.Video, Path: { } path } clip) { DropPreload(layer); return; }
+        // no modo computador fraco não abre um segundo vídeo antes da hora (dois decodificando juntos pesam demais)
+        if (_perf.LowEnd || target?.Clip is not { Kind: ClipKind.Video, Path: { } path } clip) { DropPreload(layer); return; }
         if (_preloads.TryGetValue(layer, out var p) && p.Clip == clip) return;
         DropPreload(layer);
         try { _preloads[layer] = (clip, new VideoPlayer(path)); }

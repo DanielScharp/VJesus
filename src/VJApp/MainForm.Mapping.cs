@@ -160,7 +160,7 @@ sealed partial class MainForm
         if (_remote is { WantsFrames: true } remote)
             EncodePreview(_netGate, bgra, width, height, pitch, null, 0, remote.PublishFrame, 82);
         if (_minimized) return; // ninguém está vendo: não gasta processador convertendo imagem
-        EncodePreview(_mainGate, bgra, width, height, pitch, data => Send(new { type = "preview", data }), _previewWidth);
+        EncodePreview(_mainGate, bgra, width, height, pitch, data => Send(new { type = "preview", data }), _perf.LowEnd ? Math.Min(_previewWidth, 480) : _previewWidth);
     }
 
     /// <summary>Janela principal minimizada (as prévias da tela param; telões e retorno continuam).</summary>

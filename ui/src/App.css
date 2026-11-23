@@ -1444,3 +1444,8 @@ header.topbar .stats .usage.high b { color: #ff6b6b; }
 .bib-nav { min-height: 180px; }
 
 .perf-sub { margin: 14px 0 6px; font-size: 13px; }
+
+.perf-low { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; margin: 4px 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; }
+.perf-low.on { border-color: var(--accent); }
+.perf-low span { display: flex; flex-direction: column; gap: 3px; }
+.perf-low small { color: var(--muted); }

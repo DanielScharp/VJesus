@@ -32,6 +32,13 @@ export function PerformanceDialog({ onClose }: { onClose: () => void }) {
     <div className="modal-back" onMouseDown={onClose}>
       <div className="modal perf-dialog" onMouseDown={(e) => e.stopPropagation()}>
         <h3>Desempenho do vídeo</h3>
+        <label className={`perf-low ${st?.lowEnd ? 'on' : ''}`}>
+          <input type="checkbox" checked={!!st?.lowEnd} onChange={(e) => send({ type: 'performanceSet', lowEnd: e.target.checked })} />
+          <span>
+            <b>Modo computador fraco</b>
+            <small>Para PC antigo ou notebook simples: telão a 30 fps, prévias da tela de controle mais leves, não abre o próximo vídeo antes da hora e letra animada em 720p. O que vai para o público continua igual, só menos fluido nas animações.</small>
+          </span>
+        </label>
         <p className="meta">Onde os vídeos são decodificados neste computador. A escolha fica salva neste PC e vale para os vídeos que começarem a tocar depois.</p>
         <div className="perf-modes">
           {MODES.map((m) => (
@@ -51,7 +58,8 @@ export function PerformanceDialog({ onClose }: { onClose: () => void }) {
             </label>
           ))}
         </div>
-        {st?.fps === 'auto' && st.fpsNow && <p className="meta">Agora: {st.fpsNow} fps{st.fpsNow === 30 ? ' (o computador não estava aguentando 60; volta sozinho quando sobrar folga)' : ''}</p>}
+        {st?.lowEnd && <p className="meta">Com o modo computador fraco ligado, o telão fica em 30 fps.</p>}
+        {!st?.lowEnd && st?.fps === 'auto' && st.fpsNow && <p className="meta">Agora: {st.fpsNow} fps{st.fpsNow === 30 ? ' (o computador não estava aguentando 60; volta sozinho quando sobrar folga)' : ''}</p>}
         <div className="perf-test">
           <button disabled={!st || st.testing} onClick={() => send({ type: 'performanceTest' })}>
             {st?.testing ? 'Testando… (uns 15 segundos)' : 'Testar este computador'}

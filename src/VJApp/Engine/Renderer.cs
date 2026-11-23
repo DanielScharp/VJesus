@@ -165,7 +165,8 @@ sealed partial class Renderer : IDisposable
     {
         _pendingDefs = effects;
         _layers = Enumerable.Range(0, layerCount).Select(_ => new LayerSlot()).ToArray();
-        _thread = new Thread(Run) { IsBackground = true, Name = "Render" };
+        // o telão vem antes de tudo: o Windows dá a vez para esta thread quando o processador está disputado
+        _thread = new Thread(Run) { IsBackground = true, Name = "Render", Priority = ThreadPriority.Highest };
         _thread.Start();
     }
 
@@ -232,8 +233,12 @@ sealed partial class Renderer : IDisposable
     void Init()
     {
         FeatureLevel[] levels = [FeatureLevel.Level_11_1, FeatureLevel.Level_11_0];
-        D3D11.D3D11CreateDevice(null, DriverType.Hardware, DeviceCreationFlags.BgraSupport, levels,
-            out _device, out _ctx).CheckError();
+        // notebooks com duas placas: usa a mais forte (a dedicada); sem ela, a que o Windows indicar
+        var adapter = StrongestAdapter();
+        if (adapter == null || D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.BgraSupport, levels, out _device, out _ctx).Failure)
+            D3D11.D3D11CreateDevice(null, DriverType.Hardware, DeviceCreationFlags.BgraSupport, levels,
+                out _device, out _ctx).CheckError();
+        adapter?.Dispose();
 
         string path = Path.Combine(AppContext.BaseDirectory, "Shaders", "Engine.hlsl");
         string src = File.ReadAllText(path);
@@ -259,6 +264,34 @@ sealed partial class Renderer : IDisposable
         InitOutputs(Compiler.Compile(src, "VSSlice", path, "vs_5_0").ToArray(), src, path);
         InitAttacks(src, path);
         InitLyrics(src, path);
+    }
+
+    /// <summary>A placa de vídeo de alto desempenho (o Windows sabe qual é) ou, sem essa informação, a com mais memória própria.</summary>
+    static IDXGIAdapter1? StrongestAdapter()
+    {
+        try
+        {
+            using var factory = DXGI.CreateDXGIFactory1<IDXGIFactory6>();
+            if (factory.EnumAdapterByGpuPreference(0, GpuPreference.HighPerformance, out IDXGIAdapter1? best).Success && best != null)
+            {
+                if ((best.Description1.Flags & AdapterFlags.Software) == 0) return best;
+                best.Dispose();
+            }
+        }
+        catch { }
+        try
+        {
+            using var factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
+            IDXGIAdapter1? pick = null;
+            for (uint i = 0; factory.EnumAdapters1(i, out var a).Success; i++)
+            {
+                if ((a.Description1.Flags & AdapterFlags.Software) != 0 || (pick != null && (ulong)a.Description1.DedicatedVideoMemory <= (ulong)pick.Description1.DedicatedVideoMemory)) { a.Dispose(); continue; }
+                pick?.Dispose();
+                pick = a;
+            }
+            return pick;
+        }
+        catch { return null; }
     }
 
     ID3D11Buffer CreateCb<T>() where T : unmanaged =>
@@ -664,6 +697,7 @@ sealed partial class Renderer : IDisposable
     public int FrameInterval => _interval;
     long _presentTicks, _workTicks;
     int _slowSeconds, _easySeconds;
+    string _lastMode = "auto";
 
     /// <summary>Modo automático: com 60 fps faltando por 3 s seguidos, passa a 30; com folga de sobra por 15 s, volta a 60.</summary>
     void AdaptFrameRate(int frames, double seconds)
@@ -672,6 +706,8 @@ sealed partial class Renderer : IDisposable
         double workMs = frames > 0 ? _workTicks * 1000.0 / Stopwatch.Frequency / frames : 0;
         _workTicks = 0;
         string mode = FrameMode;
+        // trocou o modo (ex.: desligou o modo computador fraco): começa do jeito escolhido, sem esperar
+        if (mode != _lastMode) { _lastMode = mode; _interval = mode == "30" ? 2 : 1; _slowSeconds = 0; _easySeconds = 0; return; }
         if (mode == "30") { _interval = 2; return; }
         if (mode == "60") { _interval = 1; return; }
         if (_interval == 1)

@@ -18,6 +18,16 @@ sealed partial class MainForm
         public string Decode { get; set; } = "auto";
         /// <summary>Quadros por segundo do telão: "auto", "60" ou "30".</summary>
         public string Fps { get; set; } = "auto";
+        /// <summary>Modo computador fraco: 30 fps, prévias mais espaçadas e menores, sem abrir o próximo vídeo antes da hora e letra animada em 720p.</summary>
+        public bool LowEnd { get; set; }
+    }
+
+    /// <summary>Passa para o motor o que vale neste PC (fps e prévias).</summary>
+    void ApplyPerformanceToRenderer()
+    {
+        if (_renderer == null) return;
+        _renderer.FrameMode = _perf.LowEnd ? "30" : _perf.Fps;
+        _renderer.PreviewIntervalMs = _perf.LowEnd ? 200 : 66;
     }
 
     static string PerformancePath => Path.Combine(AppDataDir, "desempenho.json");
@@ -36,7 +46,7 @@ sealed partial class MainForm
         if (_perf.Decode is not ("auto" or "gpu" or "cpu")) _perf.Decode = "auto";
         VideoPlayer.DecodeMode = _perf.Decode;
         if (_perf.Fps is not ("auto" or "60" or "30")) _perf.Fps = "auto";
-        if (_renderer != null) _renderer.FrameMode = _perf.Fps;
+        ApplyPerformanceToRenderer();
     }
 
     void OnPerformanceMessage(string type, JsonNode msg)
@@ -47,11 +57,13 @@ sealed partial class MainForm
                 SendPerformance();
                 break;
             case "performanceSet":
-                if ((string?)msg["fps"] is "auto" or "60" or "30")
+                if ((string?)msg["fps"] is "auto" or "60" or "30") _perf.Fps = (string)msg["fps"]!;
+                if (msg["lowEnd"] is JsonNode low)
                 {
-                    _perf.Fps = (string)msg["fps"]!;
-                    if (_renderer != null) _renderer.FrameMode = _perf.Fps;
+                    _perf.LowEnd = (bool)low;
+                    if (_perf.LowEnd) for (int l = 0; l < _comp.Layers.Count; l++) DropPreload(l);
                 }
+                ApplyPerformanceToRenderer();
                 var mode = (string?)msg["decode"] ?? _perf.Decode;
                 if (mode is not ("auto" or "gpu" or "cpu")) return;
                 _perf.Decode = mode;
@@ -72,7 +84,7 @@ sealed partial class MainForm
         for (int l = 0; l < _players.Length && l < _comp.Layers.Count; l++)
             if (_players[l] is { IsLive: false, IsStill: false } p)
                 layers.Add(new { layer = _comp.Layers[l].Name, clip = Path.GetFileName(p.FilePath), codec = p.CodecName, size = $"{p.SourceWidth}×{p.SourceHeight}", gpu = p.HardwareDecode });
-        Send(new { type = "performance", decode = _perf.Decode, fps = _perf.Fps, fpsNow = _renderer?.FrameInterval == 2 ? 30 : 60, testing = _perfTesting, layers, test = _perfTest });
+        Send(new { type = "performance", decode = _perf.Decode, fps = _perf.Fps, lowEnd = _perf.LowEnd, fpsNow = _renderer?.FrameInterval == 2 ? 30 : 60, testing = _perfTesting, layers, test = _perfTest });
     }
 
     /// <summary>

@@ -36,7 +36,7 @@ sealed partial class MainForm
                 index = _liveSlide,
                 style,
                 transparent = (bool?)kin["transparent"] == true,
-                light = (bool?)kin["light"] == true,
+                light = (bool?)kin["light"] == true || _perf.LowEnd, // 720p: metade do trabalho para desenhar a animação
             });
             if (!_kineticOn)
             {
