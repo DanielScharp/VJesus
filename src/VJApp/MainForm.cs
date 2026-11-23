@@ -72,18 +72,7 @@ sealed partial class MainForm : Form
         var errors = new List<string>();
         _effectDefs = EffectLibrary.Load(_effectDir, errors);
 
-        _renderer = new Renderer(_comp.Layers.Count, _effectDefs);
-        _renderer.Stats += fps => Send(new { type = "stats", fps = Math.Round(fps, 1), cpu = Math.Round(_sysMon.Cpu), ram = Math.Round(_sysMon.Ram), vram = Math.Round(_sysMon.Vram), vramInfo = _sysMon.VramInfo });
-        _renderer.Preview += OnPreview;
-        _renderer.StagePreview += OnStagePreview;
-        _renderer.OutputPreview += OnOutputPreview;
-        _renderer.Error += ex => Send(new { type = "error", message = "Motor de vídeo: " + ex.Message });
-        _renderer.EffectError += msg => Send(new { type = "error", message = msg });
-        _renderer.DeviceLost += ex => BeginInvoke(() => OnRendererLost(ex));
-        for (int i = 0; i < _comp.Layers.Count; i++) ApplyLayerParams(i);
-        _renderer.SetBpm(_comp.Bpm);
-        RebuildEffectChains();
-        ApplyMapping();
+        CreateRenderer(_comp.Bpm);
         StartAudio();
         ApplyStageWindow();
         HookDisplayEvents();
@@ -228,6 +217,8 @@ sealed partial class MainForm : Form
             case var panicType when panicType?.StartsWith("panic") == true: OnPanicMessage(panicType, msg); break;
             case var perfType when perfType?.StartsWith("performance") == true: OnPerformanceMessage(perfType, msg); break;
             case "outputPreview": SetOutputPreview((string?)msg["screenId"]); break;
+            // teste do religamento do motor (só com VJ_TEST=1): simula a placa de vídeo caindo
+            case "engineRestartTest" when Environment.GetEnvironmentVariable("VJ_TEST") == "1": RestartRenderer(new Exception("teste")); break;
             case "blendTest": if (_renderer != null) _renderer.BlendTest = Math.Clamp((int?)msg["mode"] ?? 0, 0, 3); break;
             case "previewSize": SetPreviewWidth((int?)msg["width"] ?? 960); break;
             case var presType when presType?.StartsWith("presentation") == true: OnPresentationMessage(presType, msg); break;
