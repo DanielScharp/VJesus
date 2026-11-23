@@ -16,6 +16,8 @@ sealed partial class MainForm
     {
         /// <summary>"auto", "gpu" ou "cpu".</summary>
         public string Decode { get; set; } = "auto";
+        /// <summary>Quadros por segundo do telão: "auto", "60" ou "30".</summary>
+        public string Fps { get; set; } = "auto";
     }
 
     static string PerformancePath => Path.Combine(AppDataDir, "desempenho.json");
@@ -33,6 +35,8 @@ sealed partial class MainForm
         catch { _perf = new(); }
         if (_perf.Decode is not ("auto" or "gpu" or "cpu")) _perf.Decode = "auto";
         VideoPlayer.DecodeMode = _perf.Decode;
+        if (_perf.Fps is not ("auto" or "60" or "30")) _perf.Fps = "auto";
+        if (_renderer != null) _renderer.FrameMode = _perf.Fps;
     }
 
     void OnPerformanceMessage(string type, JsonNode msg)
@@ -43,7 +47,12 @@ sealed partial class MainForm
                 SendPerformance();
                 break;
             case "performanceSet":
-                var mode = (string?)msg["decode"];
+                if ((string?)msg["fps"] is "auto" or "60" or "30")
+                {
+                    _perf.Fps = (string)msg["fps"]!;
+                    if (_renderer != null) _renderer.FrameMode = _perf.Fps;
+                }
+                var mode = (string?)msg["decode"] ?? _perf.Decode;
                 if (mode is not ("auto" or "gpu" or "cpu")) return;
                 _perf.Decode = mode;
                 VideoPlayer.DecodeMode = mode;
@@ -63,7 +72,7 @@ sealed partial class MainForm
         for (int l = 0; l < _players.Length && l < _comp.Layers.Count; l++)
             if (_players[l] is { IsLive: false, IsStill: false } p)
                 layers.Add(new { layer = _comp.Layers[l].Name, clip = Path.GetFileName(p.FilePath), codec = p.CodecName, size = $"{p.SourceWidth}×{p.SourceHeight}", gpu = p.HardwareDecode });
-        Send(new { type = "performance", decode = _perf.Decode, testing = _perfTesting, layers, test = _perfTest });
+        Send(new { type = "performance", decode = _perf.Decode, fps = _perf.Fps, fpsNow = _renderer?.FrameInterval == 2 ? 30 : 60, testing = _perfTesting, layers, test = _perfTest });
     }
 
     /// <summary>

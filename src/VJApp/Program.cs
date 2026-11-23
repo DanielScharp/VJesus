@@ -44,9 +44,13 @@ static class Program
     {
         try
         {
-            if (File.Exists(RelaunchMark) && DateTime.TryParse(File.ReadAllText(RelaunchMark), out var last)
-                && DateTime.Now - last < TimeSpan.FromMinutes(1)) return false;
-            File.WriteAllText(RelaunchMark, DateTime.Now.ToString("o"));
+            // reabre sempre, mas não em laço: no máximo 3 vezes em 5 minutos (um problema que derruba na hora de abrir)
+            var recent = File.Exists(RelaunchMark)
+                ? File.ReadAllLines(RelaunchMark).Select(l => DateTime.TryParse(l, out var t) ? t : DateTime.MinValue).Where(t => DateTime.Now - t < TimeSpan.FromMinutes(5)).ToList()
+                : [];
+            if (recent.Count >= 3) return false;
+            recent.Add(DateTime.Now);
+            File.WriteAllLines(RelaunchMark, recent.Select(t => t.ToString("o")));
             Process.Start(new ProcessStartInfo(Environment.ProcessPath!, "--recuperar") { UseShellExecute = true });
             return true;
         }

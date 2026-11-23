@@ -1442,3 +1442,5 @@ header.topbar .stats .usage.high b { color: #ff6b6b; }
 
 .bib-books-scroll { flex: 0 0 auto; max-height: 68%; }
 .bib-nav { min-height: 180px; }
+
+.perf-sub { margin: 14px 0 6px; font-size: 13px; }

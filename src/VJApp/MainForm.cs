@@ -24,7 +24,7 @@ sealed partial class MainForm : Form
         Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
-    readonly WebView2 _web = new() { Dock = DockStyle.Fill };
+    WebView2 _web = new() { Dock = DockStyle.Fill };
     readonly System.Windows.Forms.Timer _playbackTimer = new() { Interval = 100 };
     Composition _comp = Composition.LoadOrDefault(Composition.DefaultPath);
     VideoPlayer?[] _players;
@@ -77,6 +77,24 @@ sealed partial class MainForm : Form
         ApplyStageWindow();
         HookDisplayEvents();
 
+        if (!await InitWebViewAsync()) return;
+        LoadPerformance();
+        LoadClicker();
+        StartHolyrics();
+        _playbackTimer.Start();
+        StartAutosave();
+        EnsureDesktopShortcut();
+        RegisterProjectFileType();
+        StartControl();
+        StartOverlay();
+        StartPanic();
+        StartUpdateCheck();
+        StartCarousels();
+    }
+
+    /// <summary>Liga a tela de controle (WebView2). Também usado para recriar a tela se ela cair, sem mexer no telão.</summary>
+    async Task<bool> InitWebViewAsync()
+    {
         try { await _web.EnsureCoreWebView2Async(await AppInfo.WebViewEnvironment()); }
         catch (Microsoft.Web.WebView2.Core.WebView2RuntimeNotFoundException)
         {
@@ -89,7 +107,7 @@ sealed partial class MainForm : Form
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
                     "https://developer.microsoft.com/microsoft-edge/webview2/#download") { UseShellExecute = true });
             Close();
-            return;
+            return false;
         }
         var core = _web.CoreWebView2;
         core.WebMessageReceived += OnWebMessage;
@@ -119,18 +137,7 @@ sealed partial class MainForm : Form
             core.SetVirtualHostNameToFolderMapping("slides.vj", PresentationsDir, CoreWebView2HostResourceAccessKind.Allow);
             core.Navigate($"https://{UiHost}/index.html");
         }
-        LoadPerformance();
-        LoadClicker();
-        StartHolyrics();
-        _playbackTimer.Start();
-        StartAutosave();
-        EnsureDesktopShortcut();
-        RegisterProjectFileType();
-        StartControl();
-        StartOverlay();
-        StartPanic();
-        StartUpdateCheck();
-        StartCarousels();
+        return true;
     }
 
     // ---------------- mensagens da UI ----------------

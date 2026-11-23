@@ -259,7 +259,7 @@ partial class Renderer
                 Pass(_psBlit!, rtv, o.TestSrv);
                 ctx.PSSetShaderResource(0, null!);
                 if (capture) PresentCapture(o, time);
-                o.SwapChain!.Present(first ? 1u : 0u, PresentFlags.None);
+                PresentTimed(o, first);
                 first = false;
                 continue;
             }
@@ -291,10 +291,10 @@ partial class Renderer
             if (capture) PresentCapture(o, time);
 
             // só a primeira tela espera o vsync; as outras apresentam na hora
-            o.SwapChain!.Present(first ? 1u : 0u, PresentFlags.None);
+            PresentTimed(o, first);
             first = false;
         }
-        if (_outputs.Count == 0) Thread.Sleep(16);
+        if (_outputs.Count == 0) Thread.Sleep(16 * _interval);
     }
 
     /// <summary>Copia a textura da saída para a janela e manda a versão reduzida para a UI (~15 por segundo).</summary>
@@ -357,6 +357,14 @@ partial class Renderer
         ctx.CopyResource(ch.Staging, ch.Rt.Texture);
         ch.Pending = true;
     }
+    /// <summary>Mostra o quadro: a primeira tela espera o monitor (1 ou 2 atualizações, conforme o fps); as outras na hora.</summary>
+    void PresentTimed(OutputTarget o, bool first)
+    {
+        long t = System.Diagnostics.Stopwatch.GetTimestamp();
+        o.SwapChain!.Present(first ? (uint)_interval : 0u, PresentFlags.None);
+        _presentTicks += System.Diagnostics.Stopwatch.GetTimestamp() - t;
+    }
+
     void DisposeOutputs()
     {
         foreach (var o in _outputs) o.Dispose();

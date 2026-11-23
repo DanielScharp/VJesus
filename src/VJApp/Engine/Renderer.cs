@@ -657,6 +657,35 @@ sealed partial class Renderer : IDisposable
 
     int _fpsFrames;
 
+    /// <summary>Quadros por segundo: "60", "30" ou "auto" (60 enquanto o computador aguenta; cai para 30 se não der).</summary>
+    public volatile string FrameMode = "auto";
+    /// <summary>1 = um quadro a cada atualização do monitor (60 fps num monitor de 60 Hz); 2 = um a cada duas (30 fps).</summary>
+    volatile int _interval = 1;
+    public int FrameInterval => _interval;
+    long _presentTicks, _workTicks;
+    int _slowSeconds, _easySeconds;
+
+    /// <summary>Modo automático: com 60 fps faltando por 3 s seguidos, passa a 30; com folga de sobra por 15 s, volta a 60.</summary>
+    void AdaptFrameRate(int frames, double seconds)
+    {
+        double fps = frames / Math.Max(0.001, seconds);
+        double workMs = frames > 0 ? _workTicks * 1000.0 / Stopwatch.Frequency / frames : 0;
+        _workTicks = 0;
+        string mode = FrameMode;
+        if (mode == "30") { _interval = 2; return; }
+        if (mode == "60") { _interval = 1; return; }
+        if (_interval == 1)
+        {
+            _slowSeconds = fps < 50 ? _slowSeconds + 1 : 0;
+            if (_slowSeconds >= 3) { _interval = 2; _slowSeconds = 0; _easySeconds = 0; }
+        }
+        else
+        {
+            _easySeconds = workMs < 9 ? _easySeconds + 1 : 0;
+            if (_easySeconds >= 15) { _interval = 1; _easySeconds = 0; _slowSeconds = 0; }
+        }
+    }
+
     void RenderFrame(Stopwatch fpsClock)
     {
         int frames = _fpsFrames;
@@ -686,6 +715,7 @@ sealed partial class Renderer : IDisposable
             long p3 = Stopwatch.GetTimestamp();
             RenderOutputs(_comp[result]!, ComposeGroups(time, now), time);
             long p4 = Stopwatch.GetTimestamp();
+            _workTicks += p4 - p0 - Interlocked.Exchange(ref _presentTicks, 0); // trabalho do quadro, sem a espera do monitor
             if (PerfLog != null) { _perf[0] += p1 - p0; _perf[1] += p2 - p1; _perf[2] += p3 - p2; _perf[3] += p4 - p3; }
 
             frames++;
@@ -698,6 +728,7 @@ sealed partial class Renderer : IDisposable
                     Array.Clear(_perf);
                 }
                 Stats?.Invoke(frames * 1000.0 / fpsClock.ElapsedMilliseconds);
+                AdaptFrameRate(frames, fpsClock.ElapsedMilliseconds / 1000.0);
                 frames = 0;
                 fpsClock.Restart();
             }

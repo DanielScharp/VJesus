@@ -1,4 +1,5 @@
 using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.WinForms;
 using VJApp.Engine;
 using VJApp.Model;
 
@@ -88,6 +89,7 @@ sealed partial class MainForm
             r.Brightness = brightness;
             r.Speed = speed;
             r.ShowTestCard = testCard;
+            r.FrameMode = _perf.Fps;
             r.StageMirror = _stageMirror;
             r.Overlay = _overlayFeed;
             ApplyOverlayTargets();
@@ -145,16 +147,8 @@ sealed partial class MainForm
         Program.LogError("interface", new Exception("WebView2: " + kind));
         if (kind == CoreWebView2ProcessFailedKind.BrowserProcessExited)
         {
-            // a interface inteira caiu; o telão é desenhado à parte e continua. Quem decide a hora de reabrir é o operador.
-            var r = MessageBox.Show(this,
-                "A tela de controle do VJesus parou, mas o telão continua normal.\n\n" +
-                "Clique em OK quando puder para reabrir o VJesus (o telão volta em poucos segundos com o que estava tocando).",
-                AppInfo.Name, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
-            if (r == DialogResult.OK)
-            {
-                SaveLiveState(force: true);
-                if (Program.Relaunch()) Environment.Exit(0);
-            }
+            // a tela de controle inteira caiu; o telão é desenhado à parte e continua. Recria só a tela de controle.
+            _ = RecreateWebViewAsync();
             return;
         }
         if (kind is CoreWebView2ProcessFailedKind.RenderProcessExited or CoreWebView2ProcessFailedKind.RenderProcessUnresponsive)
@@ -165,5 +159,29 @@ sealed partial class MainForm
             _lastWebReload = DateTime.Now;
             try { _web.Reload(); } catch { }
         }
+    }
+
+    /// <summary>Troca a tela de controle por uma nova (o telão, os clips e a letra continuam como estão).</summary>
+    async Task RecreateWebViewAsync()
+    {
+        if (DateTime.Now - _lastWebReload > TimeSpan.FromMinutes(2)) _webReloads = 0;
+        if (++_webReloads > 3)
+        {
+            // não conseguiu nem recriando: aí sim reabre o programa, que volta com a mesma projeção
+            SaveLiveState(force: true);
+            if (Program.Relaunch()) Environment.Exit(0);
+            return;
+        }
+        _lastWebReload = DateTime.Now;
+        try
+        {
+            var old = _web;
+            _web = new WebView2 { Dock = DockStyle.Fill };
+            Controls.Add(_web);
+            Controls.Remove(old);
+            try { old.Dispose(); } catch { }
+            if (!await InitWebViewAsync()) return;
+        }
+        catch (Exception ex) { Program.LogError("interface (recriar)", ex); }
     }
 }

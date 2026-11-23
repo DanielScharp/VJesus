@@ -214,7 +214,9 @@ sealed partial class MainForm
     // ---------------- voltar onde estava ----------------
 
     sealed record LiveLayer(int Layer, string? DeckId, int Column, string? Path, double Position, int Slide);
-    sealed record LiveState(List<LiveLayer> Layers, bool Panic, DateTime Saved);
+    /// <summary>O que está no telão: clips, tela de pânico e a letra/Bíblia/texto no ar (para voltar igual depois de uma queda).</summary>
+    sealed record LiveState(List<LiveLayer> Layers, bool Panic, DateTime Saved,
+        string? SongId = null, int Slide = -1, BiblePassage? Bible = null, string? Text = null, bool Blank = false);
 
     static string LiveStatePath => Path.Combine(AppDataDir, "ao-vivo.json");
     static string SessionFlagPath => Path.Combine(AppDataDir, "sessao-aberta.txt");
@@ -252,7 +254,8 @@ sealed partial class MainForm
             double pos = l < _players.Length && _players[l] is { IsLive: false } p ? Math.Round(p.Position, 1) : 0;
             layers.Add(new LiveLayer(l, layer.ActiveDeck, layer.Active, clip.Path, pos, _presSlide.GetValueOrDefault(l)));
         }
-        var json = JsonSerializer.Serialize(new LiveState(layers, _panicOn, DateTime.Now));
+        var json = JsonSerializer.Serialize(new LiveState(layers, _panicOn, DateTime.Now, _liveSongId, _liveSlide, _liveBible,
+            _liveSongId == null && _liveBible == null ? _liveText : null, _blank));
         if (json == _liveLast) return;
         _liveLast = json;
         try { File.WriteAllText(LiveStatePath, json); } catch { }
@@ -284,6 +287,15 @@ sealed partial class MainForm
             restored++;
         }
         EndTriggerGroup();
+        // a letra, o versículo ou o texto que estava no ar
+        try
+        {
+            if (state.SongId != null && state.Slide >= 0) ShowSlide(state.SongId, state.Slide);
+            else if (state.Bible != null) _ = ShowBibleAsync(state.Bible);
+            else if (state.Text != null) { _liveSongId = null; _liveBible = null; _liveSlide = -1; _liveText = state.Text; _blank = false; UpdateLyricsOutput(); }
+            if (state.Blank && (state.SongId != null || state.Bible != null || state.Text != null)) { _blank = true; UpdateLyricsOutput(); }
+        }
+        catch (Exception ex) { Program.LogError("recuperar letra", ex); }
         if (state.Panic) SetPanic(true);
         SendComposition(withThumbs: false);
         if (restored > 0 || state.Panic)

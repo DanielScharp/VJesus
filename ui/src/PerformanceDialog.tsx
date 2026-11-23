@@ -8,6 +8,12 @@ const MODES: { id: DecodeMode; label: string; hint: string }[] = [
   { id: 'cpu', label: 'Processador', hint: 'Como era antes. Use se algum driver de vídeo der problema.' },
 ]
 
+const FPS: { id: 'auto' | '60' | '30'; label: string; hint: string }[] = [
+  { id: 'auto', label: 'Automático (recomendado)', hint: '60 enquanto o computador aguenta; se começar a faltar, passa a 30 sozinho (sem engasgos) e volta a 60 quando sobrar folga.' },
+  { id: '60', label: '60 fps (mais suave)', hint: 'Transições, letras animadas e fundos animados mais fluidos. Pede o dobro da placa de vídeo.' },
+  { id: '30', label: '30 fps (mais leve)', hint: 'Metade do trabalho da placa de vídeo. Bom para computador fraco ou notebook; vídeos comuns (30 fps) ficam iguais.' },
+]
+
 const NAME: Record<DecodeMode, string> = { auto: 'Automático', gpu: 'Placa de vídeo', cpu: 'Processador' }
 
 /** Menu → Desempenho do vídeo: onde decodificar os vídeos e um teste para descobrir o melhor neste PC. */
@@ -36,6 +42,16 @@ export function PerformanceDialog({ onClose }: { onClose: () => void }) {
           ))}
         </div>
 
+        <h4 className="perf-sub">Quadros por segundo do telão</h4>
+        <div className="perf-modes">
+          {FPS.map((m) => (
+            <label key={m.id} className={`perf-mode ${(st?.fps ?? 'auto') === m.id ? 'on' : ''}`}>
+              <input type="radio" name="fps" checked={(st?.fps ?? 'auto') === m.id} onChange={() => send({ type: 'performanceSet', fps: m.id })} />
+              <span><b>{m.label}</b><small>{m.hint}</small></span>
+            </label>
+          ))}
+        </div>
+        {st?.fps === 'auto' && st.fpsNow && <p className="meta">Agora: {st.fpsNow} fps{st.fpsNow === 30 ? ' (o computador não estava aguentando 60; volta sozinho quando sobrar folga)' : ''}</p>}
         <div className="perf-test">
           <button disabled={!st || st.testing} onClick={() => send({ type: 'performanceTest' })}>
             {st?.testing ? 'Testando… (uns 15 segundos)' : 'Testar este computador'}
